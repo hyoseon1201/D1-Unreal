@@ -32,6 +32,11 @@ void AD1Enemy::PossessedBy(AController* NewController)
 	// TODO: AI Controller √ ±‚»≠
 }
 
+int32 AD1Enemy::GetLevel() const
+{
+	return Level;
+}
+
 void AD1Enemy::BeginPlay()
 {
 	Super::BeginPlay();

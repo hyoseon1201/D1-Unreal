@@ -19,6 +19,11 @@ UAbilitySystemComponent* AD1CharacterBase::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
+int32 AD1CharacterBase::GetLevel() const
+{
+	return 1;
+}
+
 void AD1CharacterBase::BeginPlay()
 {
 	Super::BeginPlay();
@@ -40,7 +45,9 @@ void AD1CharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEf
 
 void AD1CharacterBase::InitializeDefaultAttributes() const
 {
-	ApplyEffectToSelf(DefaultPrimaryAttributes, 1.f);
-	//ApplyEffectToSelf(DefaultSecondaryAttributes, 1.f);
-	//ApplyEffectToSelf(DefaultVitalAttributes, 1.f);
+	int32 CurrentLevel = GetLevel();
+
+	ApplyEffectToSelf(DefaultPrimaryAttributes, (float)CurrentLevel);
+	ApplyEffectToSelf(DefaultSecondaryAttributes, (float)CurrentLevel);
+	ApplyEffectToSelf(DefaultVitalAttributes, (float)CurrentLevel);
 }

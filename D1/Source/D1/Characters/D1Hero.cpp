@@ -42,6 +42,12 @@ void AD1Hero::LoadProgress()
 {
 }
 
+int32 AD1Hero::GetLevel() const
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	return D1PS->GetPlayerLevel();
+}
+
 void AD1Hero::InitAbilityActorInfo()
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
