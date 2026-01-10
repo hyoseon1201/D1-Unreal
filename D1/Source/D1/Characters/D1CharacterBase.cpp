@@ -4,6 +4,7 @@
 #include "Characters/D1CharacterBase.h"
 
 #include "AbilitySystemComponent.h"
+#include <AbilitySystem/D1AttributeSet.h>
 
 AD1CharacterBase::AD1CharacterBase()
 {
@@ -46,7 +47,6 @@ void AD1CharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEf
 void AD1CharacterBase::InitializeDefaultAttributes() const
 {
 	int32 CurrentLevel = GetLevel();
-
 	ApplyEffectToSelf(DefaultPrimaryAttributes, (float)CurrentLevel);
 	ApplyEffectToSelf(DefaultSecondaryAttributes, (float)CurrentLevel);
 	ApplyEffectToSelf(DefaultVitalAttributes, (float)CurrentLevel);

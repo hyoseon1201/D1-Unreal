@@ -7,6 +7,8 @@
 #include "Player/D1PlayerState.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
+#include "UI/HUD/D1HUD.h"
+#include "Player/D1PlayerController.h"
 
 AD1Hero::AD1Hero()
 {
@@ -57,4 +59,12 @@ void AD1Hero::InitAbilityActorInfo()
 
 	AbilitySystemComponent = D1PS->GetAbilitySystemComponent();
 	AttributeSet = D1PS->GetAttributeSet();
+
+	if (AD1PlayerController* D1PlayerController = Cast<AD1PlayerController>(GetController()))
+	{
+		if (AD1HUD* D1HUD = Cast<AD1HUD>(D1PlayerController->GetHUD()))
+		{
+			D1HUD->InitOverlay(D1PlayerController, D1PS, AbilitySystemComponent, AttributeSet);
+		}
+	}
 }
