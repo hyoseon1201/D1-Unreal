@@ -5,6 +5,7 @@
 
 #include "UI/Widget/D1UserWidget.h"
 #include "UI/WidgetController/D1OverlayWidgetController.h"
+#include "UI/WidgetController/D1AttributeMenuWidgetController.h"
 #include "Blueprint/UserWidget.h"
 
 UD1OverlayWidgetController* AD1HUD::GetOverlayWidgetController(const FWidgetControllerParams& WCParams)
@@ -16,6 +17,17 @@ UD1OverlayWidgetController* AD1HUD::GetOverlayWidgetController(const FWidgetCont
 		OverlayWidgetController->BindCallbacksToDependencies();
 	}
 	return OverlayWidgetController;
+}
+
+UD1AttributeMenuWidgetController* AD1HUD::GetAttributeMenuWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (AttributeMenuWidgetController == nullptr)
+	{
+		AttributeMenuWidgetController = NewObject<UD1AttributeMenuWidgetController>(this, AttributeMenuWidgetControllerClass);
+		AttributeMenuWidgetController->SetWidgetControllerParams(WCParams);
+		AttributeMenuWidgetController->BindCallbacksToDependencies();
+	}
+	return AttributeMenuWidgetController;
 }
 
 void AD1HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS)

@@ -8,6 +8,7 @@
 
 class UD1UserWidget;
 class UD1OverlayWidgetController;
+class UD1AttributeMenuWidgetController;
 class UAbilitySystemComponent;
 class UAttributeSet;
 struct FWidgetControllerParams;
@@ -23,6 +24,7 @@ class D1_API AD1HUD : public AHUD
 public:
 
 	UD1OverlayWidgetController* GetOverlayWidgetController(const FWidgetControllerParams& WCParams);
+	UD1AttributeMenuWidgetController* GetAttributeMenuWidgetController(const FWidgetControllerParams& WCParams);
 
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
@@ -30,12 +32,18 @@ private:
 	UPROPERTY()
 	TObjectPtr<UD1UserWidget> OverlayWidget;
 
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UD1UserWidget> OverlayWidgetClass;
+
 	UPROPERTY()
 	TObjectPtr<UD1OverlayWidgetController> OverlayWidgetController;
 
 	UPROPERTY(EditAnywhere)
-	TSubclassOf<UD1UserWidget> OverlayWidgetClass;
+	TSubclassOf<UD1OverlayWidgetController> OverlayWidgetControllerClass;
+
+	UPROPERTY()
+	TObjectPtr<UD1AttributeMenuWidgetController> AttributeMenuWidgetController;
 
 	UPROPERTY(EditAnywhere)
-	TSubclassOf<UD1OverlayWidgetController> OverlayWidgetControllerClass;
+	TSubclassOf<UD1AttributeMenuWidgetController> AttributeMenuWidgetControllerClass;
 };

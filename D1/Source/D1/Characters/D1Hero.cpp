@@ -56,7 +56,7 @@ void AD1Hero::InitAbilityActorInfo()
 	check(D1PS);
 
 	D1PS->GetAbilitySystemComponent()->InitAbilityActorInfo(D1PS, this);
-
+	Cast<UD1AbilitySystemComponent>(D1PS->GetAbilitySystemComponent())->AbilityActorInfoSet();
 	AbilitySystemComponent = D1PS->GetAbilitySystemComponent();
 	AttributeSet = D1PS->GetAttributeSet();
 

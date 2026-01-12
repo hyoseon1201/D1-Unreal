@@ -1,4 +1,6 @@
+
 #include "UI/WidgetController/D1OverlayWidgetController.h"
+
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystemComponent.h"
 
@@ -16,7 +18,6 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 {
 	const UD1AttributeSet* D1AS = CastChecked<UD1AttributeSet>(AttributeSet);
 
-	// 1. Health 변경 감지
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetHealthAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
@@ -24,7 +25,6 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 		}
 	);
 
-	// 2. MaxHealth 변경 감지
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetMaxHealthAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
@@ -32,7 +32,6 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 		}
 	);
 
-	// 3. Mana 변경 감지
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetManaAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
@@ -40,7 +39,6 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 		}
 	);
 
-	// 4. MaxMana 변경 감지
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetMaxManaAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
