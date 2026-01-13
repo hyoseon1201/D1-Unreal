@@ -6,6 +6,7 @@
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
 #include "Interaction/CombatInterface.h"
+#include "Abilities/GameplayAbility.h"
 #include "D1CharacterBase.generated.h"
 
 class UAbilitySystemComponent;
@@ -58,5 +59,5 @@ protected:
 private:
 
 	UPROPERTY(EditAnywhere, Category = "Abilities")
-	TArray <TSubclassOf<UGameplayAbility>> StartupAbilities;
+	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 };

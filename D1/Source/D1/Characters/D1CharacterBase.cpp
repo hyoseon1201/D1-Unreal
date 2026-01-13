@@ -4,7 +4,8 @@
 #include "Characters/D1CharacterBase.h"
 
 #include "AbilitySystemComponent.h"
-#include <AbilitySystem/D1AttributeSet.h>
+#include "AbilitySystem/D1AttributeSet.h"
+#include "AbilitySystem/D1AbilitySystemComponent.h"
 
 AD1CharacterBase::AD1CharacterBase()
 {
@@ -54,4 +55,11 @@ void AD1CharacterBase::InitializeDefaultAttributes() const
 
 void AD1CharacterBase::AddCharacterAbilities()
 {
+	UD1AbilitySystemComponent* D1ASC = CastChecked<UD1AbilitySystemComponent>(AbilitySystemComponent);
+	if (!HasAuthority())
+	{
+		return;
+	}
+
+	D1ASC->AddCharacterAbilities(StartupAbilities);
 }

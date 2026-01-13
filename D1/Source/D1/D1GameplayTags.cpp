@@ -29,4 +29,12 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Attributes_Secondary_MaxMana = Manager.AddNativeGameplayTag(FName("Attributes.Secondary.MaxMana"), FString("Maximum amount of Mana obtainable"));
 	GameplayTags.Attributes_Secondary_HealthRegeneration = Manager.AddNativeGameplayTag(FName("Attributes.Secondary.HealthRegeneration"), FString("Amount of Health regenerated every 1 second"));
 	GameplayTags.Attributes_Secondary_ManaRegeneration = Manager.AddNativeGameplayTag(FName("Attributes.Secondary.ManaRegeneration"), FString("Amount of Mana regenerated every 1 second"));
+
+	/* Input Tags */
+	GameplayTags.InputTag_LMB = Manager.AddNativeGameplayTag(FName("InputTag.LMB"), FString("Input Tag for Left Mouse Button"));
+	GameplayTags.InputTag_RMB = Manager.AddNativeGameplayTag(FName("InputTag.RMB"), FString("Input Tag for Right Mouse Button"));
+	GameplayTags.InputTag_1 = Manager.AddNativeGameplayTag(FName("InputTag.1"), FString("Input Tag for 1 Key"));
+	GameplayTags.InputTag_2 = Manager.AddNativeGameplayTag(FName("InputTag.2"), FString("Input Tag for 2 Key"));
+	GameplayTags.InputTag_3 = Manager.AddNativeGameplayTag(FName("InputTag.3"), FString("Input Tag for 3 Key"));
+	GameplayTags.InputTag_4 = Manager.AddNativeGameplayTag(FName("InputTag.4"), FString("Input Tag for 4 Key"));
 }

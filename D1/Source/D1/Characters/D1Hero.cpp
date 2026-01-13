@@ -28,8 +28,8 @@ void AD1Hero::PossessedBy(AController* NewController)
 
 	// Init ability actor info for the Server
 	InitAbilityActorInfo();
-
 	InitializeDefaultAttributes();
+	AddCharacterAbilities();
 }
 
 void AD1Hero::OnRep_PlayerState()
@@ -38,10 +38,6 @@ void AD1Hero::OnRep_PlayerState()
 
 	// Init ability actor info for the Client
 	InitAbilityActorInfo();
-}
-
-void AD1Hero::LoadProgress()
-{
 }
 
 int32 AD1Hero::GetLevel() const

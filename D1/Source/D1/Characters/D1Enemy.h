@@ -4,13 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "Characters/D1CharacterBase.h"
+#include "Interaction/EnemyInterface.h"
+#include "Interaction/HighlightInterface.h"
 #include "D1Enemy.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class D1_API AD1Enemy : public AD1CharacterBase
+class D1_API AD1Enemy : public AD1CharacterBase, public IEnemyInterface, public IHighlightInterface
 {
 	GENERATED_BODY()
 	
@@ -19,8 +21,19 @@ public:
 
 	virtual void PossessedBy(AController* NewController) override;
 
-	// combat interface
+	/* Combat Interface */
 	virtual int32 GetLevel() const override;
+
+	/* Enemy Interface */
+	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
+	virtual AActor* GetCombatTarget_Implementation() const override;
+
+	/* Highlight Interface */
+	virtual void HighlightActor_Implementation() override;
+
+	virtual void UnHighlightActor_Implementation() override;
+
+	virtual void SetMoveToLocation_Implementation(FVector& OutDestination) override;
 
 protected:
 	virtual void BeginPlay() override;

@@ -37,6 +37,31 @@ int32 AD1Enemy::GetLevel() const
 	return Level;
 }
 
+void AD1Enemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
+{
+}
+
+AActor* AD1Enemy::GetCombatTarget_Implementation() const
+{
+	return nullptr;
+}
+
+void AD1Enemy::HighlightActor_Implementation()
+{
+	GetMesh()->SetRenderCustomDepth(true);
+	Weapon->SetRenderCustomDepth(true);
+}
+
+void AD1Enemy::UnHighlightActor_Implementation()
+{
+	GetMesh()->SetRenderCustomDepth(false);
+	Weapon->SetRenderCustomDepth(false);
+}
+
+void AD1Enemy::SetMoveToLocation_Implementation(FVector& OutDestination)
+{
+}
+
 void AD1Enemy::BeginPlay()
 {
 	Super::BeginPlay();
