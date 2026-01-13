@@ -1,11 +1,44 @@
+
 #include "AbilitySystem/D1AttributeSet.h"
+
 #include "Net/UnrealNetwork.h"
 #include "GameplayEffectExtension.h"
 #include "GameFramework/Character.h"
 #include "GameplayEffectAggregator.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "D1GameplayTags.h"
 
-UD1AttributeSet::UD1AttributeSet() {}
+UD1AttributeSet::UD1AttributeSet() 
+{
+	const FD1GameplayTags& Tags = FD1GameplayTags::Get();
+
+	/*
+	 * Vital Attributes
+	 */
+	TagsToAttributes.Add(Tags.Attributes_Vital_Health, GetHealthAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Vital_Mana, GetManaAttribute);
+
+	/*
+	 * Primary Attributes
+	 */
+	TagsToAttributes.Add(Tags.Attributes_Primary_Strength, GetStrengthAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Primary_Intelligence, GetIntelligenceAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Primary_Dexterity, GetDexterityAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Primary_Luck, GetLuckAttribute);
+
+	/*
+	 * Secondary Attributes
+	 */
+	TagsToAttributes.Add(Tags.Attributes_Secondary_AttackPower, GetAttackPowerAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_Armor, GetArmorAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_ArmorPenetration, GetArmorPenetrationAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_CriticalHitChance, GetCriticalHitChanceAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_CriticalHitDamage, GetCriticalHitDamageAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_MaxHealth, GetMaxHealthAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_MaxMana, GetMaxManaAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_HealthRegeneration, GetHealthRegenerationAttribute);
+	TagsToAttributes.Add(Tags.Attributes_Secondary_ManaRegeneration, GetManaRegenerationAttribute);
+}
 
 void UD1AttributeSet::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
 {

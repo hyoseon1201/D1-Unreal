@@ -51,3 +51,7 @@ void AD1CharacterBase::InitializeDefaultAttributes() const
 	ApplyEffectToSelf(DefaultSecondaryAttributes, (float)CurrentLevel);
 	ApplyEffectToSelf(DefaultVitalAttributes, (float)CurrentLevel);
 }
+
+void AD1CharacterBase::AddCharacterAbilities()
+{
+}
