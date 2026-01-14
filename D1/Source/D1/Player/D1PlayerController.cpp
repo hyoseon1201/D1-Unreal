@@ -11,6 +11,8 @@
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "D1GameplayTags.h"
 #include "Interaction/HighlightInterface.h"
+#include "NavigationSystem.h"
+#include "NavigationPath.h"
 
 AD1PlayerController::AD1PlayerController()
 {
@@ -23,6 +25,7 @@ void AD1PlayerController::PlayerTick(float DeltaTime)
 {
 	Super::PlayerTick(DeltaTime);
 	CursorTrace();
+	AutoRun();
 }
 
 void AD1PlayerController::BeginPlay()
@@ -82,8 +85,43 @@ void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
 void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-	if (GetASC() == nullptr) return;
-	GetASC()->AbilityInputTagReleased(InputTag);
+	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_LMB))
+	{
+		if (GetASC() == nullptr)
+		{
+			GetASC()->AbilityInputTagReleased(InputTag);
+		}
+		return;
+	}
+
+	if (bTargeting)
+	{
+		if (GetASC() == nullptr)
+		{
+			GetASC()->AbilityInputTagReleased(InputTag);
+		}
+	}
+	else
+	{
+		APawn* ControlledPawn = GetPawn();
+		if (FollowTime <= ShortPressThreshold && ControlledPawn)
+		{
+			if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
+			{
+				Spline->ClearSplinePoints();
+				for (const FVector& PointLoc : NavPath->PathPoints)
+				{
+					Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+					DrawDebugSphere(GetWorld(), PointLoc, 8.f, 8, FColor::Green, false, 5.f);
+				}
+
+				bAutoRunning = true;
+			}
+		}
+
+		FollowTime = 0.f;
+		bTargeting = false;
+	}
 }
 
 void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
@@ -167,5 +205,22 @@ void AD1PlayerController::UnHighlightActor(AActor* InActor)
 	if (IsValid(InActor) && InActor->Implements<UHighlightInterface>())
 	{
 		IHighlightInterface::Execute_UnHighlightActor(InActor);
+	}
+}
+
+void AD1PlayerController::AutoRun()
+{
+	if (!bAutoRunning) return;
+	if (APawn* ControlledPawn = GetPawn())
+	{
+		const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);
+		const FVector Direction = Spline->FindDirectionClosestToWorldLocation(LocationOnSpline, ESplineCoordinateSpace::World);
+		ControlledPawn->AddMovementInput(Direction);
+
+		const float DistanceToDestination = (LocationOnSpline - CachedDestination).Length();
+		if (DistanceToDestination <= AutoRunAcceptanceRadius)
+		{
+			bAutoRunning = false;
+		}
 	}
 }

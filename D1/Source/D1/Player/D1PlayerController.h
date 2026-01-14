@@ -59,6 +59,8 @@ private:
 	static void HighlightActor(AActor* InActor);
 	static void UnHighlightActor(AActor* InActor);
 
+	void AutoRun();
+
 	FVector CachedDestination = FVector::ZeroVector;
 	float FollowTime = 0.f;
 	float ShortPressThreshold = 0.5f;
