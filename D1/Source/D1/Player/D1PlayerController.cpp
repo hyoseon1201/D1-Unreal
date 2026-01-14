@@ -73,17 +73,53 @@ void AD1PlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-	GEngine->AddOnScreenDebugMessage(1, 3.f, FColor::Red, *InputTag.ToString());
+	if (InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_LMB))
+	{
+		bTargeting = ThisActor ? true : false;
+		bAutoRunning = false;
+	}
 }
 
 void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-	GEngine->AddOnScreenDebugMessage(2, 3.f, FColor::Blue, *InputTag.ToString());
+	if (GetASC() == nullptr) return;
+	GetASC()->AbilityInputTagReleased(InputTag);
 }
 
 void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-	GEngine->AddOnScreenDebugMessage(3, 3.f, FColor::Green, *InputTag.ToString());
+	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_LMB))
+	{
+		if (GetASC() == nullptr)
+		{
+			GetASC()->AbilityInputTagHeld(InputTag);
+		}
+		return;
+	}
+
+	if (bTargeting)
+	{
+		if (GetASC() == nullptr)
+		{
+			GetASC()->AbilityInputTagHeld(InputTag);
+		}
+	}
+	else
+	{
+		FollowTime += GetWorld()->GetDeltaSeconds();
+
+		FHitResult Hit;
+		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+		{
+			CachedDestination = Hit.ImpactPoint;
+		}
+
+		if (APawn* ControlledPawn = GetPawn())
+		{
+			const FVector WorldDirection = (CachedDestination - ControlledPawn->GetActorLocation()).GetSafeNormal();
+			ControlledPawn->AddMovementInput(WorldDirection);
+		}
+	}
 }
 
 UD1AbilitySystemComponent* AD1PlayerController::GetASC()
@@ -97,14 +133,11 @@ UD1AbilitySystemComponent* AD1PlayerController::GetASC()
 
 void AD1PlayerController::CursorTrace()
 {
-	// 1. 커서 아래의 히트 결과 가져오기
 	GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
 	if (!CursorHit.bBlockingHit) return;
 
-	// 2. 이전 액터 저장 및 현재 액터 갱신
 	LastActor = ThisActor;
 
-	// 인터페이스를 구현하고 있는지 확인하여 ThisActor 할당
 	if (IsValid(CursorHit.GetActor()) && CursorHit.GetActor()->Implements<UHighlightInterface>())
 	{
 		ThisActor = CursorHit.GetActor();
@@ -114,7 +147,6 @@ void AD1PlayerController::CursorTrace()
 		ThisActor = nullptr;
 	}
 
-	// 3. 상태가 변했을 때만 하이라이트 함수 호출
 	if (LastActor != ThisActor)
 	{
 		UnHighlightActor(LastActor);
