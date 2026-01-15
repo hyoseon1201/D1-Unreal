@@ -4,6 +4,7 @@
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 
 #include "D1GameplayTags.h"
+#include "AbilitySystem/Ability/D1GameplayAbility.h"
 
 void UD1AbilitySystemComponent::AbilityActorInfoSet()
 {
@@ -15,7 +16,11 @@ void UD1AbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<U
 	for (TSubclassOf<UGameplayAbility> AbilityClass : StartupAbilities)
 	{
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
-		GiveAbilityAndActivateOnce(AbilitySpec);
+		if (const UD1GameplayAbility* D1Ability = Cast<UD1GameplayAbility>(AbilitySpec.Ability))
+		{
+			AbilitySpec.DynamicAbilityTags.AddTag(D1Ability->StartupInputTag);
+			GiveAbility(AbilitySpec);
+		}
 	}
 }
 

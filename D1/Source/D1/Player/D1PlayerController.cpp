@@ -80,13 +80,17 @@ void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 		bTargeting = ThisActor ? true : false;
 		bAutoRunning = false;
 	}
+	if (GetASC())
+	{
+		GetASC()->AbilityInputTagPressed(InputTag);
+	}
 }
 
 void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
 	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
-		if (GetASC() == nullptr)
+		if (GetASC())
 		{
 			GetASC()->AbilityInputTagReleased(InputTag);
 		}
@@ -95,7 +99,7 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 	if (bTargeting)
 	{
-		if (GetASC() == nullptr)
+		if (GetASC())
 		{
 			GetASC()->AbilityInputTagReleased(InputTag);
 		}
@@ -126,7 +130,7 @@ void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
 	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
-		if (GetASC() == nullptr)
+		if (GetASC())
 		{
 			GetASC()->AbilityInputTagHeld(InputTag);
 		}
@@ -135,7 +139,7 @@ void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 
 	if (bTargeting)
 	{
-		if (GetASC() == nullptr)
+		if (GetASC())
 		{
 			GetASC()->AbilityInputTagHeld(InputTag);
 		}
