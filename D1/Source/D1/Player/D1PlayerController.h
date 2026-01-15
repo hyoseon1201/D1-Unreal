@@ -56,6 +56,7 @@ private:
 	TObjectPtr<AActor> LastActor;
 	TObjectPtr<AActor> ThisActor;
 	FHitResult CursorHit;
+
 	static void HighlightActor(AActor* InActor);
 	static void UnHighlightActor(AActor* InActor);
 

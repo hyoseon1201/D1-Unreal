@@ -17,7 +17,6 @@
 AD1PlayerController::AD1PlayerController()
 {
 	bReplicates = true;
-
 	Spline = CreateDefaultSubobject<USplineComponent>("Spline");
 }
 
@@ -76,7 +75,7 @@ void AD1PlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-	if (InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_LMB))
+	if (InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
 		bTargeting = ThisActor ? true : false;
 		bAutoRunning = false;
@@ -85,7 +84,7 @@ void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
 void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_LMB))
+	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
 		if (GetASC() == nullptr)
 		{
@@ -112,9 +111,8 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 				for (const FVector& PointLoc : NavPath->PathPoints)
 				{
 					Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
-					DrawDebugSphere(GetWorld(), PointLoc, 8.f, 8, FColor::Green, false, 5.f);
 				}
-
+				CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
 				bAutoRunning = true;
 			}
 		}
@@ -126,7 +124,7 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_LMB))
+	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
 		if (GetASC() == nullptr)
 		{
@@ -146,10 +144,9 @@ void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 	{
 		FollowTime += GetWorld()->GetDeltaSeconds();
 
-		FHitResult Hit;
-		if (GetHitResultUnderCursor(ECC_Visibility, false, Hit))
+		if (CursorHit.bBlockingHit)
 		{
-			CachedDestination = Hit.ImpactPoint;
+			CachedDestination = CursorHit.ImpactPoint;
 		}
 
 		if (APawn* ControlledPawn = GetPawn())
