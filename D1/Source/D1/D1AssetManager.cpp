@@ -4,6 +4,7 @@
 #include "D1AssetManager.h"
 
 #include "D1GameplayTags.h"
+#include "AbilitySystemGlobals.h"
 
 UD1AssetManager& UD1AssetManager::Get()
 {
@@ -18,4 +19,6 @@ void UD1AssetManager::StartInitialLoading()
 	Super::StartInitialLoading();
 
 	FD1GameplayTags::InitializeNativeGameplayTags();
+
+	UAbilitySystemGlobals::Get().InitGlobalData();
 }

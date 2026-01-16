@@ -21,4 +21,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 	TSubclassOf<AD1Projectile> ProjectileClass;
+
+	UFUNCTION(BlueprintCallable, Category = "Projectile")
+	void SpawnProjectile(const FVector& ProjectileTargetLocation);
 };

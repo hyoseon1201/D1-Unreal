@@ -6,10 +6,14 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
+#include "Components/CapsuleComponent.h"
 
 AD1CharacterBase::AD1CharacterBase()
 {
 	PrimaryActorTick.bCanEverTick = false;
+
+	GetCapsuleComponent()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
+	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 
 	Weapon = CreateDefaultSubobject<USkeletalMeshComponent>("Weapon");
 	Weapon->SetupAttachment(GetMesh(), FName("WeaponHandSocket"));

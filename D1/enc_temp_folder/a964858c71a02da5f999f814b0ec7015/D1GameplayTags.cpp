@@ -43,6 +43,4 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 
 	/* Player Block Tags */
 	GameplayTags.Player_Block_InputPressed = Manager.AddNativeGameplayTag(FName("Player.Block.InputPressed"), FString("Block Input Pressed callback for input"));
-	GameplayTags.Player_Block_InputHeld = Manager.AddNativeGameplayTag(FName("Player.Block.Held"), FString("Block Input Held callback for input"));
-	GameplayTags.Player_Block_InputReleased = Manager.AddNativeGameplayTag(FName("Player.Block.Released"), FString("Block Input Released callback for input"));
 }

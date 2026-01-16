@@ -80,11 +80,6 @@ void AD1PlayerController::Move(const FInputActionValue& InputActionValue)
 
 void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 {
-	if (GetASC() && GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputPressed))
-	{
-		return;
-	}
-
 	if (InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
 		bTargeting = ThisActor ? true : false;
@@ -98,11 +93,6 @@ void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 
 void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 {
-	if (GetASC() && GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputReleased))
-	{
-		return;
-	}
-
 	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
 		if (GetASC())
@@ -143,11 +133,6 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 {
-	if (GetASC() && GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputHeld))
-	{
-		return;
-	}
-
 	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
 		if (GetASC())
