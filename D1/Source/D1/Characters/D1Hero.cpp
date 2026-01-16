@@ -40,9 +40,10 @@ void AD1Hero::OnRep_PlayerState()
 	InitAbilityActorInfo();
 }
 
-int32 AD1Hero::GetLevel() const
+int32 AD1Hero::GetPlayerLevel_Implementation()
 {
-	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	const AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
 	return D1PS->GetPlayerLevel();
 }
 

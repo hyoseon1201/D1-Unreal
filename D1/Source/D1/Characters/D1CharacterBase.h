@@ -24,14 +24,17 @@ public:
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
-	// combat interface
-	virtual int32 GetLevel() const override;
+	/** Combat Interface */
+	virtual FVector GetCombatSocketLocation_Implementation() override;
 
 protected:
 	virtual void BeginPlay() override;
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TObjectPtr<USkeletalMeshComponent> Weapon;
+
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName WeaponTipSocketName;
 
 protected:
 	virtual void InitAbilityActorInfo();

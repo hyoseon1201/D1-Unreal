@@ -32,7 +32,7 @@ void AD1Enemy::PossessedBy(AController* NewController)
 	// TODO: AI Controller √ ±‚»≠
 }
 
-int32 AD1Enemy::GetLevel() const
+int32 AD1Enemy::GetPlayerLevel_Implementation()
 {
 	return Level;
 }

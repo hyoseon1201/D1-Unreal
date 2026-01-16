@@ -22,7 +22,7 @@ public:
 	virtual void PossessedBy(AController* NewController) override;
 
 	/* Combat Interface */
-	virtual int32 GetLevel() const override;
+	virtual int32 GetPlayerLevel_Implementation() override;
 
 	/* Enemy Interface */
 	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;

@@ -21,9 +21,10 @@ UAbilitySystemComponent* AD1CharacterBase::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
-int32 AD1CharacterBase::GetLevel() const
+FVector AD1CharacterBase::GetCombatSocketLocation_Implementation()
 {
-	return 1;
+	check(Weapon);
+	return Weapon->GetSocketLocation(WeaponTipSocketName);
 }
 
 void AD1CharacterBase::BeginPlay()
@@ -47,7 +48,13 @@ void AD1CharacterBase::ApplyEffectToSelf(TSubclassOf<UGameplayEffect> GameplayEf
 
 void AD1CharacterBase::InitializeDefaultAttributes() const
 {
-	int32 CurrentLevel = GetLevel();
+	int32 CurrentLevel = 1;
+
+	if (this->Implements<UCombatInterface>())
+	{
+		CurrentLevel = ICombatInterface::Execute_GetPlayerLevel(const_cast<AD1CharacterBase*>(this));
+	}
+
 	ApplyEffectToSelf(DefaultPrimaryAttributes, (float)CurrentLevel);
 	ApplyEffectToSelf(DefaultSecondaryAttributes, (float)CurrentLevel);
 	ApplyEffectToSelf(DefaultVitalAttributes, (float)CurrentLevel);
