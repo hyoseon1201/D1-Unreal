@@ -7,6 +7,7 @@
 #include "D1ProjectileSpell.generated.h"
 
 class AD1Projectile;
+class UGameplayEffect;
 
 /**
  * 
@@ -24,4 +25,7 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "Projectile")
 	void SpawnProjectile(const FVector& ProjectileTargetLocation);
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
 };

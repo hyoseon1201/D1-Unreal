@@ -6,7 +6,10 @@
 #include "Characters/D1CharacterBase.h"
 #include "Interaction/EnemyInterface.h"
 #include "Interaction/HighlightInterface.h"
+#include "UI/WidgetController/D1OverlayWidgetController.h"
 #include "D1Enemy.generated.h"
+
+class UWidgetComponent;
 
 /**
  * 
@@ -35,10 +38,19 @@ public:
 
 	virtual void SetMoveToLocation_Implementation(FVector& OutDestination) override;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnAttributeChangedSignature OnHealthChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FOnAttributeChangedSignature OnMaxHealthChanged;
+
 protected:
 	virtual void BeginPlay() override;
 	virtual void InitAbilityActorInfo() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Class Defaults")
 	int32 Level = 1;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UWidgetComponent> HealthBar;
 };

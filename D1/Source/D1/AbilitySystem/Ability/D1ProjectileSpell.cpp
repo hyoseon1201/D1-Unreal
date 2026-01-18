@@ -5,6 +5,8 @@
 
 #include "Actor/D1Projectile.h"
 #include "Interaction/CombatInterface.h"
+#include "AbilitySystemBlueprintLibrary.h"
+#include "AbilitySystemComponent.h"
 
 void UD1ProjectileSpell::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -20,11 +22,16 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 	if (AvatarActor && AvatarActor->Implements<UCombatInterface>())
 	{
 		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor);
+
 		FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
 		Rotation.Pitch = 0.f;
 
+		const float SpawnDistanceOffset = 150.f;
+		const FVector ForwardDirection = Rotation.Vector();
+		const FVector SpawnLocation = SocketLocation + (ForwardDirection * SpawnDistanceOffset);
+
 		FTransform SpawnTransform;
-		SpawnTransform.SetLocation(SocketLocation);
+		SpawnTransform.SetLocation(SpawnLocation);
 		SpawnTransform.SetRotation(Rotation.Quaternion());
 
 		AD1Projectile* Projectile = GetWorld()->SpawnActorDeferred<AD1Projectile>(
@@ -34,7 +41,9 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 			Cast<APawn>(GetOwningActorFromActorInfo()),
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
-		//TODO: Give the Projectile a Gameplay Effect Spec for causing Damage.
+		const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
+		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), SourceASC->MakeEffectContext());
+		Projectile->DamageEffectSpecHandle = SpecHandle;
 
 		Projectile->FinishSpawning(SpawnTransform);
 	}
