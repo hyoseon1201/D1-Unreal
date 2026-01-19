@@ -11,12 +11,6 @@ class UGameplayEffect;
 UENUM(BlueprintType)
 enum class ECharacterClass : uint8
 {
-	// --- Player Classes ---
-	Elementalist,
-	Warrior,
-	Ranger,
-
-	// --- Enemy Classes ---
 	Enemy_Goblin_Melee,      // 근거리 고블린
 	Enemy_Goblin_Ranger,     // 원거리 고블린
 	Enemy_Dragon			 // 보스
@@ -49,5 +43,6 @@ public:
 	UPROPERTY(EditDefaultsOnly, Category = "Common Class Defaults")
 	TSubclassOf<UGameplayEffect> VitalAttributes;
 
+	FCharacterClassDefaultInfo GetClassDefaultInfo(ECharacterClass CharacterClass);
 };
 

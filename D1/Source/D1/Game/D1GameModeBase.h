@@ -6,6 +6,8 @@
 #include "GameFramework/GameModeBase.h"
 #include "D1GameModeBase.generated.h"
 
+class UD1CharacterClassInfo;
+
 /**
  * 
  */
@@ -14,4 +16,8 @@ class D1_API AD1GameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
 	
+public:
+
+	UPROPERTY(EditDefaultsOnly, Category = "Characer Class Defaults")
+	TObjectPtr<UD1CharacterClassInfo> CharacterClassInfo;
 };

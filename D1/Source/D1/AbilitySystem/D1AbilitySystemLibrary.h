@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Data/D1CharacterClassInfo.h"
 #include "D1AbilitySystemLibrary.generated.h"
 
 class UD1OverlayWidgetController;
@@ -23,4 +24,7 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController")
 	static UD1AttributeMenuWidgetController* GetAttributeMenuWidgetController(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")
+	static void InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC);
 };

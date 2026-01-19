@@ -9,6 +9,7 @@
 #include "AbilitySystem/D1AttributeSet.h"
 #include "Components/WidgetComponent.h"
 #include "UI/Widget/D1UserWidget.h"
+#include "AbilitySystem/D1AbilitySystemLibrary.h"
 
 AD1Enemy::AD1Enemy()
 {
@@ -114,4 +115,9 @@ void AD1Enemy::InitAbilityActorInfo()
 	{
 		InitializeDefaultAttributes();
 	}
+}
+
+void AD1Enemy::InitializeDefaultAttributes() const
+{
+	UD1AbilitySystemLibrary::InitializeDefaultAttributes(this, CharacterClass, Level, AbilitySystemComponent);
 }
