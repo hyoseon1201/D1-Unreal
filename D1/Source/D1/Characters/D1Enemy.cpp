@@ -49,6 +49,12 @@ int32 AD1Enemy::GetPlayerLevel_Implementation()
 	return Level;
 }
 
+void AD1Enemy::Die()
+{
+	SetLifeSpan(LifeSpan);
+	Super::Die();
+}
+
 void AD1Enemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
 {
 }
@@ -77,6 +83,7 @@ void AD1Enemy::SetMoveToLocation_Implementation(FVector& OutDestination)
 void AD1Enemy::BeginPlay()
 {
 	Super::BeginPlay();
+	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 	InitAbilityActorInfo();
 
 	if (UD1UserWidget* D1UserWidget = Cast<UD1UserWidget>(HealthBar->GetUserWidgetObject()))

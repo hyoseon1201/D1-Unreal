@@ -12,6 +12,7 @@ class UInputAction;
 class UD1InputConfig;
 class USplineComponent;
 class UD1AbilitySystemComponent;
+class UD1DamageTextComponent;
 struct FInputActionValue;
 
 /**
@@ -25,6 +26,9 @@ class D1_API AD1PlayerController : public APlayerController
 public:
 	AD1PlayerController();
 	virtual void PlayerTick(float DeltaTime) override;
+	
+	UFUNCTION(Client, Reliable)
+	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter);
 
 protected:
 	virtual void BeginPlay() override;
@@ -73,4 +77,7 @@ private:
 
 	UPROPERTY(VisibleAnywhere)
 	TObjectPtr< USplineComponent> Spline;
+
+	UPROPERTY(EditDefaultsOnly)
+	TSubclassOf<UD1DamageTextComponent> DamageTextComponentClass;
 };

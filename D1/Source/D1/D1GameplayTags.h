@@ -47,6 +47,8 @@ public:
 	FGameplayTag Player_Block_InputReleased;
 	FGameplayTag Player_Block_InputHeld;
 
+	FGameplayTag Damage;
+
 private:
 	static FD1GameplayTags GameplayTags;
 };
