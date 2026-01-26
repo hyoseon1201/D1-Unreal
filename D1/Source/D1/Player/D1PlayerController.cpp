@@ -29,15 +29,15 @@ void AD1PlayerController::PlayerTick(float DeltaTime)
 	AutoRun();
 }
 
-void AD1PlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter)
+void AD1PlayerController::ShowDamageNumber_Implementation(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit)
 {
-	if (IsValid(TargetCharacter) && DamageTextComponentClass)
+	if (IsValid(TargetCharacter) && DamageTextComponentClass && IsLocalController())
 	{
 		UD1DamageTextComponent* DamageText = NewObject<UD1DamageTextComponent>(TargetCharacter, DamageTextComponentClass);
 		DamageText->RegisterComponent();
 		DamageText->AttachToComponent(TargetCharacter->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
 		DamageText->DetachFromComponent(FDetachmentTransformRules::KeepWorldTransform);
-		DamageText->SetDamageText(DamageAmount);
+		DamageText->SetDamageText(DamageAmount, bCriticalHit);
 	}
 }
 

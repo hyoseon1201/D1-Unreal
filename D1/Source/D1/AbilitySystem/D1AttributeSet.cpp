@@ -10,6 +10,7 @@
 #include "Interaction/CombatInterface.h"
 #include "Kismet/GameplayStatics.h"
 #include "Player/D1PlayerController.h"
+#include "D1AbilitySystemLibrary.h"
 
 UD1AttributeSet::UD1AttributeSet() 
 {
@@ -112,8 +113,8 @@ void UD1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 					CombatInterface->Die();
 				}
 			}
-			
-			ShowFloatingText(Props, LocalIncomingDamage);
+			const bool bCriticalHit = UD1AbilitySystemLibrary::IsCriticalHit(Props.EffectContextHandle);
+			ShowFloatingText(Props, LocalIncomingDamage, bCriticalHit);
 		}
 	}
 }
@@ -166,13 +167,13 @@ void UD1AttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& 
 	}
 }
 
-void UD1AttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage) const
+void UD1AttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage, bool bCriticalHit) const
 {
 	if (Props.SourceCharacter != Props.TargetCharacter)
 	{
-		if (AD1PlayerController* PC = Cast<AD1PlayerController>(UGameplayStatics::GetPlayerController(Props.SourceCharacter, 0)))
+		if (AD1PlayerController* PC = Cast<AD1PlayerController>(Props.SourceCharacter->Controller))
 		{
-			PC->ShowDamageNumber(Damage, Props.TargetCharacter);
+			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
 		}
 	}
 }

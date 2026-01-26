@@ -16,5 +16,5 @@ class D1_API UD1DamageTextComponent : public UWidgetComponent
 	
 public:
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void SetDamageText(float Damage);
+	void SetDamageText(float Damage, bool bCriticalHit);
 };

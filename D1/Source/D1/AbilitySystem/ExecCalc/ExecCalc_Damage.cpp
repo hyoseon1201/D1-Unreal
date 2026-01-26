@@ -5,6 +5,7 @@
 #include "AbilitySystem/D1AbilitySystemLibrary.h"
 #include "Interaction/CombatInterface.h"
 #include "D1GameplayTags.h"
+#include <D1AbilityTypes.h>
 
 struct D1DamageStatics
 {
@@ -108,6 +109,11 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		// CritDamage가 150이라면 1.5배 데미지
 		FinalDamage *= (CritDamage / 100.f);
 	}
+
+	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
+	FGameplayEffectContext* Context = EffectContextHandle.Get();
+	FD1GameplayEffectContext* D1Context = static_cast<FD1GameplayEffectContext*>(Context);
+	UD1AbilitySystemLibrary::SetIsCriticalHit(EffectContextHandle, bIsCritical);
 
 	// --- 5. 결과 출력 및 로그 ---
 	const FGameplayModifierEvaluatedData EvaluatedData(UD1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, FinalDamage);

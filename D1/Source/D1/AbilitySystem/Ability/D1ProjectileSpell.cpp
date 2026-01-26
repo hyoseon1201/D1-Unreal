@@ -25,7 +25,6 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor);
 
 		FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
-		Rotation.Pitch = 0.f;
 
 		const float SpawnDistanceOffset = 150.f;
 		const FVector ForwardDirection = Rotation.Vector();
@@ -43,6 +42,15 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 			ESpawnActorCollisionHandlingMethod::AlwaysSpawn);
 
 		const UAbilitySystemComponent* SourceASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(GetAvatarActorFromActorInfo());
+		FGameplayEffectContextHandle EffectContextHandle = SourceASC->MakeEffectContext();
+		EffectContextHandle.SetAbility(this);
+		EffectContextHandle.AddSourceObject(Projectile);
+		TArray<TWeakObjectPtr<AActor>> Actors;
+		Actors.Add(Projectile);
+		EffectContextHandle.AddActors(Actors);
+		FHitResult HitResult;
+		EffectContextHandle.AddHitResult(HitResult);
+
 		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), SourceASC->MakeEffectContext());
 
 		FD1GameplayTags GameplayTags = FD1GameplayTags::Get();

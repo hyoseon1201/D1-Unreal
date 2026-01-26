@@ -86,6 +86,8 @@ void AD1Enemy::BeginPlay()
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 	InitAbilityActorInfo();
 
+	// TODO: Give Startup Abilities
+
 	if (UD1UserWidget* D1UserWidget = Cast<UD1UserWidget>(HealthBar->GetUserWidgetObject()))
 	{
 		D1UserWidget->SetWidgetController(this);

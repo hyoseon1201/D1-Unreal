@@ -9,6 +9,7 @@
 #include "Player/D1PlayerState.h"
 #include "Game/D1GameModeBase.h"
 #include "Interaction/CombatInterface.h"
+#include "D1AbilityTypes.h"
 
 UD1OverlayWidgetController* UD1AbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
 {
@@ -85,4 +86,21 @@ UD1CharacterClassInfo* UD1AbilitySystemLibrary::GetCharacterClassInfo(const UObj
 	AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
 	if (D1GameMode == nullptr) return nullptr;
 	return D1GameMode->CharacterClassInfo;
+}
+
+bool UD1AbilitySystemLibrary::IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle)
+{
+	if (const FD1GameplayEffectContext* D1EffectContext = static_cast<const FD1GameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		return D1EffectContext->IsCriticalHit();
+	}
+	return false;
+}
+
+void UD1AbilitySystemLibrary::SetIsCriticalHit(UPARAM(ref)FGameplayEffectContextHandle& EffectContextHandle, bool bInIsCriticalHit)
+{
+	if (FD1GameplayEffectContext* D1EffectContext = static_cast<FD1GameplayEffectContext*>(EffectContextHandle.Get()))
+	{
+		D1EffectContext->SetIsCriticalHit(bInIsCriticalHit);
+	}
 }
