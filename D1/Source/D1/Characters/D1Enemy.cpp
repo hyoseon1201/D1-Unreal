@@ -10,6 +10,9 @@
 #include "Components/WidgetComponent.h"
 #include "UI/Widget/D1UserWidget.h"
 #include "AbilitySystem/D1AbilitySystemLibrary.h"
+#include "AI/D1AIController.h"
+#include "BehaviorTree/BehaviorTree.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 AD1Enemy::AD1Enemy()
 {
@@ -41,7 +44,9 @@ void AD1Enemy::PossessedBy(AController* NewController)
 
 	if (!HasAuthority()) return;
 
-	// TODO: AI Controller √ ±‚»≠
+	D1AIController = Cast<AD1AIController>(NewController);
+	D1AIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
+	D1AIController->RunBehaviorTree(BehaviorTree);
 }
 
 int32 AD1Enemy::GetPlayerLevel_Implementation()

@@ -11,6 +11,8 @@
 #include "D1Enemy.generated.h"
 
 class UWidgetComponent;
+class UBehaviorTree;
+class AD1AIController;
 
 /**
  * 
@@ -63,4 +65,10 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UWidgetComponent> HealthBar;
+
+	UPROPERTY(EditAnywhere, Category = "AI")
+	TObjectPtr<UBehaviorTree> BehaviorTree;
+
+	UPROPERTY()
+	TObjectPtr<AD1AIController> D1AIController;
 };

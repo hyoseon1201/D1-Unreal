@@ -20,7 +20,8 @@ public class D1 : ModuleRules
             "GameplayTags",
             "GameplayTasks",
             "NavigationSystem",
-			"Niagara"
+			"Niagara",
+            "AIModule"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
