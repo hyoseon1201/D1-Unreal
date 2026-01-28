@@ -42,6 +42,11 @@ void AD1CharacterBase::Die()
 	MulticastHandleDeath();
 }
 
+UAnimMontage* AD1CharacterBase::GetHitReactMontage_Implementation()
+{
+	return HitReactMontage;
+}
+
 void AD1CharacterBase::MulticastHandleDeath_Implementation()
 {
 	Weapon->SetSimulatePhysics(true);

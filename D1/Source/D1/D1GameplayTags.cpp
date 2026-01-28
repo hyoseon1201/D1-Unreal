@@ -47,4 +47,5 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Player_Block_InputReleased = Manager.AddNativeGameplayTag(FName("Player.Block.Released"), FString("Block Input Released callback for input"));
 
 	GameplayTags.Damage = Manager.AddNativeGameplayTag(FName("Damage"), FString("Damage"));
+	GameplayTags.Effects_HitReact = Manager.AddNativeGameplayTag(FName("Effects.HitReact"), FString("HitReact"));
 }

@@ -13,6 +13,7 @@
 #include "AI/D1AIController.h"
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
+#include "D1GameplayTags.h"
 
 AD1Enemy::AD1Enemy()
 {
@@ -47,6 +48,7 @@ void AD1Enemy::PossessedBy(AController* NewController)
 	D1AIController = Cast<AD1AIController>(NewController);
 	D1AIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
 	D1AIController->RunBehaviorTree(BehaviorTree);
+	D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
 }
 
 int32 AD1Enemy::GetPlayerLevel_Implementation()
@@ -85,13 +87,19 @@ void AD1Enemy::SetMoveToLocation_Implementation(FVector& OutDestination)
 {
 }
 
+void AD1Enemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount)
+{
+	bHitReacting = NewCount > 0;
+	GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
+}
+
 void AD1Enemy::BeginPlay()
 {
 	Super::BeginPlay();
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 	InitAbilityActorInfo();
 
-	// TODO: Give Startup Abilities
+	UD1AbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent);
 
 	if (UD1UserWidget* D1UserWidget = Cast<UD1UserWidget>(HealthBar->GetUserWidgetObject()))
 	{
@@ -112,6 +120,11 @@ void AD1Enemy::BeginPlay()
 			{
 				OnMaxHealthChanged.Broadcast(Data.NewValue);
 			}
+		);
+
+		AbilitySystemComponent->RegisterGameplayTagEvent(FD1GameplayTags::Get().Effects_HitReact, EGameplayTagEventType::NewOrRemoved).AddUObject(
+			this,
+			&AD1Enemy::HitReactTagChanged
 		);
 
 		// 시작할때 체력을 채워주는 초기화 코드

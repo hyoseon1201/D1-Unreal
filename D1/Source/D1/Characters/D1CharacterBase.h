@@ -12,6 +12,7 @@
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UGameplayEffect;
+class UAnimMontage;
 
 UCLASS()
 class D1_API AD1CharacterBase : public ACharacter, public IAbilitySystemInterface, public ICombatInterface
@@ -27,6 +28,8 @@ public:
 	/** Combat Interface */
 	virtual FVector GetCombatSocketLocation_Implementation() override;
 	virtual void Die() override;
+
+	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
 
 	UFUNCTION(NetMulticast, Reliable)
 	virtual void MulticastHandleDeath();
@@ -70,4 +73,7 @@ private:
 
 	UPROPERTY(EditAnywhere, Category = "Abilities")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	TObjectPtr<UAnimMontage> HitReactMontage;
 };

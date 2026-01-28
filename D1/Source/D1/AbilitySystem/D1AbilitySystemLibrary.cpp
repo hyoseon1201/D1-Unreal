@@ -68,7 +68,7 @@ void UD1AbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldCo
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 }
 
-void UD1AbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
+void UD1AbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC)
 {
 	AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
 	if (D1GameMode == nullptr) return;

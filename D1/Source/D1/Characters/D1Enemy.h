@@ -43,6 +43,11 @@ public:
 
 	virtual void SetMoveToLocation_Implementation(FVector& OutDestination) override;
 
+	void HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount);
+
+	UPROPERTY(BlueprintReadOnly, Category = "Combat")
+	bool bHitReacting = false;
+
 	UPROPERTY(BlueprintAssignable)
 	FOnAttributeChangedSignature OnHealthChanged;
 

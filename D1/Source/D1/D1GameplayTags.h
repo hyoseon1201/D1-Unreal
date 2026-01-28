@@ -48,6 +48,7 @@ public:
 	FGameplayTag Player_Block_InputHeld;
 
 	FGameplayTag Damage;
+	FGameplayTag Effects_HitReact;
 
 private:
 	static FD1GameplayTags GameplayTags;

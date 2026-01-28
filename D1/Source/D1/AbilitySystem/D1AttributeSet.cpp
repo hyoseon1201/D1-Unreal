@@ -113,6 +113,12 @@ void UD1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 					CombatInterface->Die();
 				}
 			}
+			else
+			{
+				FGameplayTagContainer TagContainer;
+				TagContainer.AddTag(FD1GameplayTags::Get().Effects_HitReact);
+				Props.TargetASC->TryActivateAbilitiesByTag(TagContainer);
+			}
 			const bool bCriticalHit = UD1AbilitySystemLibrary::IsCriticalHit(Props.EffectContextHandle);
 			ShowFloatingText(Props, LocalIncomingDamage, bCriticalHit);
 		}
