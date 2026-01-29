@@ -8,6 +8,7 @@
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "D1GameplayTags.h"
 
 AD1CharacterBase::AD1CharacterBase()
 {
@@ -30,10 +31,18 @@ UAbilitySystemComponent* AD1CharacterBase::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
-FVector AD1CharacterBase::GetCombatSocketLocation_Implementation()
+FVector AD1CharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
 {
-	check(Weapon);
-	return Weapon->GetSocketLocation(WeaponTipSocketName);
+	const FD1GameplayTags& GameplayTags = FD1GameplayTags::Get();
+	if (MontageTag.MatchesTagExact(GameplayTags.CombatSocket_Weapon) && IsValid(Weapon))
+	{
+		return Weapon->GetSocketLocation(WeaponTipSocketName);
+	}
+	if (MontageTag.MatchesTagExact(GameplayTags.CombatSocket_RightHand))
+	{
+		return GetMesh()->GetSocketLocation(RightHandSocketName);
+	}
+	return FVector();
 }
 
 void AD1CharacterBase::Die()

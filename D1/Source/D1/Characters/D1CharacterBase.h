@@ -26,7 +26,7 @@ public:
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
 
 	/** Combat Interface */
-	virtual FVector GetCombatSocketLocation_Implementation() override;
+	virtual FVector GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag) override;
 	virtual void Die() override;
 
 	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
@@ -42,6 +42,9 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	FName WeaponTipSocketName;
+
+	UPROPERTY(EditAnywhere, Category = "Combat")
+	FName RightHandSocketName;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	float BaseWalkSpeed = 600.f;

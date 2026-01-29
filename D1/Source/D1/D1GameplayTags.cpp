@@ -38,6 +38,10 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.InputTag_3 = Manager.AddNativeGameplayTag(FName("InputTag.3"), FString("Input Tag for 3 Key"));
 	GameplayTags.InputTag_4 = Manager.AddNativeGameplayTag(FName("InputTag.4"), FString("Input Tag for 4 Key"));
 
+	/* Combat Sockets */
+	GameplayTags.CombatSocket_Weapon = Manager.AddNativeGameplayTag(FName("CombatSocket.Weapon"), FString("Combat Socket Weapon"));
+	GameplayTags.CombatSocket_RightHand = Manager.AddNativeGameplayTag(FName("CombatSocket.RightHand"), FString("Combat Socket RigntHand"));
+
 	/* Montage Tags */
 	GameplayTags.Event_Montage_GroundSword = Manager.AddNativeGameplayTag(FName("Event.Montage.GroundSword"), FString("GroundSword Montage"));
 

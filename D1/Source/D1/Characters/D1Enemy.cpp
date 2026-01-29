@@ -49,6 +49,9 @@ void AD1Enemy::PossessedBy(AController* NewController)
 	D1AIController->GetBlackboardComponent()->InitializeBlackboard(*BehaviorTree->BlackboardAsset);
 	D1AIController->RunBehaviorTree(BehaviorTree);
 	D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
+
+	// TODO: 나중에 Melee 몬스터 종류 늘어나면 수정해야함
+	D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("RangedAttacker"), CharacterClass != ECharacterClass::Enemy_Goblin_Melee);
 }
 
 int32 AD1Enemy::GetPlayerLevel_Implementation()
@@ -91,6 +94,7 @@ void AD1Enemy::HitReactTagChanged(const FGameplayTag CallbackTag, int32 NewCount
 {
 	bHitReacting = NewCount > 0;
 	GetCharacterMovement()->MaxWalkSpeed = bHitReacting ? 0.f : BaseWalkSpeed;
+	D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
 }
 
 void AD1Enemy::BeginPlay()
