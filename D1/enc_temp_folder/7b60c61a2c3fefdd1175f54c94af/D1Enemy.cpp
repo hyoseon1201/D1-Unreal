@@ -67,12 +67,11 @@ void AD1Enemy::Die()
 
 void AD1Enemy::SetCombatTarget_Implementation(AActor* InCombatTarget)
 {
-	CombatTarget = InCombatTarget;
 }
 
 AActor* AD1Enemy::GetCombatTarget_Implementation() const
 {
-	return CombatTarget;
+	return nullptr;
 }
 
 void AD1Enemy::HighlightActor_Implementation()
