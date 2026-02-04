@@ -12,9 +12,8 @@ class UGameplayAbility;
 UENUM(BlueprintType)
 enum class ECharacterClass : uint8
 {
-	Enemy_Goblin_Melee,      // 근거리 고블린
-	Enemy_Goblin_Ranger,     // 원거리 고블린
-	Enemy_Dragon			 // 보스
+	Enemy_Melee,     // 근접 공격형 (근거리 고블린, 오크 등)
+	Enemy_Ranger,    // 원거리 공격형 (원거리 고블린, 궁수 등)
 };
 
 USTRUCT(BlueprintType)
@@ -24,6 +23,9 @@ struct FCharacterClassDefaultInfo
 
 	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
 	TSubclassOf<UGameplayEffect> PrimaryAttribute;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
+	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
 };
 
 /**

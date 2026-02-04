@@ -54,6 +54,8 @@ public:
 	FGameplayTag Damage;
 	FGameplayTag Effects_HitReact;
 
+	FGameplayTag Abilities_Attack;
+
 private:
 	static FD1GameplayTags GameplayTags;
 };

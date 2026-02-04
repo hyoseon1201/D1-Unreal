@@ -52,4 +52,6 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 
 	GameplayTags.Damage = Manager.AddNativeGameplayTag(FName("Damage"), FString("Damage"));
 	GameplayTags.Effects_HitReact = Manager.AddNativeGameplayTag(FName("Effects.HitReact"), FString("HitReact"));
+
+	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
 }

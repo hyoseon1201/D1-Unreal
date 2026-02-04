@@ -51,7 +51,7 @@ void AD1Enemy::PossessedBy(AController* NewController)
 	D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("HitReacting"), false);
 
 	// TODO: 나중에 Melee 몬스터 종류 늘어나면 수정해야함
-	D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("RangedAttacker"), CharacterClass != ECharacterClass::Enemy_Goblin_Melee);
+	D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("RangedAttacker"), CharacterClass != ECharacterClass::Enemy_Melee);
 }
 
 int32 AD1Enemy::GetPlayerLevel_Implementation()
@@ -103,7 +103,7 @@ void AD1Enemy::BeginPlay()
 	GetCharacterMovement()->MaxWalkSpeed = BaseWalkSpeed;
 	InitAbilityActorInfo();
 
-	UD1AbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent);
+	UD1AbilitySystemLibrary::GiveStartupAbilities(this, AbilitySystemComponent, CharacterClass);
 
 	if (UD1UserWidget* D1UserWidget = Cast<UD1UserWidget>(HealthBar->GetUserWidgetObject()))
 	{
