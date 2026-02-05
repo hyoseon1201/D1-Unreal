@@ -10,6 +10,7 @@
 #include "Game/D1GameModeBase.h"
 #include "Interaction/CombatInterface.h"
 #include "D1AbilityTypes.h"
+#include "Engine/OverlapResult.h"
 
 UD1OverlayWidgetController* UD1AbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
 {
@@ -70,7 +71,6 @@ void UD1AbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldCo
 
 void UD1AbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
 {
-	UE_LOG(LogTemp, Warning, TEXT("Attempting to give abilities for Class Index: %d"), (int32)CharacterClass);
 	UD1CharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
 	if (CharacterClassInfo == nullptr) return;
 
@@ -115,5 +115,24 @@ void UD1AbilitySystemLibrary::SetIsCriticalHit(UPARAM(ref)FGameplayEffectContext
 	if (FD1GameplayEffectContext* D1EffectContext = static_cast<FD1GameplayEffectContext*>(EffectContextHandle.Get()))
 	{
 		D1EffectContext->SetIsCriticalHit(bInIsCriticalHit);
+	}
+}
+
+void UD1AbilitySystemLibrary::GetLivePlayersWithinRadius(const UObject* WorldContextObject, TArray<AActor*>& OutOverlappingActors, const TArray<AActor*>& ActorsToIgnore, float Radius, const FVector& SphereOrigin)
+{
+	FCollisionQueryParams SphereParams;
+	SphereParams.AddIgnoredActors(ActorsToIgnore);
+
+	if (const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+	{
+		TArray<FOverlapResult> Overlaps;
+		World->OverlapMultiByObjectType(Overlaps, SphereOrigin, FQuat::Identity, FCollisionObjectQueryParams(FCollisionObjectQueryParams::InitType::AllDynamicObjects), FCollisionShape::MakeSphere(Radius), SphereParams);
+		for (FOverlapResult& Overlap : Overlaps)
+		{
+			if (Overlap.GetActor()->Implements<UCombatInterface>() && !ICombatInterface::Execute_IsDead(Overlap.GetActor()))
+			{
+				OutOverlappingActors.AddUnique(ICombatInterface::Execute_GetAvatar(Overlap.GetActor()));
+			}
+		}
 	}
 }

@@ -51,6 +51,16 @@ void AD1CharacterBase::Die()
 	MulticastHandleDeath();
 }
 
+bool AD1CharacterBase::IsDead_Implementation() const
+{
+	return bDead;
+}
+
+AActor* AD1CharacterBase::GetAvatar_Implementation()
+{
+	return this;
+}
+
 UAnimMontage* AD1CharacterBase::GetHitReactMontage_Implementation()
 {
 	return HitReactMontage;
@@ -68,6 +78,8 @@ void AD1CharacterBase::MulticastHandleDeath_Implementation()
 	GetMesh()->SetCollisionResponseToChannel(ECC_WorldStatic, ECR_Block);
 
 	GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+	bDead = true;
 }
 
 void AD1CharacterBase::BeginPlay()
