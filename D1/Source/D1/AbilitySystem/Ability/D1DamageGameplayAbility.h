@@ -14,4 +14,15 @@ class D1_API UD1DamageGameplayAbility : public UD1GameplayAbility
 {
 	GENERATED_BODY()
 	
+public:
+	UFUNCTION(BlueprintCallable)
+	void CauseDamage(AActor* TargetActor);
+
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	TSubclassOf<UGameplayEffect> DamageEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Damage")
+	TMap<FGameplayTag, FScalableFloat> DamageTypes;
+
 };

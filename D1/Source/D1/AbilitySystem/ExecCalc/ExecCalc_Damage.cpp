@@ -91,7 +91,22 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	}
 
 	// --- 4. 데미지 및 치명타 계산 ---
-	float Damage = FMath::Max<float>(0.f, Spec.GetSetByCallerMagnitude(FD1GameplayTags::Get().Damage, false, 0.f));
+	float Damage = 0.f;
+
+	for (FGameplayTag DamageTypeTag : FD1GameplayTags::Get().DamageTypes)
+	{
+		// 세 번째 인자로 0.f를 주어 태그가 없을 경우 0을 반환하게 합니다.
+		const float DamageTypeValue = Spec.GetSetByCallerMagnitude(DamageTypeTag, false, 0.f);
+
+		if (DamageTypeValue > 0.f)
+		{
+			UE_LOG(LogTemp, Log, TEXT("Damage Type: %s | Value: %.2f"), *DamageTypeTag.ToString(), DamageTypeValue);
+		}
+
+		Damage += DamageTypeValue;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("Total Raw Damage: %.2f"), Damage);
 
 	// [방어력 계산]
 	const float EffectiveArmorPen = ArmorPenetration / (1.f + (SourceLevel * Pen_Coeff));
@@ -118,15 +133,4 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	// --- 5. 결과 출력 및 로그 ---
 	const FGameplayModifierEvaluatedData EvaluatedData(UD1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, FinalDamage);
 	OutExecutionOutput.AddOutputModifier(EvaluatedData);
-
-	// 상세 로그
-	UE_LOG(LogTemp, Warning, TEXT("==============================================="));
-	UE_LOG(LogTemp, Warning, TEXT("[D1_CALC] %s (Lv.%.f) -> %s (Lv.%.f)"),
-		SourceAvatar ? *SourceAvatar->GetName() : TEXT("None"), SourceLevel,
-		TargetAvatar ? *TargetAvatar->GetName() : TEXT("None"), TargetLevel);
-	UE_LOG(LogTemp, Log, TEXT("  - Raw Armor: %.2f | Pen: %.2f"), Armor, ArmorPenetration);
-	UE_LOG(LogTemp, Log, TEXT("  - Crit Chance: %.1f%% | Crit Multi: %.2fx"), CritChance, CritDamage / 100.f);
-	UE_LOG(LogTemp, Log, TEXT("  - IS CRITICAL: %s"), bIsCritical ? TEXT("TRUE") : TEXT("FALSE"));
-	UE_LOG(LogTemp, Warning, TEXT("  >>> FINAL DAMAGE: %.2f"), FinalDamage);
-	UE_LOG(LogTemp, Warning, TEXT("==============================================="));
 }

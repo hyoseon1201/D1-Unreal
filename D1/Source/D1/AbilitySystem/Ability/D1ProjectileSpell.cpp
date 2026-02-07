@@ -22,13 +22,16 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	if (AvatarActor && AvatarActor->Implements<UCombatInterface>())
 	{
+		FVector AdjustedTarget = ProjectileTargetLocation;
+		AdjustedTarget.Z += 50.f;
+
 		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor, SocketTag);
 
-		FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
+		FRotator Rotation = (AdjustedTarget - (SocketLocation + FVector(0.f, 0.f, 30.f))).Rotation();
 
 		const float SpawnDistanceOffset = 150.f;
 		const FVector ForwardDirection = Rotation.Vector();
-		const FVector SpawnLocation = SocketLocation + (ForwardDirection * SpawnDistanceOffset);
+		const FVector SpawnLocation = SocketLocation + (ForwardDirection * SpawnDistanceOffset) + FVector(0.f, 0.f, 70.f);
 
 		FTransform SpawnTransform;
 		SpawnTransform.SetLocation(SpawnLocation);
@@ -51,14 +54,17 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 		FHitResult HitResult;
 		EffectContextHandle.AddHitResult(HitResult);
 
-		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), SourceASC->MakeEffectContext());
+		const FGameplayEffectSpecHandle SpecHandle = SourceASC->MakeOutgoingSpec(DamageEffectClass, GetAbilityLevel(), EffectContextHandle);
 
 		FD1GameplayTags GameplayTags = FD1GameplayTags::Get();
-		const float ScaledDamage = Damage.GetValueAtLevel(GetAbilityLevel());
 
-		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, GameplayTags.Damage, ScaledDamage);
+		for (auto& Pair : DamageTypes)
+		{
+			const float ScaledDamage = Pair.Value.GetValueAtLevel(GetAbilityLevel());
+			UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(SpecHandle, Pair.Key, ScaledDamage);
+		}
+
 		Projectile->DamageEffectSpecHandle = SpecHandle;
-
 		Projectile->FinishSpawning(SpawnTransform);
 	}
 }

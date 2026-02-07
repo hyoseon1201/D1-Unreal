@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "AbilitySystem/Ability/D1GameplayAbility.h"
+#include "AbilitySystem/Ability/D1DamageGameplayAbility.h"
 #include "D1ProjectileSpell.generated.h"
 
 class AD1Projectile;
@@ -13,7 +13,7 @@ class UGameplayEffect;
  * 
  */
 UCLASS()
-class D1_API UD1ProjectileSpell : public UD1GameplayAbility
+class D1_API UD1ProjectileSpell : public UD1DamageGameplayAbility
 {
 	GENERATED_BODY()
 
@@ -25,7 +25,4 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "Projectile")
 	void SpawnProjectile(const FVector& ProjectileTargetLocation, const FGameplayTag& SocketTag);
-
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TSubclassOf<UGameplayEffect> DamageEffectClass;
 };

@@ -61,6 +61,11 @@ AActor* AD1CharacterBase::GetAvatar_Implementation()
 	return this;
 }
 
+TArray<FTaggedMontage> AD1CharacterBase::GetAttackMontages_Implementation()
+{
+	return AttackMontages;
+}
+
 UAnimMontage* AD1CharacterBase::GetHitReactMontage_Implementation()
 {
 	return HitReactMontage;

@@ -180,6 +180,11 @@ void UD1AttributeSet::ShowFloatingText(const FEffectProperties& Props, float Dam
 		if (AD1PlayerController* PC = Cast<AD1PlayerController>(Props.SourceCharacter->Controller))
 		{
 			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
+			return;
+		}
+		if (AD1PlayerController* PC = Cast<AD1PlayerController>(Props.TargetCharacter->Controller))
+		{
+			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
 		}
 	}
 }

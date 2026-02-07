@@ -44,7 +44,10 @@ public:
 	FGameplayTag CombatSocket_RightHand;
 
 	/* Montage Tags */
-	FGameplayTag Event_Montage_GroundSword;
+	FGameplayTag Montage_GroundSword;
+	FGameplayTag Montage_Attack_Weapon;
+	FGameplayTag Montage_Attack_RightHand;
+	FGameplayTag Montage_Attack_LeftHand;
 
 	/* Player Block Tags */
 	FGameplayTag Player_Block_InputPressed;
@@ -52,9 +55,12 @@ public:
 	FGameplayTag Player_Block_InputHeld;
 
 	FGameplayTag Damage;
-	FGameplayTag Effects_HitReact;
+	FGameplayTag Damage_Physical;
+	TArray<FGameplayTag> DamageTypes;
 
 	FGameplayTag Abilities_Attack;
+
+	FGameplayTag Effects_HitReact;
 
 private:
 	static FD1GameplayTags GameplayTags;

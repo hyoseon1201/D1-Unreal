@@ -43,7 +43,10 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.CombatSocket_RightHand = Manager.AddNativeGameplayTag(FName("CombatSocket.RightHand"), FString("Combat Socket RigntHand"));
 
 	/* Montage Tags */
-	GameplayTags.Event_Montage_GroundSword = Manager.AddNativeGameplayTag(FName("Event.Montage.GroundSword"), FString("GroundSword Montage"));
+	GameplayTags.Montage_GroundSword = Manager.AddNativeGameplayTag(FName("Montage.GroundSword"), FString("GroundSword Montage"));
+	GameplayTags.Montage_Attack_Weapon = Manager.AddNativeGameplayTag(FName("Montage.Attack.Weapon"), FString("Weapon Attack Montage"));
+	GameplayTags.Montage_Attack_RightHand = Manager.AddNativeGameplayTag(FName("Montage.Attack.RightHand"), FString("RightHand Attack Montage"));
+	GameplayTags.Montage_Attack_LeftHand = Manager.AddNativeGameplayTag(FName("Montage.Attack.LeftHand"), FString("LeftHand Attack Montage"));
 
 	/* Player Block Tags */
 	GameplayTags.Player_Block_InputPressed = Manager.AddNativeGameplayTag(FName("Player.Block.InputPressed"), FString("Block Input Pressed callback for input"));
@@ -51,7 +54,11 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Player_Block_InputReleased = Manager.AddNativeGameplayTag(FName("Player.Block.Released"), FString("Block Input Released callback for input"));
 
 	GameplayTags.Damage = Manager.AddNativeGameplayTag(FName("Damage"), FString("Damage"));
-	GameplayTags.Effects_HitReact = Manager.AddNativeGameplayTag(FName("Effects.HitReact"), FString("HitReact"));
+	GameplayTags.Damage_Physical = Manager.AddNativeGameplayTag(FName("Damage.Physical"), FString("Physical Damage"));
+
+	GameplayTags.DamageTypes.Add(GameplayTags.Damage_Physical);
 
 	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
+	GameplayTags.Effects_HitReact = Manager.AddNativeGameplayTag(FName("Effects.HitReact"), FString("HitReact"));
+
 }
