@@ -39,15 +39,16 @@ public:
 	FGameplayTag InputTag_3;
 	FGameplayTag InputTag_4;
 
-	/* Combat Sockets */
-	FGameplayTag CombatSocket_Weapon;
-	FGameplayTag CombatSocket_RightHand;
-
 	/* Montage Tags */
 	FGameplayTag Montage_GroundSword;
 	FGameplayTag Montage_Attack_Weapon;
 	FGameplayTag Montage_Attack_RightHand;
 	FGameplayTag Montage_Attack_LeftHand;
+
+	/* Combat Socket Tags */
+	FGameplayTag CombatSocket_Weapon;
+	FGameplayTag CombatSocket_RightHand;
+	FGameplayTag CombatSocket_LeftHand;
 
 	/* Player Block Tags */
 	FGameplayTag Player_Block_InputPressed;

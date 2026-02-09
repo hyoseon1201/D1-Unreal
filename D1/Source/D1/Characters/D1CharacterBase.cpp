@@ -31,18 +31,30 @@ UAbilitySystemComponent* AD1CharacterBase::GetAbilitySystemComponent() const
 	return AbilitySystemComponent;
 }
 
-FVector AD1CharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& MontageTag)
+FVector AD1CharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& SocketTag)
 {
 	const FD1GameplayTags& GameplayTags = FD1GameplayTags::Get();
-	if (MontageTag.MatchesTagExact(GameplayTags.CombatSocket_Weapon) && IsValid(Weapon))
+	// 1. 무기 끝 소켓 (칼 등)
+	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_Weapon) && IsValid(Weapon))
 	{
 		return Weapon->GetSocketLocation(WeaponTipSocketName);
 	}
-	if (MontageTag.MatchesTagExact(GameplayTags.CombatSocket_RightHand))
+
+	// 2. 오른손 소켓
+	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_RightHand))
 	{
 		return GetMesh()->GetSocketLocation(RightHandSocketName);
 	}
-	return FVector();
+
+	// 3. 왼손 소켓 (필요시 추가)
+	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_LeftHand))
+	{
+		return GetMesh()->GetSocketLocation(LeftHandSocketName);
+	}
+
+	// 기본값으로 메쉬의 위치를 반환하거나 로그를 찍어 문제를 파악합니다.
+	UE_LOG(LogTemp, Error, TEXT("Unknown Socket Tag: %s"), *SocketTag.ToString());
+	return GetMesh()->GetComponentLocation();
 }
 
 void AD1CharacterBase::Die()

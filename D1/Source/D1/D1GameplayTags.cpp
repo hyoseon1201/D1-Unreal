@@ -38,15 +38,16 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.InputTag_3 = Manager.AddNativeGameplayTag(FName("InputTag.3"), FString("Input Tag for 3 Key"));
 	GameplayTags.InputTag_4 = Manager.AddNativeGameplayTag(FName("InputTag.4"), FString("Input Tag for 4 Key"));
 
-	/* Combat Sockets */
-	GameplayTags.CombatSocket_Weapon = Manager.AddNativeGameplayTag(FName("CombatSocket.Weapon"), FString("Combat Socket Weapon"));
-	GameplayTags.CombatSocket_RightHand = Manager.AddNativeGameplayTag(FName("CombatSocket.RightHand"), FString("Combat Socket RigntHand"));
-
 	/* Montage Tags */
 	GameplayTags.Montage_GroundSword = Manager.AddNativeGameplayTag(FName("Montage.GroundSword"), FString("GroundSword Montage"));
 	GameplayTags.Montage_Attack_Weapon = Manager.AddNativeGameplayTag(FName("Montage.Attack.Weapon"), FString("Weapon Attack Montage"));
 	GameplayTags.Montage_Attack_RightHand = Manager.AddNativeGameplayTag(FName("Montage.Attack.RightHand"), FString("RightHand Attack Montage"));
 	GameplayTags.Montage_Attack_LeftHand = Manager.AddNativeGameplayTag(FName("Montage.Attack.LeftHand"), FString("LeftHand Attack Montage"));
+
+	/* Combat Socket Tags */
+	GameplayTags.CombatSocket_Weapon = Manager.AddNativeGameplayTag(FName("CombatSocket.Weapon"), FString("Socket for Weapon"));
+	GameplayTags.CombatSocket_RightHand = Manager.AddNativeGameplayTag(FName("CombatSocket.RightHand"), FString("Socket for Right Hand"));
+	GameplayTags.CombatSocket_LeftHand = Manager.AddNativeGameplayTag(FName("CombatSocket.LeftHand"), FString("Socket for Left Hand"));
 
 	/* Player Block Tags */
 	GameplayTags.Player_Block_InputPressed = Manager.AddNativeGameplayTag(FName("Player.Block.InputPressed"), FString("Block Input Pressed callback for input"));

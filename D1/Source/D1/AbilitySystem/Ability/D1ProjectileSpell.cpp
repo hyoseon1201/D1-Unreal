@@ -22,19 +22,19 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 	AActor* AvatarActor = GetAvatarActorFromActorInfo();
 	if (AvatarActor && AvatarActor->Implements<UCombatInterface>())
 	{
-		FVector AdjustedTarget = ProjectileTargetLocation;
-		AdjustedTarget.Z += 50.f;
-
 		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor, SocketTag);
 
-		FRotator Rotation = (AdjustedTarget - (SocketLocation + FVector(0.f, 0.f, 30.f))).Rotation();
+		// 1. 로그 출력
+		UE_LOG(LogTemp, Warning, TEXT("Avatar Location: %s"), *AvatarActor->GetActorLocation().ToString());
+		UE_LOG(LogTemp, Warning, TEXT("Socket Location: %s"), *SocketLocation.ToString());
 
-		const float SpawnDistanceOffset = 150.f;
-		const FVector ForwardDirection = Rotation.Vector();
-		const FVector SpawnLocation = SocketLocation + (ForwardDirection * SpawnDistanceOffset) + FVector(0.f, 0.f, 70.f);
+		// 2. 비주얼 디버깅 (월드에 빨간 구체 생성)
+		DrawDebugSphere(GetWorld(), SocketLocation, 10.f, 12, FColor::Red, false, 5.f);
+
+		FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
 
 		FTransform SpawnTransform;
-		SpawnTransform.SetLocation(SpawnLocation);
+		SpawnTransform.SetLocation(SocketLocation);
 		SpawnTransform.SetRotation(Rotation.Quaternion());
 
 		AD1Projectile* Projectile = GetWorld()->SpawnActorDeferred<AD1Projectile>(
