@@ -24,13 +24,6 @@ void UD1ProjectileSpell::SpawnProjectile(const FVector& ProjectileTargetLocation
 	{
 		const FVector SocketLocation = ICombatInterface::Execute_GetCombatSocketLocation(AvatarActor, SocketTag);
 
-		// 1. 로그 출력
-		UE_LOG(LogTemp, Warning, TEXT("Avatar Location: %s"), *AvatarActor->GetActorLocation().ToString());
-		UE_LOG(LogTemp, Warning, TEXT("Socket Location: %s"), *SocketLocation.ToString());
-
-		// 2. 비주얼 디버깅 (월드에 빨간 구체 생성)
-		DrawDebugSphere(GetWorld(), SocketLocation, 10.f, 12, FColor::Red, false, 5.f);
-
 		FRotator Rotation = (ProjectileTargetLocation - SocketLocation).Rotation();
 
 		FTransform SpawnTransform;

@@ -62,6 +62,10 @@ int32 AD1Enemy::GetPlayerLevel_Implementation()
 void AD1Enemy::Die()
 {
 	SetLifeSpan(LifeSpan);
+	if (D1AIController)
+	{
+		D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
+	}
 	Super::Die();
 }
 
