@@ -3,6 +3,8 @@
 
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/D1AbilitySystemComponent.h"
+#include "AbilitySystem/Data/D1AbilityInfo.h"
 
 void UD1OverlayWidgetController::BroadcastInitialValues()
 {
@@ -45,4 +47,30 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 			OnMaxManaChanged.Broadcast(Data.NewValue);
 		}
 	);
+
+	if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(AbilitySystemComponent))
+	{
+		if (D1ASC->bStartupAbilitiesGiven)
+		{
+			OnInitializeStartupAbilities(D1ASC);
+		}
+		else
+		{
+			D1ASC->AbilitiesGivenDelegate.AddUObject(this, &UD1OverlayWidgetController::OnInitializeStartupAbilities);
+		}
+	}
+}
+
+void UD1OverlayWidgetController::OnInitializeStartupAbilities(UD1AbilitySystemComponent* D1ASC)
+{
+	if (!D1ASC->bStartupAbilitiesGiven) return;
+
+	FForEachAbility BroadcastDelegate;
+	BroadcastDelegate.BindLambda([this, D1ASC](const FGameplayAbilitySpec& AbilitySpec)
+		{
+			FD1AbilityTagInfo Info = AbilityInfo->FindAbilityTagInforTag(D1ASC->GetAbilityTagFromSpec(AbilitySpec));
+			Info.InputTag = D1ASC->GetInputTagFromSpec(AbilitySpec);
+			AbilityInfoDelegate.Broadcast(Info);
+		});
+	D1ASC->ForEachAbility(BroadcastDelegate);
 }

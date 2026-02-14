@@ -55,11 +55,13 @@ public:
 	FGameplayTag Player_Block_InputReleased;
 	FGameplayTag Player_Block_InputHeld;
 
+	/* Ability Tags */
+	FGameplayTag Abilities_Attack;
+	FGameplayTag Abilities_Physical_GroundSword;
+
 	FGameplayTag Damage;
 	FGameplayTag Damage_Physical;
 	TArray<FGameplayTag> DamageTypes;
-
-	FGameplayTag Abilities_Attack;
 
 	FGameplayTag Effects_HitReact;
 
