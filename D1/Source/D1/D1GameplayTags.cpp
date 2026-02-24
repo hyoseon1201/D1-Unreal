@@ -33,6 +33,10 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	/* Input Tags */
 	GameplayTags.InputTag_LMB = Manager.AddNativeGameplayTag(FName("InputTag.LMB"), FString("Input Tag for Left Mouse Button"));
 	GameplayTags.InputTag_RMB = Manager.AddNativeGameplayTag(FName("InputTag.RMB"), FString("Input Tag for Right Mouse Button"));
+	GameplayTags.InputTag_Q = Manager.AddNativeGameplayTag(FName("InputTag.Q"), FString("Input Tag for Q Key"));
+	GameplayTags.InputTag_W = Manager.AddNativeGameplayTag(FName("InputTag.W"), FString("Input Tag for W Key"));
+	GameplayTags.InputTag_E = Manager.AddNativeGameplayTag(FName("InputTag.E"), FString("Input Tag for E Key"));
+	GameplayTags.InputTag_R = Manager.AddNativeGameplayTag(FName("InputTag.R"), FString("Input Tag for R Key"));
 	GameplayTags.InputTag_1 = Manager.AddNativeGameplayTag(FName("InputTag.1"), FString("Input Tag for 1 Key"));
 	GameplayTags.InputTag_2 = Manager.AddNativeGameplayTag(FName("InputTag.2"), FString("Input Tag for 2 Key"));
 	GameplayTags.InputTag_3 = Manager.AddNativeGameplayTag(FName("InputTag.3"), FString("Input Tag for 3 Key"));

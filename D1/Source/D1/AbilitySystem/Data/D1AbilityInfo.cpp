@@ -7,7 +7,7 @@ FD1AbilityTagInfo UD1AbilityInfo::FindAbilityTagInforTag(const FGameplayTag& Abi
 {
 	for (const FD1AbilityTagInfo& Info : AbilityInformation)
 	{
-		if (Info.AttributeTag == AbilityTag)
+		if (Info.AbilityTag == AbilityTag)
 		{
 			return Info;
 		}

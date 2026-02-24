@@ -50,6 +50,7 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 
 	if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(AbilitySystemComponent))
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[BindCallbacks] bStartupAbilitiesGiven is: %s"), D1ASC->bStartupAbilitiesGiven ? TEXT("TRUE") : TEXT("FALSE"));
 		if (D1ASC->bStartupAbilitiesGiven)
 		{
 			OnInitializeStartupAbilities(D1ASC);
@@ -69,8 +70,12 @@ void UD1OverlayWidgetController::OnInitializeStartupAbilities(UD1AbilitySystemCo
 	BroadcastDelegate.BindLambda([this, D1ASC](const FGameplayAbilitySpec& AbilitySpec)
 		{
 			FD1AbilityTagInfo Info = AbilityInfo->FindAbilityTagInforTag(D1ASC->GetAbilityTagFromSpec(AbilitySpec));
-			Info.InputTag = D1ASC->GetInputTagFromSpec(AbilitySpec);
-			AbilityInfoDelegate.Broadcast(Info);
+			if (Info.AbilityTag.IsValid())
+			{
+				// 유효한 UI 정보가 있을 때만 InputTag를 채우고 브로드캐스트합니다.
+				Info.InputTag = D1ASC->GetInputTagFromSpec(AbilitySpec);
+				AbilityInfoDelegate.Broadcast(Info);
+			}
 		});
 	D1ASC->ForEachAbility(BroadcastDelegate);
 }

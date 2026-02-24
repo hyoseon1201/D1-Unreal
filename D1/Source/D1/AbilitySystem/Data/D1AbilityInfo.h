@@ -13,7 +13,7 @@ struct FD1AbilityTagInfo
 	GENERATED_BODY()
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	FGameplayTag AttributeTag = FGameplayTag();
+	FGameplayTag AbilityTag = FGameplayTag();
 
 	UPROPERTY(BlueprintReadOnly)
 	FGameplayTag InputTag = FGameplayTag();
@@ -32,7 +32,7 @@ class D1_API UD1AbilityInfo : public UDataAsset
 	
 public:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
-	TArray< FD1AbilityTagInfo> AbilityInformation;
+	TArray<FD1AbilityTagInfo> AbilityInformation;
 
 	FD1AbilityTagInfo FindAbilityTagInforTag(const FGameplayTag& AbilityTag, bool bLogNotFound = false) const;
 };

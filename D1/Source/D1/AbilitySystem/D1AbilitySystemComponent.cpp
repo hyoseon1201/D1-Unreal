@@ -24,6 +24,10 @@ void UD1AbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<U
 	}
 
 	bStartupAbilitiesGiven = true;
+
+	ENetRole Role = GetOwnerRole();
+	UE_LOG(LogTemp, Warning, TEXT("[AddCharacterAbilities] Role: %d, bStartupAbilitiesGiven set to TRUE"), Role);
+
 	AbilitiesGivenDelegate.Broadcast(this);
 }
 
@@ -91,15 +95,22 @@ FGameplayTag UD1AbilitySystemComponent::GetAbilityTagFromSpec(const FGameplayAbi
 {
 	if (AbilitySpec.Ability)
 	{
+		// 1. 어떤 어빌리티를 검사하고 있는지 출력
+		UE_LOG(LogTemp, Warning, TEXT("[GetAbilityTag] Checking Ability: %s"), *AbilitySpec.Ability->GetName());
+
 		for (FGameplayTag Tag : AbilitySpec.Ability.Get()->AbilityTags)
 		{
+			// 2. 이 어빌리티가 무슨 태그들을 가지고 있는지 전부 출력
+			UE_LOG(LogTemp, Warning, TEXT("   - Found Tag in Ability: [%s]"), *Tag.ToString());
+
 			if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Abilities"))))
 			{
 				return Tag;
 			}
 		}
 	}
-	
+
+	UE_LOG(LogTemp, Error, TEXT("[GetAbilityTag] Failed to find matching tag for %s!"), *GetNameSafe(AbilitySpec.Ability.Get()));
 	return FGameplayTag();
 }
 
@@ -114,6 +125,17 @@ FGameplayTag UD1AbilitySystemComponent::GetInputTagFromSpec(const FGameplayAbili
 	}
 
 	return FGameplayTag();
+}
+
+void UD1AbilitySystemComponent::OnRep_ActivateAbilities()
+{
+	Super::OnRep_ActivateAbilities();
+
+	if (!bStartupAbilitiesGiven)
+	{
+		bStartupAbilitiesGiven = true;
+		AbilitiesGivenDelegate.Broadcast(this);
+	}
 }
 
 void UD1AbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySystemComponent* AbilitySystemComponent, const FGameplayEffectSpec& EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle)
