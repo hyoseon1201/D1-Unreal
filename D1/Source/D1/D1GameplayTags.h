@@ -63,6 +63,9 @@ public:
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Physical_GroundSword;
 
+	/* Cooldown Tags */
+	FGameplayTag Cooldown_Physical_GroundSword;
+
 	FGameplayTag Damage;
 	FGameplayTag Damage_Physical;
 	TArray<FGameplayTag> DamageTypes;

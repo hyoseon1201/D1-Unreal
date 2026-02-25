@@ -72,7 +72,6 @@ void UD1OverlayWidgetController::OnInitializeStartupAbilities(UD1AbilitySystemCo
 			FD1AbilityTagInfo Info = AbilityInfo->FindAbilityTagInforTag(D1ASC->GetAbilityTagFromSpec(AbilitySpec));
 			if (Info.AbilityTag.IsValid())
 			{
-				// 유효한 UI 정보가 있을 때만 InputTag를 채우고 브로드캐스트합니다.
 				Info.InputTag = D1ASC->GetInputTagFromSpec(AbilitySpec);
 				AbilityInfoDelegate.Broadcast(Info);
 			}

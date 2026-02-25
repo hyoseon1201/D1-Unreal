@@ -62,6 +62,9 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
 	GameplayTags.Abilities_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Abilities.Physical.GroundSword"), FString("GroundSword Ability"));
 
+	/* Cooldown Tags */
+	GameplayTags.Cooldown_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.GroundSword"), FString("GroundSword Ability Cooldown"));
+
 	GameplayTags.Damage = Manager.AddNativeGameplayTag(FName("Damage"), FString("Damage"));
 	GameplayTags.Damage_Physical = Manager.AddNativeGameplayTag(FName("Damage.Physical"), FString("Physical Damage"));
 
