@@ -141,4 +141,5 @@ void AD1CharacterBase::AddCharacterAbilities()
 	}
 
 	D1ASC->AddCharacterAbilities(StartupAbilities);
+	D1ASC->AddCharacterPassiveAbilities(StartupPassiveAbilities);
 }

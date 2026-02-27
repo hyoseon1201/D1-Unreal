@@ -33,5 +33,5 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 	TArray<FD1LevelupTagInfo> LevelupInformation;
 
-	int32 FindLevelForXP(int32 XP);
+	int32 FindLevelForXP(int32 XP) const;
 };

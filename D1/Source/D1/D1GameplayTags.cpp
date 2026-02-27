@@ -30,6 +30,9 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Attributes_Secondary_HealthRegeneration = Manager.AddNativeGameplayTag(FName("Attributes.Secondary.HealthRegeneration"), FString("Amount of Health regenerated every 1 second"));
 	GameplayTags.Attributes_Secondary_ManaRegeneration = Manager.AddNativeGameplayTag(FName("Attributes.Secondary.ManaRegeneration"), FString("Amount of Mana regenerated every 1 second"));
 
+	/* Meta Attributes */
+	GameplayTags.Attributes_Meta_IncomingXP = Manager.AddNativeGameplayTag(FName("Attributes.Meta.IncomingXP"), FString("Incoming XP"));
+
 	/* Input Tags */
 	GameplayTags.InputTag_LMB = Manager.AddNativeGameplayTag(FName("InputTag.LMB"), FString("Input Tag for Left Mouse Button"));
 	GameplayTags.InputTag_RMB = Manager.AddNativeGameplayTag(FName("InputTag.RMB"), FString("Input Tag for Right Mouse Button"));

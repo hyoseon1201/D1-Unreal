@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "ScalableFloat.h"
 #include "D1CharacterClassInfo.generated.h"
 
 class UGameplayEffect;
@@ -12,8 +13,8 @@ class UGameplayAbility;
 UENUM(BlueprintType)
 enum class ECharacterClass : uint8
 {
-	Enemy_Melee,     // 근접 공격형 (근거리 고블린, 오크 등)
-	Enemy_Ranger,    // 원거리 공격형 (원거리 고블린, 궁수 등)
+	Goblin_Melee,
+	Goblin_Ranger,
 };
 
 USTRUCT(BlueprintType)
@@ -26,6 +27,9 @@ struct FCharacterClassDefaultInfo
 
 	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
 	TArray<TSubclassOf<UGameplayAbility>> StartupAbilities;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Class Defaults")
+	FScalableFloat XPReward;
 };
 
 /**

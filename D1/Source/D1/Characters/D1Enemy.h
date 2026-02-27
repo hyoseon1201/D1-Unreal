@@ -27,14 +27,17 @@ public:
 
 	virtual void PossessedBy(AController* NewController) override;
 
-	/* Combat Interface */
+	/* Begin Combat Interface */
 	virtual int32 GetPlayerLevel_Implementation() override;
 
 	virtual void Die() override;
+	/* End Combat Interface */
 
-	/* Enemy Interface */
+	/* Begin Enemy Interface */
 	virtual void SetCombatTarget_Implementation(AActor* InCombatTarget) override;
 	virtual AActor* GetCombatTarget_Implementation() const override;
+	virtual ECharacterClass GetCharacterClass_Implementation() override;
+	/* End Enemy Interface */
 
 	/* Highlight Interface */
 	virtual void HighlightActor_Implementation() override;
@@ -69,7 +72,7 @@ protected:
 	int32 Level = 1;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Class Defaults")
-	ECharacterClass CharacterClass = ECharacterClass::Enemy_Melee;
+	ECharacterClass CharacterClass = ECharacterClass::Goblin_Melee;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UWidgetComponent> HealthBar;
