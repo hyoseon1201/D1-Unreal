@@ -9,6 +9,7 @@
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "UI/HUD/D1HUD.h"
 #include "Player/D1PlayerController.h"
+#include "AbilitySystem/Data/D1LevelupInfo.h"
 
 AD1Hero::AD1Hero()
 {
@@ -45,6 +46,63 @@ int32 AD1Hero::GetPlayerLevel_Implementation()
 	const AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
 	return D1PS->GetPlayerLevel();
+}
+
+void AD1Hero::AddToXP_Implementation(int32 InXP)
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	D1PS->AddToXP(InXP);
+}
+
+int32 AD1Hero::GetXP_Implementation() const
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	return D1PS->GetXP();
+}
+
+void AD1Hero::LevelUp_Implementation()
+{
+	
+}
+
+int32 AD1Hero::FindLevelForXP_Implementation(int32 InXP) const
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	return D1PS->LevelUpInfo->FindLevelForXP(InXP);
+}
+
+int32 AD1Hero::GetAttributePointsReward_Implementation(int32 Level) const
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	return D1PS->LevelUpInfo->LevelupInformation[Level].AttributePointAward;
+}
+
+int32 AD1Hero::GetSpellPointsReward_Implementation(int32 Level) const
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	return D1PS->LevelUpInfo->LevelupInformation[Level].SpellPointAward;
+}
+
+void AD1Hero::AddToPlayerLevel_Implementation(int32 InPlayerLevel)
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	D1PS->AddToLevel(InPlayerLevel);
+}
+
+void AD1Hero::AddToSpellPoints_Implementation(int32 InSpellPoints)
+{
+	// TODO
+}
+
+void AD1Hero::AddToAttributePoints_Implementation(int32 InAttributePoints)
+{
+	// TODO
 }
 
 void AD1Hero::InitAbilityActorInfo()

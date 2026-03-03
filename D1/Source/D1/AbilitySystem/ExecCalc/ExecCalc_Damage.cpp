@@ -6,6 +6,7 @@
 #include "Interaction/CombatInterface.h"
 #include "D1GameplayTags.h"
 #include <D1AbilityTypes.h>
+#include <AbilitySystem/Data/D1AbilitySystemConfig.h>
 
 struct D1DamageStatics
 {
@@ -76,61 +77,81 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	float CritDamage = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitDamageDef, EvaluationParameters, CritDamage);
 
-	// --- 3. 커브 테이블 데이터 추출 ---
-	UD1CharacterClassInfo* CharacterClassInfo = UD1AbilitySystemLibrary::GetCharacterClassInfo(SourceAvatar);
-	float Armor_K = 1000.f;
-	float Pen_Coeff = 0.15f;
+	// --- 3. 커브 테이블 데이터 추출 (Global Config 기반) ---
+	// GetWorld()를 통해 전역 설정 에셋을 가져옵니다.
+	UD1AbilitySystemConfig* Config = UD1AbilitySystemLibrary::GetAbilitySystemConfig(SourceAvatar);
 
-	if (CharacterClassInfo && CharacterClassInfo->DamageCalculationCoefficients)
+	float Armor_K = 1000.f; // 기본값
+	float Pen_Coeff = 0.15f; // 기본값
+
+	if (Config)
 	{
-		const FRealCurve* ArmorKCurve = CharacterClassInfo->DamageCalculationCoefficients->FindCurve(FName("Armor.K_Value"), FString());
-		const FRealCurve* PenCoeffCurve = CharacterClassInfo->DamageCalculationCoefficients->FindCurve(FName("ArmorPen.Coeff"), FString());
+		UE_LOG(LogTemp, Log, TEXT("[ExecCalc] Success: Found AbilitySystemConfig."));
 
-		if (ArmorKCurve) Armor_K = ArmorKCurve->Eval(TargetLevel);
-		if (PenCoeffCurve) Pen_Coeff = PenCoeffCurve->Eval(SourceLevel);
+		if (Config->DamageCalculationCoefficients)
+		{
+			const FRealCurve* ArmorKCurve = Config->DamageCalculationCoefficients->FindCurve(FName("Armor.K_Value"), FString());
+			const FRealCurve* PenCoeffCurve = Config->DamageCalculationCoefficients->FindCurve(FName("ArmorPen.Coeff"), FString());
+
+			if (ArmorKCurve && PenCoeffCurve)
+			{
+				Armor_K = ArmorKCurve->Eval(TargetLevel);
+				Pen_Coeff = PenCoeffCurve->Eval(SourceLevel);
+				UE_LOG(LogTemp, Log, TEXT("[ExecCalc] Success: Extracted Curve Values. Armor_K: %.2f, Pen_Coeff: %.4f (at Levels S:%f, T:%f)"), Armor_K, Pen_Coeff, SourceLevel, TargetLevel);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[ExecCalc] Fail: Could not find specific Rows (Armor.K_Value or ArmorPen.Coeff) in CurveTable!"));
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[ExecCalc] Fail: DamageCalculationCoefficients CurveTable is NULL in Config."));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[ExecCalc] Fail: Unable to find AbilitySystemConfig! Check if assigned in GameMode."));
 	}
 
-	// --- 4. 데미지 및 치명타 계산 ---
+	// --- 4. 데미지 및 상세 계산 ---
 	float Damage = 0.f;
 
 	for (FGameplayTag DamageTypeTag : FD1GameplayTags::Get().DamageTypes)
 	{
-		// 세 번째 인자로 0.f를 주어 태그가 없을 경우 0을 반환하게 합니다.
 		const float DamageTypeValue = Spec.GetSetByCallerMagnitude(DamageTypeTag, false, 0.f);
-
-		if (DamageTypeValue > 0.f)
-		{
-			UE_LOG(LogTemp, Log, TEXT("Damage Type: %s | Value: %.2f"), *DamageTypeTag.ToString(), DamageTypeValue);
-		}
-
 		Damage += DamageTypeValue;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("Total Raw Damage: %.2f"), Damage);
+	UE_LOG(LogTemp, Warning, TEXT("--- Damage Calculation Details ---"));
+	UE_LOG(LogTemp, Log, TEXT("Raw Accumulated Damage: %.2f"), Damage);
 
-	// [방어력 계산]
+	// [방어력 계산 공식 적용]
 	const float EffectiveArmorPen = ArmorPenetration / (1.f + (SourceLevel * Pen_Coeff));
 	const float FinalArmor = FMath::Max<float>(0.f, Armor - EffectiveArmorPen);
 	const float DamageMultiplier = Armor_K / (FinalArmor + Armor_K);
 
 	float FinalDamage = Damage * DamageMultiplier;
 
-	// [치명타 판정]
-	// FRand()는 0~1 사이의 값을 반환합니다. CritChance는 0~100 사이의 % 수치라고 가정합니다.
-	const bool bIsCritical = FMath::FRand() * 100.f < CritChance;
+	UE_LOG(LogTemp, Log, TEXT("Captured Armor: %.2f | Captured Pen: %.2f"), Armor, ArmorPenetration);
+	UE_LOG(LogTemp, Log, TEXT("Effective Pen: %.2f | Final Armor: %.2f | Multiplier: %.4f"), EffectiveArmorPen, FinalArmor, DamageMultiplier);
 
+	// [치명타 판정]
+	const bool bIsCritical = FMath::FRand() * 100.f < CritChance;
 	if (bIsCritical)
 	{
-		// CritDamage가 150이라면 1.5배 데미지
 		FinalDamage *= (CritDamage / 100.f);
+		UE_LOG(LogTemp, Warning, TEXT("!!! CRITICAL HIT !!! Multiplier applied: %.2f"), CritDamage / 100.f);
 	}
 
+	// Context에 치명타 여부 저장 (UI 표시용)
 	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
-	FGameplayEffectContext* Context = EffectContextHandle.Get();
-	FD1GameplayEffectContext* D1Context = static_cast<FD1GameplayEffectContext*>(Context);
 	UD1AbilitySystemLibrary::SetIsCriticalHit(EffectContextHandle, bIsCritical);
 
-	// --- 5. 결과 출력 및 로그 ---
+	UE_LOG(LogTemp, Warning, TEXT(">> FINAL DAMAGE TO APPLY: %.2f <<"), FinalDamage);
+	UE_LOG(LogTemp, Warning, TEXT("----------------------------------"));
+
+	// --- 5. 결과 출력 ---
 	const FGameplayModifierEvaluatedData EvaluatedData(UD1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, FinalDamage);
 	OutExecutionOutput.AddOutputModifier(EvaluatedData);
 }

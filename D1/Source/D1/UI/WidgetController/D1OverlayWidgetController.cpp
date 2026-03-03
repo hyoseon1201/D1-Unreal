@@ -22,6 +22,13 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 {
 	AD1PlayerState* D1PS = CastChecked<AD1PlayerState>(PlayerState);
 	D1PS->OnXPChangedDelegate.AddUObject(this, &UD1OverlayWidgetController::OnXPChanged);
+	D1PS->OnLevelChangedDelegate.AddLambda(
+		[this](int32 NewLevel)
+		{
+			OnPlayerLevelChangedDelegate.Broadcast(NewLevel);
+		}
+	);
+
 	const UD1AttributeSet* D1AS = CastChecked<UD1AttributeSet>(AttributeSet);
 
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetHealthAttribute()).AddLambda(

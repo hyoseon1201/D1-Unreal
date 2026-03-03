@@ -11,6 +11,8 @@
 #include "Interaction/CombatInterface.h"
 #include "D1AbilityTypes.h"
 #include "Engine/OverlapResult.h"
+#include "AbilitySystem/Data/D1AbilitySystemConfig.h"
+#include "D1/Game/D1GameModeBase.h"
 
 UD1OverlayWidgetController* UD1AbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
 {
@@ -143,6 +145,17 @@ bool UD1AbilitySystemLibrary::IsNotFriend(AActor* FirstActor, AActor* SecondActo
 	const bool bBothAreEnemies = FirstActor->ActorHasTag(FName("Enemy")) && SecondActor->ActorHasTag(FName("Enemy"));
 	const bool bFriends = bBothArePlayers || bBothAreEnemies;
 	return !bFriends;
+}
+
+UD1AbilitySystemConfig* UD1AbilitySystemLibrary::GetAbilitySystemConfig(const UObject* WorldContextObject)
+{
+	AD1GameModeBase* D1GM = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
+	if (D1GM)
+	{
+		return D1GM->AbilitySystemConfig;
+	}
+
+	return nullptr;
 }
 
 int32 UD1AbilitySystemLibrary::GetXPRewardForClassAndLevel(const UObject* WorldContextObject, ECharacterClass CharacterClass, int32 CharacterLevel)

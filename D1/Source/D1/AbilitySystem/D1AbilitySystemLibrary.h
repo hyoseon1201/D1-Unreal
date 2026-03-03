@@ -9,6 +9,7 @@
 
 class UD1OverlayWidgetController;
 class UD1AttributeMenuWidgetController;
+class UD1AbilitySystemConfig;
 
 /**
  * 
@@ -45,6 +46,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|GameplayMechanics")
 	static bool IsNotFriend(AActor* FirstActor, AActor* SecondActor);
+
+	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|AbilitySystemConfig")
+	static UD1AbilitySystemConfig* GetAbilitySystemConfig(const UObject* WorldContextObject);
 
 	static int32 GetXPRewardForClassAndLevel(const UObject* WorldContextObject, ECharacterClass CharacterClass, int32 CharacterLevel);
 };

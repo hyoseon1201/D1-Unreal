@@ -7,6 +7,7 @@
 #include "D1GameModeBase.generated.h"
 
 class UD1CharacterClassInfo;
+class UD1AbilitySystemConfig;
 
 /**
  * 
@@ -20,4 +21,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Characer Class Defaults")
 	TObjectPtr<UD1CharacterClassInfo> CharacterClassInfo;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Characer Class Defaults")
+	TObjectPtr<UD1AbilitySystemConfig> AbilitySystemConfig;
 };
