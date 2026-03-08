@@ -9,6 +9,9 @@
 
 class UAbilitySystemComponent;
 class UAttributeSet;
+class UNiagaraComponent;
+class UCameraComponent;
+class USpringArmComponent;
 
 /**
  * 
@@ -41,6 +44,18 @@ public:
 	virtual void AddToAttributePoints_Implementation(int32 InAttributePoints) override;
 	// End player interface
 
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UNiagaraComponent> LevelUpNiagaraComponent;
+
 private:
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<UCameraComponent> TopDownCameraComponent;
+
+	UPROPERTY(VisibleAnywhere)
+	TObjectPtr<USpringArmComponent> CameraBoom;
+
 	virtual void InitAbilityActorInfo() override;
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastLevelupParticles() const;
 };

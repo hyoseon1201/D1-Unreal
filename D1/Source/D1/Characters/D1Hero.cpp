@@ -9,10 +9,26 @@
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "UI/HUD/D1HUD.h"
 #include "Player/D1PlayerController.h"
+#include "NiagaraComponent.h"
 #include "AbilitySystem/Data/D1LevelupInfo.h"
+#include "GameFramework/SpringArmComponent.h"
+#include "Camera/CameraComponent.h"
 
 AD1Hero::AD1Hero()
 {
+	CameraBoom = CreateDefaultSubobject<USpringArmComponent>("CameraBoom");
+	CameraBoom->SetupAttachment(GetRootComponent());
+	CameraBoom->SetUsingAbsoluteRotation(true);
+	CameraBoom->bDoCollisionTest = false;
+
+	TopDownCameraComponent = CreateDefaultSubobject<UCameraComponent>("TopDownCameraComponent");
+	TopDownCameraComponent->SetupAttachment(CameraBoom, USpringArmComponent::SocketName);
+	TopDownCameraComponent->bUsePawnControlRotation = false;
+
+	LevelUpNiagaraComponent = CreateDefaultSubobject<UNiagaraComponent>("LevelUpNiagaraComponent");
+	LevelUpNiagaraComponent->SetupAttachment(GetRootComponent());
+	LevelUpNiagaraComponent->bAutoActivate = false;
+
 	GetCharacterMovement()->bOrientRotationToMovement = true;
 	GetCharacterMovement()->RotationRate = FRotator(0.f, 400.f, 0.f);
 	GetCharacterMovement()->bConstrainToPlane = true;
@@ -64,7 +80,7 @@ int32 AD1Hero::GetXP_Implementation() const
 
 void AD1Hero::LevelUp_Implementation()
 {
-	
+	MulticastLevelupParticles();
 }
 
 int32 AD1Hero::FindLevelForXP_Implementation(int32 InXP) const
@@ -121,5 +137,17 @@ void AD1Hero::InitAbilityActorInfo()
 		{
 			D1HUD->InitOverlay(D1PlayerController, D1PS, AbilitySystemComponent, AttributeSet);
 		}
+	}
+}
+
+void AD1Hero::MulticastLevelupParticles_Implementation() const
+{
+	if (IsValid(LevelUpNiagaraComponent))
+	{
+		const FVector CameraLocation = TopDownCameraComponent->GetComponentLocation();
+		const FVector NiagaraSystemLocation = LevelUpNiagaraComponent->GetComponentLocation();
+		const FRotator ToCameraRotation = (CameraLocation - NiagaraSystemLocation).Rotation();
+		LevelUpNiagaraComponent->SetWorldRotation(ToCameraRotation);
+		LevelUpNiagaraComponent->Activate(true);
 	}
 }
