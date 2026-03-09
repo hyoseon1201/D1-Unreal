@@ -44,7 +44,13 @@ public:
 	void AddToAttributePoints(int32 InPlayerLevel);
 
 	UFUNCTION(BlueprintNativeEvent)
+	int32 GetAttributePoints() const;
+
+	UFUNCTION(BlueprintNativeEvent)
 	void AddToSpellPoints(int32 InPlayerLevel);
+
+	UFUNCTION(BlueprintNativeEvent)
+	int32 GetSpellPoints() const;
 
 	UFUNCTION(BlueprintNativeEvent)
 	void LevelUp();

@@ -6,6 +6,7 @@
 #include "AbilitySystem/Data/D1AttributeInfo.h"
 #include "D1GameplayTags.h"
 #include <Player/D1PlayerState.h>
+#include <AbilitySystem/D1AbilitySystemComponent.h>
 
 void UD1AttributeMenuWidgetController::BroadcastInitialValues()
 {
@@ -45,6 +46,12 @@ void UD1AttributeMenuWidgetController::BindCallbacksToDependencies()
 			AttributePointsChangedDelegate.Broadcast(Points);
 		}
 	);
+}
+
+void UD1AttributeMenuWidgetController::UpgradeAttribute(const FGameplayTag& AttributeTag)
+{
+	UD1AbilitySystemComponent* D1ASC = CastChecked<UD1AbilitySystemComponent>(AbilitySystemComponent);
+	D1ASC->UpgradeAttribute(AttributeTag);
 }
 
 void UD1AttributeMenuWidgetController::BroadcastAttributeInfo(const FGameplayTag& AttributeTag, const FGameplayAttribute& Attribute) const

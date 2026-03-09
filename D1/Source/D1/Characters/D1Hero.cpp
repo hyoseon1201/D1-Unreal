@@ -113,12 +113,30 @@ void AD1Hero::AddToPlayerLevel_Implementation(int32 InPlayerLevel)
 
 void AD1Hero::AddToSpellPoints_Implementation(int32 InSpellPoints)
 {
-	// TODO
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	D1PS->AddToSpellPoints(InSpellPoints);
 }
 
 void AD1Hero::AddToAttributePoints_Implementation(int32 InAttributePoints)
 {
-	// TODO
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	D1PS->AddToAttributePoints(InAttributePoints);
+}
+
+int32 AD1Hero::GetAttributePoints_Implementation() const
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	return D1PS->GetAttributePoints();
+}
+
+int32 AD1Hero::GetSpellPoints_Implementation() const
+{
+	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
+	check(D1PS);
+	return D1PS->GetSpellPoints();
 }
 
 void AD1Hero::InitAbilityActorInfo()

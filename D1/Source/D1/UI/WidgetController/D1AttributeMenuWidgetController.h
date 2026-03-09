@@ -8,6 +8,7 @@
 
 class UD1AttributeInfo;
 struct FD1AttributeTagInfo;
+struct FGameplayTag;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAttributeTagInfoSignature, const FD1AttributeTagInfo&, Info);
 
@@ -28,6 +29,9 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Attributes")
 	FOnPlayerStatChangedSignature AttributePointsChangedDelegate;
+
+	UFUNCTION(BlueprintCallable)
+	void UpgradeAttribute(const FGameplayTag& AttributeTag);
 
 protected:
 
