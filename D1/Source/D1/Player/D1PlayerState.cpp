@@ -24,6 +24,8 @@ void AD1PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 
 	DOREPLIFETIME(AD1PlayerState, Level);
 	DOREPLIFETIME(AD1PlayerState, XP);
+	DOREPLIFETIME(AD1PlayerState, AttributePoints);
+	DOREPLIFETIME(AD1PlayerState, SpellPoints);
 }
 
 UAbilitySystemComponent* AD1PlayerState::GetAbilitySystemComponent() const
@@ -41,6 +43,18 @@ void AD1PlayerState::AddToLevel(int32 InLevel)
 {
 	Level += InLevel;
 	OnLevelChangedDelegate.Broadcast(Level);
+}
+
+void AD1PlayerState::AddToAttributePoints(int32 InPoints)
+{
+	AttributePoints += InPoints;
+	OnAttributePointsChangedDelegate.Broadcast(AttributePoints);
+}
+
+void AD1PlayerState::AddToSpellPoints(int32 InPoints)
+{
+	SpellPoints += InPoints;
+	OnSpellPointsChangedDelegate.Broadcast(SpellPoints);
 }
 
 void AD1PlayerState::SetXP(int32 InXP)
@@ -63,4 +77,14 @@ void AD1PlayerState::OnRep_Level(int32 OldLevel)
 void AD1PlayerState::OnRep_XP(int32 OldXP)
 {
 	OnXPChangedDelegate.Broadcast(XP);
+}
+
+void AD1PlayerState::OnRep_AttributePoints(int32 OldAttributePoints)
+{
+	OnAttributePointsChangedDelegate.Broadcast(AttributePoints);
+}
+
+void AD1PlayerState::OnRep_SpellPoints(int32 OldSpellPoints)
+{
+	OnSpellPointsChangedDelegate.Broadcast(SpellPoints);
 }

@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/Data/D1AttributeInfo.h"
 #include "D1GameplayTags.h"
+#include <Player/D1PlayerState.h>
 
 void UD1AttributeMenuWidgetController::BroadcastInitialValues()
 {
@@ -17,6 +18,9 @@ void UD1AttributeMenuWidgetController::BroadcastInitialValues()
 	{
 		BroadcastAttributeInfo(Pair.Key, Pair.Value());
 	}
+
+	AD1PlayerState* D1PS = CastChecked<AD1PlayerState>(PlayerState);
+	AttributePointsChangedDelegate.Broadcast(D1PS->GetAttributePoints());
 }
 
 void UD1AttributeMenuWidgetController::BindCallbacksToDependencies()
@@ -33,6 +37,14 @@ void UD1AttributeMenuWidgetController::BindCallbacksToDependencies()
 			}
 		);
 	}
+
+	AD1PlayerState* D1PS = CastChecked<AD1PlayerState>(PlayerState);
+	D1PS->OnAttributePointsChangedDelegate.AddLambda(
+		[this](int32 Points)
+		{
+			AttributePointsChangedDelegate.Broadcast(Points);
+		}
+	);
 }
 
 void UD1AttributeMenuWidgetController::BroadcastAttributeInfo(const FGameplayTag& AttributeTag, const FGameplayAttribute& Attribute) const
