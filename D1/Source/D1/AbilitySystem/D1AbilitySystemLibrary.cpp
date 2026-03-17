@@ -5,27 +5,44 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/D1HUD.h"
-#include "UI/WidgetController/D1WidgetController.h"
 #include "Player/D1PlayerState.h"
 #include "Game/D1GameModeBase.h"
 #include "Interaction/CombatInterface.h"
 #include "D1AbilityTypes.h"
 #include "Engine/OverlapResult.h"
 #include "AbilitySystem/Data/D1AbilitySystemConfig.h"
-#include "D1/Game/D1GameModeBase.h"
+#include "UI/WidgetController/D1WidgetController.h"
 
-UD1OverlayWidgetController* UD1AbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
+bool UD1AbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AD1HUD*& OutD1HUD)
 {
 	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
 	{
-		if (AD1HUD* D1HUD = Cast<AD1HUD>(PC->GetHUD()))
+		OutD1HUD = Cast<AD1HUD>(PC->GetHUD());
+		if (OutD1HUD)
 		{
 			AD1PlayerState* PS = PC->GetPlayerState<AD1PlayerState>();
 			UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
 			UAttributeSet* AS = PS->GetAttributeSet();
-			const FWidgetControllerParams WidgetControllerParams(PC, PS, ASC, AS);
-			return D1HUD->GetOverlayWidgetController(WidgetControllerParams);
+			OutWCParams.AttributeSet = AS;
+			OutWCParams.AbilitySystemComponent = ASC;
+			OutWCParams.PlayerState = PS;
+			OutWCParams.PlayerController = PC;
+			return true;
 		}
+	}
+
+	return false;
+}
+
+UD1OverlayWidgetController* UD1AbilitySystemLibrary::GetOverlayWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AD1HUD* D1HUD = nullptr;
+	const bool bSuccessfulParams = MakeWidgetControllerParams(WorldContextObject, WCParams, D1HUD);
+
+	if (bSuccessfulParams)
+	{
+		return D1HUD->GetOverlayWidgetController(WCParams);
 	}
 
 	return nullptr;
@@ -33,16 +50,27 @@ UD1OverlayWidgetController* UD1AbilitySystemLibrary::GetOverlayWidgetController(
 
 UD1AttributeMenuWidgetController* UD1AbilitySystemLibrary::GetAttributeMenuWidgetController(const UObject* WorldContextObject)
 {
-	if (APlayerController* PC = UGameplayStatics::GetPlayerController(WorldContextObject, 0))
+	FWidgetControllerParams WCParams;
+	AD1HUD* D1HUD = nullptr;
+	const bool bSuccessfulParams = MakeWidgetControllerParams(WorldContextObject, WCParams, D1HUD);
+
+	if (bSuccessfulParams)
 	{
-		if (AD1HUD* D1HUD = Cast<AD1HUD>(PC->GetHUD()))
-		{
-			AD1PlayerState* PS = PC->GetPlayerState<AD1PlayerState>();
-			UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-			UAttributeSet* AS = PS->GetAttributeSet();
-			const FWidgetControllerParams WidgetControllerParams(PC, PS, ASC, AS);
-			return D1HUD->GetAttributeMenuWidgetController(WidgetControllerParams);
-		}
+		return D1HUD->GetAttributeMenuWidgetController(WCParams);
+	}
+
+	return nullptr;
+}
+
+UD1SkillMenuWidgetController* UD1AbilitySystemLibrary::GetSkillMenuWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AD1HUD* D1HUD = nullptr;
+	const bool bSuccessfulParams = MakeWidgetControllerParams(WorldContextObject, WCParams, D1HUD);
+
+	if (bSuccessfulParams)
+	{
+		return D1HUD->GetSkillMenuWidgetController(WCParams);
 	}
 
 	return nullptr;

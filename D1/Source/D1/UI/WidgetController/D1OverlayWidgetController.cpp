@@ -10,90 +10,68 @@
 
 void UD1OverlayWidgetController::BroadcastInitialValues()
 {
-	const UD1AttributeSet* D1AS = CastChecked<UD1AttributeSet>(AttributeSet);
 
-	OnHealthChanged.Broadcast(D1AS->GetHealth());
-	OnMaxHealthChanged.Broadcast(D1AS->GetMaxHealth());
-	OnManaChanged.Broadcast(D1AS->GetMana());
-	OnMaxManaChanged.Broadcast(D1AS->GetMaxMana());
+	OnHealthChanged.Broadcast(GetD1AS()->GetHealth());
+	OnMaxHealthChanged.Broadcast(GetD1AS()->GetMaxHealth());
+	OnManaChanged.Broadcast(GetD1AS()->GetMana());
+	OnMaxManaChanged.Broadcast(GetD1AS()->GetMaxMana());
 }
 
 void UD1OverlayWidgetController::BindCallbacksToDependencies()
 {
-	AD1PlayerState* D1PS = CastChecked<AD1PlayerState>(PlayerState);
-	D1PS->OnXPChangedDelegate.AddUObject(this, &UD1OverlayWidgetController::OnXPChanged);
-	D1PS->OnLevelChangedDelegate.AddLambda(
+	GetD1PS()->OnXPChangedDelegate.AddUObject(this, &UD1OverlayWidgetController::OnXPChanged);
+	GetD1PS()->OnLevelChangedDelegate.AddLambda(
 		[this](int32 NewLevel)
 		{
 			OnPlayerLevelChangedDelegate.Broadcast(NewLevel);
 		}
 	);
 
-	const UD1AttributeSet* D1AS = CastChecked<UD1AttributeSet>(AttributeSet);
-
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetHealthAttribute()).AddLambda(
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(GetD1AS()->GetHealthAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
 			OnHealthChanged.Broadcast(Data.NewValue);
 		}
 	);
 
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetMaxHealthAttribute()).AddLambda(
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(GetD1AS()->GetMaxHealthAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
 			OnMaxHealthChanged.Broadcast(Data.NewValue);
 		}
 	);
 
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetManaAttribute()).AddLambda(
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(GetD1AS()->GetManaAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
 			OnManaChanged.Broadcast(Data.NewValue);
 		}
 	);
 
-	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(D1AS->GetMaxManaAttribute()).AddLambda(
+	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(GetD1AS()->GetMaxManaAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)
 		{
 			OnMaxManaChanged.Broadcast(Data.NewValue);
 		}
 	);
 
-	if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(AbilitySystemComponent))
+	if (GetD1ASC())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[BindCallbacks] bStartupAbilitiesGiven is: %s"), D1ASC->bStartupAbilitiesGiven ? TEXT("TRUE") : TEXT("FALSE"));
-		if (D1ASC->bStartupAbilitiesGiven)
+		UE_LOG(LogTemp, Warning, TEXT("[BindCallbacks] bStartupAbilitiesGiven is: %s"), GetD1ASC()->bStartupAbilitiesGiven ? TEXT("TRUE") : TEXT("FALSE"));
+		if (GetD1ASC()->bStartupAbilitiesGiven)
 		{
-			OnInitializeStartupAbilities(D1ASC);
+			BroadcastAbilityInfo();
 		}
 		else
 		{
-			D1ASC->AbilitiesGivenDelegate.AddUObject(this, &UD1OverlayWidgetController::OnInitializeStartupAbilities);
+			GetD1ASC()->AbilitiesGivenDelegate.AddUObject(this, &UD1OverlayWidgetController::BroadcastAbilityInfo);
 		}
 	}
 }
 
-void UD1OverlayWidgetController::OnInitializeStartupAbilities(UD1AbilitySystemComponent* D1ASC)
+void UD1OverlayWidgetController::OnXPChanged(int32 NewXP)
 {
-	if (!D1ASC->bStartupAbilitiesGiven) return;
-
-	FForEachAbility BroadcastDelegate;
-	BroadcastDelegate.BindLambda([this, D1ASC](const FGameplayAbilitySpec& AbilitySpec)
-		{
-			FD1AbilityTagInfo Info = AbilityInfo->FindAbilityTagInforTag(D1ASC->GetAbilityTagFromSpec(AbilitySpec));
-			if (Info.AbilityTag.IsValid())
-			{
-				Info.InputTag = D1ASC->GetInputTagFromSpec(AbilitySpec);
-				AbilityInfoDelegate.Broadcast(Info);
-			}
-		});
-	D1ASC->ForEachAbility(BroadcastDelegate);
-}
-
-void UD1OverlayWidgetController::OnXPChanged(int32 NewXP) const
-{
-	const AD1PlayerState* AuraPlayerState = CastChecked<AD1PlayerState>(PlayerState);
-	const UD1LevelupInfo* LevelUpInfo = AuraPlayerState->LevelUpInfo;
+	const UD1LevelupInfo* LevelUpInfo = GetD1PS()->LevelUpInfo;
 	checkf(LevelUpInfo, TEXT("Unabled to find LevelUpInfo. Please fill out AuraPlayerState Blueprint"));
 
 	const int32 Level = LevelUpInfo->FindLevelForXP(NewXP);

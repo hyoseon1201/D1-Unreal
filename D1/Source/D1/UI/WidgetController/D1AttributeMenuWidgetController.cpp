@@ -20,16 +20,14 @@ void UD1AttributeMenuWidgetController::BroadcastInitialValues()
 		BroadcastAttributeInfo(Pair.Key, Pair.Value());
 	}
 
-	AD1PlayerState* D1PS = CastChecked<AD1PlayerState>(PlayerState);
-	AttributePointsChangedDelegate.Broadcast(D1PS->GetAttributePoints());
+	AttributePointsChangedDelegate.Broadcast(GetD1PS()->GetAttributePoints());
 }
 
 void UD1AttributeMenuWidgetController::BindCallbacksToDependencies()
 {
-	UD1AttributeSet* AS = CastChecked<UD1AttributeSet>(AttributeSet);
 	check(AttributeInfo);
 
-	for (auto& Pair : AS->TagsToAttributes)
+	for (auto& Pair : GetD1AS()->TagsToAttributes)
 	{
 		AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Pair.Value()).AddLambda(
 			[this, Pair](const FOnAttributeChangeData& Data)
@@ -39,8 +37,7 @@ void UD1AttributeMenuWidgetController::BindCallbacksToDependencies()
 		);
 	}
 
-	AD1PlayerState* D1PS = CastChecked<AD1PlayerState>(PlayerState);
-	D1PS->OnAttributePointsChangedDelegate.AddLambda(
+	GetD1PS()->OnAttributePointsChangedDelegate.AddLambda(
 		[this](int32 Points)
 		{
 			AttributePointsChangedDelegate.Broadcast(Points);

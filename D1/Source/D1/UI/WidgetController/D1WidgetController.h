@@ -8,9 +8,15 @@
 #include "D1WidgetController.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChangedSignature, int32, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FAbilityInfoSignature, const FD1AbilityTagInfo&, Info);
 
 class UAttributeSet;
 class UAbilitySystemComponent;
+class AD1PlayerController;
+class AD1PlayerState;
+class UD1AbilitySystemComponent;
+class UD1AttributeSet;
+class UD1AbilityInfo;
 
 USTRUCT(BlueprintType)
 struct FWidgetControllerParams
@@ -51,6 +57,11 @@ public:
 	virtual void BroadcastInitialValues();
 	virtual void BindCallbacksToDependencies();
 
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Messages")
+	FAbilityInfoSignature AbilityInfoDelegate;
+
+	void BroadcastAbilityInfo();
+
 protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
@@ -64,4 +75,24 @@ protected:
 
 	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
 	TObjectPtr<UAttributeSet> AttributeSet;
+
+	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
+	TObjectPtr<AD1PlayerController> D1PlayerController;
+
+	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
+	TObjectPtr<AD1PlayerState> D1PlayerState;
+
+	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
+	TObjectPtr<UD1AbilitySystemComponent> D1AbilitySystemComponent;
+
+	UPROPERTY(BlueprintReadOnly, Category = "WidgetController")
+	TObjectPtr<UD1AttributeSet> D1AttributeSet;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Widget Data")
+	TObjectPtr<UD1AbilityInfo> AbilityInfo;
+
+	AD1PlayerController* GetD1PC();
+	AD1PlayerState* GetD1PS();
+	UD1AbilitySystemComponent* GetD1ASC();
+	UD1AttributeSet* GetD1AS();
 };
