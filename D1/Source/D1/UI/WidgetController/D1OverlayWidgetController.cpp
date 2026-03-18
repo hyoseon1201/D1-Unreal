@@ -60,7 +60,7 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 		UE_LOG(LogTemp, Warning, TEXT("[BindCallbacks] bStartupAbilitiesGiven is: %s"), GetD1ASC()->bStartupAbilitiesGiven ? TEXT("TRUE") : TEXT("FALSE"));
 		if (GetD1ASC()->bStartupAbilitiesGiven)
 		{
-			BroadcastAbilityInfo();
+				BroadcastAbilityInfo();
 		}
 		else
 		{

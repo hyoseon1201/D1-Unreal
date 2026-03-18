@@ -9,7 +9,7 @@
 /**
  * 
  */
-UCLASS()
+UCLASS(BlueprintType, Blueprintable)
 class D1_API UD1SkillMenuWidgetController : public UD1WidgetController
 {
 	GENERATED_BODY()

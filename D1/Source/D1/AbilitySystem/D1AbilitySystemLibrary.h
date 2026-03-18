@@ -23,16 +23,16 @@ class D1_API UD1AbilitySystemLibrary : public UBlueprintFunctionLibrary
 	GENERATED_BODY()
 	
 public:
-	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController")
+	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static bool MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AD1HUD*& OutD1HUD);
 
-	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController")
+	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UD1OverlayWidgetController* GetOverlayWidgetController(const UObject* WorldContextObject);
 
-	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController")
+	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UD1AttributeMenuWidgetController* GetAttributeMenuWidgetController(const UObject* WorldContextObject);
 
-	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController")
+	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UD1SkillMenuWidgetController* GetSkillMenuWidgetController(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")

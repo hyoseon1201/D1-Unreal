@@ -3,12 +3,24 @@
 
 #include "UI/WidgetController/D1SkillMenuWidgetController.h"
 
+#include "AbilitySystem/D1AbilitySystemComponent.h"
+
 void UD1SkillMenuWidgetController::BroadcastInitialValues()
 {
-	Super::BroadcastInitialValues();
+	BroadcastAbilityInfo();
 }
 
 void UD1SkillMenuWidgetController::BindCallbacksToDependencies()
 {
-	Super::BindCallbacksToDependencies();
+    if (GetD1ASC())
+    {
+        if (GetD1ASC()->bStartupAbilitiesGiven)
+        {
+            BroadcastAbilityInfo();
+        }
+        else
+        {
+            GetD1ASC()->AbilitiesGivenDelegate.AddUObject(this, &UD1SkillMenuWidgetController::BroadcastAbilityInfo);
+        }
+    }
 }
