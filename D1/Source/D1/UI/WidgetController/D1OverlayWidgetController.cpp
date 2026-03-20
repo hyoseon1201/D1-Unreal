@@ -10,7 +10,6 @@
 
 void UD1OverlayWidgetController::BroadcastInitialValues()
 {
-
 	OnHealthChanged.Broadcast(GetD1AS()->GetHealth());
 	OnMaxHealthChanged.Broadcast(GetD1AS()->GetMaxHealth());
 	OnManaChanged.Broadcast(GetD1AS()->GetMana());

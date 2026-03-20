@@ -56,28 +56,5 @@ void AD1HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystem
 	OverlayWidget->SetWidgetController(WidgetController);
 	WidgetController->BroadcastInitialValues();
 
-	// ============================================================
-	// 3. WBP_Spells 전용 컨트롤러 주입 (핵심 부분)
-	// ============================================================
-	// WBP_Overlay(부모) 내부에서 "WBP_Spells"라는 이름의 자식 위젯을 찾습니다.
-	if (UD1UserWidget* SpellsWidget = Cast<UD1UserWidget>(OverlayWidget->GetWidgetFromName(TEXT("WBP_Spells"))))
-	{
-		// 스킬 메뉴용 컨트롤러를 가져와서 꽂아줍니다.
-		UD1SkillMenuWidgetController* SkillMenuController = GetSkillMenuWidgetController(WidgetControllerParams);
-
-		SpellsWidget->SetWidgetController(SkillMenuController);
-
-		// 스킬 메뉴의 초기값(스킬 포인트 등)을 방송합니다.
-		SkillMenuController->BroadcastInitialValues();
-
-		UE_LOG(LogTemp, Warning, TEXT("WBP_Spells: SkillMenuWidgetController success"));
-	}
-	else
-	{
-		// 위젯을 찾지 못했다면 로그를 남겨 확인합니다.
-		UE_LOG(LogTemp, Error, TEXT("WBP_Spells can't find"));
-	}
-	// ============================================================
-
 	Widget->AddToViewport();
 }

@@ -65,6 +65,17 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
 	GameplayTags.Abilities_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Abilities.Physical.GroundSword"), FString("GroundSword Ability"));
 
+	GameplayTags.Abilities_HitReact = Manager.AddNativeGameplayTag(FName("Abilities.HitReact"), FString("HitReact Ability"));
+
+	GameplayTags.Abilities_Status_Locked = Manager.AddNativeGameplayTag(FName("Abilities.Status.Locked"), FString("Ability Locked"));
+	GameplayTags.Abilities_Status_Eligible = Manager.AddNativeGameplayTag(FName("Abilities.Status.Eligible"), FString("Ability Eligible"));
+	GameplayTags.Abilities_Status_Unlocked = Manager.AddNativeGameplayTag(FName("Abilities.Status.Unlocked"), FString("Ability Unlocked"));
+	GameplayTags.Abilities_Status_Equipped = Manager.AddNativeGameplayTag(FName("Abilities.Status.Equipped"), FString("Ability Equipped"));
+
+	GameplayTags.Abilities_Type_Active = Manager.AddNativeGameplayTag(FName("Abilities.Type.Active"), FString("Ability Type Active"));
+	GameplayTags.Abilities_Type_Passive = Manager.AddNativeGameplayTag(FName("Abilities.Type.Passive"), FString("Ability Type Passive"));
+	GameplayTags.Abilities_Type_None = Manager.AddNativeGameplayTag(FName("Abilities.Type.None"), FString("Ability Type None"));
+
 	/* Cooldown Tags */
 	GameplayTags.Cooldown_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.GroundSword"), FString("GroundSword Ability Cooldown"));
 
