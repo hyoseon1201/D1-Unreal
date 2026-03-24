@@ -21,7 +21,7 @@ void UD1AbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<U
 		if (const UD1GameplayAbility* D1Ability = Cast<UD1GameplayAbility>(AbilitySpec.Ability))
 		{
 			AbilitySpec.DynamicAbilityTags.AddTag(D1Ability->StartupInputTag);
-			AbilitySpec.DynamicAbilityTags.AddTag(FD1GameplayTags::Get().Abilities_Status_Equipped);
+			AbilitySpec.DynamicAbilityTags.AddTag(FD1GameplayTags::Get().Abilities_Status_Locked);
 			GiveAbility(AbilitySpec);
 		}
 	}

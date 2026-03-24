@@ -65,6 +65,7 @@ public:
 	/* Ability Tags */
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Physical_GroundSword;
+	FGameplayTag Abilities_Physical_WhirlwindCharge;
 	
 	FGameplayTag Abilities_HitReact;
 
@@ -77,14 +78,20 @@ public:
 	FGameplayTag Abilities_Type_Passive;
 	FGameplayTag Abilities_Type_None;
 
+	/* Class Tags */
+	FGameplayTag Class_Warrior;
+
 	/* Cooldown Tags */
 	FGameplayTag Cooldown_Physical_GroundSword;
+	FGameplayTag Cooldown_Physical_WhirlwindCharge;
 
 	FGameplayTag Damage;
 	FGameplayTag Damage_Physical;
 	TArray<FGameplayTag> DamageTypes;
 
 	FGameplayTag Effects_HitReact;
+
+
 
 private:
 	static FD1GameplayTags GameplayTags;

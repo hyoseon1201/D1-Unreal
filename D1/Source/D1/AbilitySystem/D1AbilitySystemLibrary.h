@@ -11,6 +11,7 @@ class UD1OverlayWidgetController;
 class UD1AttributeMenuWidgetController;
 class UD1SkillMenuWidgetController;
 class UD1AbilitySystemConfig;
+class UD1AbilityInfo;
 class AD1HUD;
 struct FWidgetControllerParams;
 
@@ -43,6 +44,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")
 	static UD1CharacterClassInfo* GetCharacterClassInfo(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")
+	static UD1AbilityInfo* GetAbilityInfo(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|GameplayEffects")
 	static bool IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle);

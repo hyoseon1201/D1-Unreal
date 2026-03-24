@@ -126,9 +126,16 @@ void UD1AbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextOb
 
 UD1CharacterClassInfo* UD1AbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)
 {
-	AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
+	const AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
 	if (D1GameMode == nullptr) return nullptr;
 	return D1GameMode->CharacterClassInfo;
+}
+
+UD1AbilityInfo* UD1AbilitySystemLibrary::GetAbilityInfo(const UObject* WorldContextObject)
+{
+	const AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
+	if (D1GameMode == nullptr) return nullptr;
+	return D1GameMode->AbilityInfo;
 }
 
 bool UD1AbilitySystemLibrary::IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle)

@@ -35,7 +35,8 @@ void UD1WidgetController::BroadcastAbilityInfo()
 			FD1AbilityTagInfo Info = AbilityInfo->FindAbilityTagInforTag(GetD1ASC()->GetAbilityTagFromSpec(AbilitySpec));
 			if (Info.AbilityTag.IsValid())
 			{
-				Info.InputTag = GetD1ASC()->GetInputTagFromSpec(AbilitySpec);
+				Info.InputTag = D1AbilitySystemComponent->GetInputTagFromSpec(AbilitySpec);
+				Info.StatusTag = D1AbilitySystemComponent->GetStatusFromSpec(AbilitySpec);
 				AbilityInfoDelegate.Broadcast(Info);
 			}
 		});

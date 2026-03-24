@@ -8,6 +8,7 @@
 
 class UD1CharacterClassInfo;
 class UD1AbilitySystemConfig;
+class UD1AbilityInfo;
 
 /**
  * 
@@ -24,4 +25,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Characer Class Defaults")
 	TObjectPtr<UD1AbilitySystemConfig> AbilitySystemConfig;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ability Info")
+	TObjectPtr<UD1AbilityInfo> AbilityInfo;
 };

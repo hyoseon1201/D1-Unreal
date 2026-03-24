@@ -17,4 +17,8 @@ class D1_API UD1SkillMenuWidgetController : public UD1WidgetController
 public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
+
+protected:
+	UFUNCTION(BlueprintCallable, Category = "WidgetController")
+	TArray<FD1AbilityTagInfo> GetFilteredAbilityInfo();
 };

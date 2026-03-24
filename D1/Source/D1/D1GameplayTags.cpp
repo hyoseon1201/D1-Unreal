@@ -63,7 +63,8 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 
 	/* Ability Tags */
 	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
-	GameplayTags.Abilities_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Abilities.Physical.GroundSword"), FString("GroundSword Ability"));
+	GameplayTags.Abilities_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Abilities.Physical.GroundSword"), FString("Warrior | GroundSword Ability"));
+	GameplayTags.Abilities_Physical_WhirlwindCharge = Manager.AddNativeGameplayTag(FName("Abilities.Physical.WhirlwindCharge"), FString("Warrior | WhirlwindCharge Ability"));
 
 	GameplayTags.Abilities_HitReact = Manager.AddNativeGameplayTag(FName("Abilities.HitReact"), FString("HitReact Ability"));
 
@@ -76,8 +77,12 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Abilities_Type_Passive = Manager.AddNativeGameplayTag(FName("Abilities.Type.Passive"), FString("Ability Type Passive"));
 	GameplayTags.Abilities_Type_None = Manager.AddNativeGameplayTag(FName("Abilities.Type.None"), FString("Ability Type None"));
 
+	/* Ability Tags */
+	GameplayTags.Class_Warrior = Manager.AddNativeGameplayTag(FName("Class.Warrior"), FString("Warrior Class"));
+
 	/* Cooldown Tags */
 	GameplayTags.Cooldown_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.GroundSword"), FString("GroundSword Ability Cooldown"));
+	GameplayTags.Cooldown_Physical_WhirlwindCharge = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.WhirlwindCharge"), FString("WhirlwindCharge Ability Cooldown"));
 
 	GameplayTags.Damage = Manager.AddNativeGameplayTag(FName("Damage"), FString("Damage"));
 	GameplayTags.Damage_Physical = Manager.AddNativeGameplayTag(FName("Damage.Physical"), FString("Physical Damage"));
@@ -85,5 +90,4 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.DamageTypes.Add(GameplayTags.Damage_Physical);
 
 	GameplayTags.Effects_HitReact = Manager.AddNativeGameplayTag(FName("Effects.HitReact"), FString("HitReact"));
-
 }
