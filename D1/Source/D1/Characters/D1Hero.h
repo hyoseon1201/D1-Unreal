@@ -38,12 +38,13 @@ public:
 	virtual void LevelUp_Implementation() override;
 	virtual int32 FindLevelForXP_Implementation(int32 InXP) const override;
 	virtual int32 GetAttributePointsReward_Implementation(int32 Level) const override;
-	virtual int32 GetSpellPointsReward_Implementation(int32 Level) const override;
+	virtual int32 GetSkillPointsReward_Implementation(int32 Level) const override;
 	virtual void AddToPlayerLevel_Implementation(int32 InPlayerLevel) override;
-	virtual void AddToSpellPoints_Implementation(int32 InSpellPoints) override;
+	virtual void AddToSkillPoints_Implementation(int32 InSkillPoints) override;
 	virtual void AddToAttributePoints_Implementation(int32 InAttributePoints) override;
 	virtual int32 GetAttributePoints_Implementation() const override;
 	virtual int32 GetSpellPoints_Implementation() const override;
+	virtual FGameplayTag GetCharacterClassTag_Implementation() const override;
 	// End player interface
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)

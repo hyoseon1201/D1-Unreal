@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "GameplayTagContainer.h"
 #include "PlayerInterface.generated.h"
 
 // This class does not need to be modified.
@@ -35,7 +36,7 @@ public:
 	int32 GetAttributePointsReward(int32 Level) const;
 
 	UFUNCTION(BlueprintNativeEvent)
-	int32 GetSpellPointsReward(int32 Level) const;
+	int32 GetSkillPointsReward(int32 Level) const;
 
 	UFUNCTION(BlueprintNativeEvent)
 	void AddToPlayerLevel(int32 InPlayerLevel);
@@ -47,11 +48,14 @@ public:
 	int32 GetAttributePoints() const;
 
 	UFUNCTION(BlueprintNativeEvent)
-	void AddToSpellPoints(int32 InPlayerLevel);
+	void AddToSkillPoints(int32 InPlayerLevel);
 
 	UFUNCTION(BlueprintNativeEvent)
 	int32 GetSpellPoints() const;
 
 	UFUNCTION(BlueprintNativeEvent)
 	void LevelUp();
+
+	UFUNCTION(BlueprintNativeEvent)
+	FGameplayTag GetCharacterClassTag() const;
 };

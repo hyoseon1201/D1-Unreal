@@ -18,6 +18,9 @@ public:
 	virtual void BroadcastInitialValues() override;
 	virtual void BindCallbacksToDependencies() override;
 
+	UPROPERTY(BlueprintAssignable)
+	FOnPlayerStatChangedSignature SkillPointsChanged;
+
 protected:
 	UFUNCTION(BlueprintCallable, Category = "WidgetController")
 	TArray<FD1AbilityTagInfo> GetFilteredAbilityInfo();

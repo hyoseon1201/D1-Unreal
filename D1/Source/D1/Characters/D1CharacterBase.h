@@ -40,6 +40,9 @@ public:
 	UPROPERTY(EditAnywhere, Category = "Combat")
 	TArray<FTaggedMontage> AttackMontages;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Character Data")
+	FGameplayTag CharacterClassTag;
+
 protected:
 	virtual void BeginPlay() override;
 

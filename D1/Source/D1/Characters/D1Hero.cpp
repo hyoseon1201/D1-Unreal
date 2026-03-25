@@ -47,6 +47,16 @@ void AD1Hero::PossessedBy(AController* NewController)
 	InitAbilityActorInfo();
 	InitializeDefaultAttributes();
 	AddCharacterAbilities();
+
+	if (AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>())
+	{
+		if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(GetAbilitySystemComponent()))
+		{
+			D1ASC->UpdateAbilityStatuses(D1PS->GetPlayerLevel());
+
+			UE_LOG(LogTemp, Log, TEXT("PossessedBy: Initialized abilities for Level [%d]"), D1PS->GetPlayerLevel());
+		}
+	}
 }
 
 void AD1Hero::OnRep_PlayerState()
@@ -97,7 +107,7 @@ int32 AD1Hero::GetAttributePointsReward_Implementation(int32 Level) const
 	return D1PS->LevelUpInfo->LevelupInformation[Level].AttributePointAward;
 }
 
-int32 AD1Hero::GetSpellPointsReward_Implementation(int32 Level) const
+int32 AD1Hero::GetSkillPointsReward_Implementation(int32 Level) const
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
@@ -109,13 +119,22 @@ void AD1Hero::AddToPlayerLevel_Implementation(int32 InPlayerLevel)
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
 	D1PS->AddToLevel(InPlayerLevel);
+
+	if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(GetAbilitySystemComponent()))
+	{
+		const int32 CurrentLevel = D1PS->GetPlayerLevel();
+
+		UE_LOG(LogTemp, Log, TEXT("AddToPlayerLevel: Level updated to [%d]. Updating abilities..."), CurrentLevel);
+
+		D1ASC->UpdateAbilityStatuses(CurrentLevel);
+	}
 }
 
-void AD1Hero::AddToSpellPoints_Implementation(int32 InSpellPoints)
+void AD1Hero::AddToSkillPoints_Implementation(int32 InSkillPoints)
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
-	D1PS->AddToSpellPoints(InSpellPoints);
+	D1PS->AddToSkillPoints(InSkillPoints);
 }
 
 void AD1Hero::AddToAttributePoints_Implementation(int32 InAttributePoints)
@@ -136,7 +155,12 @@ int32 AD1Hero::GetSpellPoints_Implementation() const
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
-	return D1PS->GetSpellPoints();
+	return D1PS->GetSkillPoints();
+}
+
+FGameplayTag AD1Hero::GetCharacterClassTag_Implementation() const
+{
+	return CharacterClassTag;
 }
 
 void AD1Hero::InitAbilityActorInfo()

@@ -7,15 +7,32 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/Data/D1AbilityInfo.h"
 #include "BlueprintGameplayTagLibrary.h"
+#include "Characters/D1CharacterBase.h"
+#include "Interaction/PlayerInterface.h"
+#include "Player/D1PlayerState.h"
 
 void UD1SkillMenuWidgetController::BroadcastInitialValues()
 {
 	BroadcastAbilityInfo();
+    SkillPointsChanged.Broadcast(GetD1PS()->GetSkillPoints());
 }
 
 void UD1SkillMenuWidgetController::BindCallbacksToDependencies()
 {
+    GetD1ASC()->AbilityStatusChanged.AddLambda([this](const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag)
+        {
+            if (AbilityInfo)
+            {
+                FD1AbilityTagInfo Info = AbilityInfo->FindAbilityTagInforTag(AbilityTag);
+                Info.StatusTag = StatusTag;
+                AbilityInfoDelegate.Broadcast(Info);
+            }
+        });
 
+    GetD1PS()->OnSkillPointsChangedDelegate.AddLambda([this](int32 SkillPoints)
+        {
+            SkillPointsChanged.Broadcast(SkillPoints);
+        });
 }
 
 TArray<FD1AbilityTagInfo> UD1SkillMenuWidgetController::GetFilteredAbilityInfo()
@@ -23,40 +40,25 @@ TArray<FD1AbilityTagInfo> UD1SkillMenuWidgetController::GetFilteredAbilityInfo()
     TArray<FD1AbilityTagInfo> FilteredInfo;
     if (!AbilityInfo || !AbilitySystemComponent) return FilteredInfo;
 
+    // 1. 아바타 액터를 가져옵니다.
     AActor* AvatarActor = AbilitySystemComponent->GetAvatarActor();
     if (!AvatarActor) return FilteredInfo;
 
-    // 디버깅: 실제 액터가 가진 Actor Tags 목록 출력
-    for (const FName& Tag : AvatarActor->Tags)
+    // 2. 인터페이스를 통해 클래스 태그를 가져옵니다.
+    FGameplayTag MyClassTag;
+    if (IPlayerInterface* PlayerInterface = Cast<IPlayerInterface>(AvatarActor))
     {
-        UE_LOG(LogTemp, Log, TEXT("Avatar Actor Tag: %s"), *Tag.ToString());
+        // BlueprintNativeEvent이므로 Execute_ 함수명을 사용합니다.
+        MyClassTag = IPlayerInterface::Execute_GetCharacterClassTag(AvatarActor);
     }
 
+    // 3. 필터링 로직
     for (const FD1AbilityTagInfo& Info : AbilityInfo->AbilityInformation)
     {
-        // 1. 공용 스킬 체크
-        if (!Info.ClassTag.IsValid())
+        // 공용 스킬(태그가 비어있음)이거나, 내 클래스 태그와 일치하는 경우
+        if (!Info.ClassTag.IsValid() || MyClassTag.MatchesTag(Info.ClassTag))
         {
             FilteredInfo.Add(Info);
-            continue;
-        }
-
-        // 2. GameplayTag를 FName으로 변환하여 Actor Tag와 비교
-        // Info.ClassTag가 "Class.Warrior"라면 "Warrior" 부분만 추출하거나 전체 이름을 비교해야 합니다.
-        // 여기서는 가장 확실하게 태그의 'Leaf Name'(마지막 이름) 혹은 전체 이름을 FName으로 변환해 체크합니다.
-
-        FName TargetTagName = Info.ClassTag.GetTagName(); // "Class.Warrior" 전체 이름
-
-        // 만약 액터 태그에 "Warrior"라고만 적었다면, 아래와 같이 비교 로직이 필요할 수 있습니다.
-        // 우선은 정확한 매칭을 위해 ActorHasTag를 사용합니다.
-        if (AvatarActor->ActorHasTag(TargetTagName) || AvatarActor->ActorHasTag(FName("Warrior")))
-        {
-            UE_LOG(LogTemp, Log, TEXT("Match Success: %s has tag %s"), *AvatarActor->GetName(), *TargetTagName.ToString());
-            FilteredInfo.Add(Info);
-        }
-        else
-        {
-            UE_LOG(LogTemp, Warning, TEXT("Match Failed: %s does not have tag %s"), *AvatarActor->GetName(), *TargetTagName.ToString());
         }
     }
 
