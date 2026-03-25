@@ -6,6 +6,8 @@
 #include "UI/WidgetController/D1WidgetController.h"
 #include "D1SkillMenuWidgetController.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FSelectedAbilityChangedSignature, const FGameplayTag&, AbilityTag, const FGameplayTag&, StatusTag);
+
 /**
  * 
  */
@@ -20,6 +22,12 @@ public:
 
 	UPROPERTY(BlueprintAssignable)
 	FOnPlayerStatChangedSignature SkillPointsChanged;
+
+	UPROPERTY(BlueprintAssignable)
+	FSelectedAbilityChangedSignature SelectedAbilityChangedDelegate;
+
+	UFUNCTION(BlueprintCallable)
+	void AbilitySelected(const FGameplayTag& AbilityTag);
 
 protected:
 	UFUNCTION(BlueprintCallable, Category = "WidgetController")

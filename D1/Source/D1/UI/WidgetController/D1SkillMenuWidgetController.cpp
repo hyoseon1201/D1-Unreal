@@ -10,6 +10,7 @@
 #include "Characters/D1CharacterBase.h"
 #include "Interaction/PlayerInterface.h"
 #include "Player/D1PlayerState.h"
+#include "D1GameplayTags.h"
 
 void UD1SkillMenuWidgetController::BroadcastInitialValues()
 {
@@ -33,6 +34,25 @@ void UD1SkillMenuWidgetController::BindCallbacksToDependencies()
         {
             SkillPointsChanged.Broadcast(SkillPoints);
         });
+}
+
+void UD1SkillMenuWidgetController::AbilitySelected(const FGameplayTag& AbilityTag)
+{
+    if (!GetD1ASC()) return;
+
+    FGameplayTag StatusTag;
+    FGameplayAbilitySpec* Spec = GetD1ASC()->GetSpecFromAbilityTag(AbilityTag);
+
+    if (Spec)
+    {
+        StatusTag = GetD1ASC()->GetStatusFromSpec(*Spec);
+    }
+    else
+    {
+        StatusTag = FD1GameplayTags::Get().Abilities_Status_Locked;
+    }
+
+    SelectedAbilityChangedDelegate.Broadcast(AbilityTag, StatusTag);
 }
 
 TArray<FD1AbilityTagInfo> UD1SkillMenuWidgetController::GetFilteredAbilityInfo()

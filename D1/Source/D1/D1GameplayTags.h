@@ -62,10 +62,13 @@ public:
 	FGameplayTag Player_Block_InputReleased;
 	FGameplayTag Player_Block_InputHeld;
 
-	/* Ability Tags */
+	/* Active Ability Tags */
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Physical_GroundSword;
 	FGameplayTag Abilities_Physical_WhirlwindCharge;
+
+	/* Passive Ability Tags */
+	FGameplayTag Abilities_TestPassive;
 	
 	FGameplayTag Abilities_HitReact;
 

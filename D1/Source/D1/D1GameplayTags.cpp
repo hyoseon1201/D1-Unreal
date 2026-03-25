@@ -61,10 +61,13 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Player_Block_InputHeld = Manager.AddNativeGameplayTag(FName("Player.Block.Held"), FString("Block Input Held callback for input"));
 	GameplayTags.Player_Block_InputReleased = Manager.AddNativeGameplayTag(FName("Player.Block.Released"), FString("Block Input Released callback for input"));
 
-	/* Ability Tags */
+	/* Active Ability Tags */
 	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
 	GameplayTags.Abilities_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Abilities.Physical.GroundSword"), FString("Warrior | GroundSword Ability"));
 	GameplayTags.Abilities_Physical_WhirlwindCharge = Manager.AddNativeGameplayTag(FName("Abilities.Physical.WhirlwindCharge"), FString("Warrior | WhirlwindCharge Ability"));
+
+	/* Passive Ability Tags */
+	GameplayTags.Abilities_TestPassive = Manager.AddNativeGameplayTag(FName("Abilities.TestPassive"), FString("Warrior | TestPassive Ability"));
 
 	GameplayTags.Abilities_HitReact = Manager.AddNativeGameplayTag(FName("Abilities.HitReact"), FString("HitReact Ability"));
 
