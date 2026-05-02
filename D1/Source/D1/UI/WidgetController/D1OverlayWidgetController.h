@@ -9,6 +9,7 @@ class UD1AbilityInfo;
 class UD1AbilitySystemComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnCooldownSignature, const FGameplayTag&, AbilityTag, const FGameplayTag&, CooldownTag, float, CooldownPercent, float, Duration);
 
 UCLASS(BlueprintType, Blueprintable)
 class D1_API UD1OverlayWidgetController : public UD1WidgetController
@@ -37,12 +38,19 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Level")
 	FOnPlayerStatChangedSignature OnPlayerLevelChangedDelegate;
 
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Cooldown")
+	FOnCooldownSignature OnCooldownTagChangedDelegate;
+
 protected:
 
 	template<typename T>
 	T* GetDataTableRowByTag(UDataTable* DataTable, const FGameplayTag& Tag);
 
 	void OnXPChanged(int32 NewXP);
+
+	void OnAbilityAssigned(const FGameplayTag& AbilityTag, const FGameplayTag& CooldownTag);
+
+	void OnCooldownTagChanged(const FGameplayTag CooldownTag, int32 NewCount, FGameplayTag AbilityTag);
 };
 
 template <typename T>

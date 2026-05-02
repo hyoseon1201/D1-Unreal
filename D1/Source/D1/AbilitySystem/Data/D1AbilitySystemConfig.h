@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -15,7 +15,7 @@ class D1_API UD1AbilitySystemConfig : public UDataAsset
 	GENERATED_BODY()
 
 public:
-	// --- ÀüÅõ °ü·Ã Àü¿ª ¼³Á¤ ---
+	// --- ì „íˆ¬ ê´€ë ¨ ì „ì—­ ì„¤ì • ---
 	UPROPERTY(EditDefaultsOnly, Category = "Combat")
 	TObjectPtr<UCurveTable> DamageCalculationCoefficients;
 };

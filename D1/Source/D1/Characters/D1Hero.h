@@ -43,7 +43,7 @@ public:
 	virtual void AddToSkillPoints_Implementation(int32 InSkillPoints) override;
 	virtual void AddToAttributePoints_Implementation(int32 InAttributePoints) override;
 	virtual int32 GetAttributePoints_Implementation() const override;
-	virtual int32 GetSpellPoints_Implementation() const override;
+	virtual int32 GetSkillPoints_Implementation() const override;
 	virtual FGameplayTag GetCharacterClassTag_Implementation() const override;
 	// End player interface
 

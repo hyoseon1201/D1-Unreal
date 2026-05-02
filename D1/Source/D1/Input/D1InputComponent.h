@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -27,19 +27,19 @@ void UD1InputComponent::BindAbilityActions(const UD1InputConfig* InputConfig, Us
 	{
 		if (Action.InputAction && Action.InputTag.IsValid())
 		{
-			// Å°¸¦ Ã³À½ ´­·¶À» ¶§ (Started)
+			// í‚¤ë¥¼ ì²˜ìŒ ëˆŒë €ì„ ë•Œ (Started)
 			if (PressedFunc)
 			{
 				BindAction(Action.InputAction, ETriggerEvent::Started, Object, PressedFunc, Action.InputTag);
 			}
 
-			// Å°¸¦ ¶ÃÀ» ¶§ (Completed)
+			// í‚¤ë¥¼ ë—ì„ ë•Œ (Completed)
 			if (ReleasedFunc)
 			{
 				BindAction(Action.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc, Action.InputTag);
 			}
 
-			// Å°¸¦ ´©¸£°í ÀÖ´Â ÁßÀÏ ¶§ (Triggered)
+			// í‚¤ë¥¼ ëˆ„ë¥´ê³  ìˆëŠ” ì¤‘ì¼ ë•Œ (Triggered)
 			if (HeldFunc)
 			{
 				BindAction(Action.InputAction, ETriggerEvent::Triggered, Object, HeldFunc, Action.InputTag);

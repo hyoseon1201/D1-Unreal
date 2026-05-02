@@ -1,4 +1,4 @@
-#include "Actor/D1EffectActor.h"
+Ôªø#include "Actor/D1EffectActor.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
 
@@ -62,7 +62,7 @@ void AD1EffectActor::OnEndOverlap(AActor* TargetActor)
 		ApplyEffectToTarget(TargetActor, InfiniteGameplayEffectClass);
 	}
 
-	// ¡¶∞≈ ∑Œ¡˜
+	// Ï†úÍ±∞ Î°úÏßÅ
 	if (InfiniteEffectRemovalPolicy == EEffectRemovalPolicy::RemoveOnEndOverlap)
 	{
 		UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);

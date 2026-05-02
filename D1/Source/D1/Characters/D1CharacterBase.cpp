@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Characters/D1CharacterBase.h"
@@ -34,25 +34,25 @@ UAbilitySystemComponent* AD1CharacterBase::GetAbilitySystemComponent() const
 FVector AD1CharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& SocketTag)
 {
 	const FD1GameplayTags& GameplayTags = FD1GameplayTags::Get();
-	// 1. ¹«±â ³¡ ¼ÒÄÏ (Ä® µî)
+	// 1. ë¬´ê¸° ë ì†Œì¼“ (ì¹¼ ë“±)
 	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_Weapon) && IsValid(Weapon))
 	{
 		return Weapon->GetSocketLocation(WeaponTipSocketName);
 	}
 
-	// 2. ¿À¸¥¼Õ ¼ÒÄÏ
+	// 2. ì˜¤ë¥¸ì† ì†Œì¼“
 	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_RightHand))
 	{
 		return GetMesh()->GetSocketLocation(RightHandSocketName);
 	}
 
-	// 3. ¿Þ¼Õ ¼ÒÄÏ (ÇÊ¿ä½Ã Ãß°¡)
+	// 3. ì™¼ì† ì†Œì¼“ (í•„ìš”ì‹œ ì¶”ê°€)
 	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_LeftHand))
 	{
 		return GetMesh()->GetSocketLocation(LeftHandSocketName);
 	}
 
-	// ±âº»°ªÀ¸·Î ¸Þ½¬ÀÇ À§Ä¡¸¦ ¹ÝÈ¯ÇÏ°Å³ª ·Î±×¸¦ Âï¾î ¹®Á¦¸¦ ÆÄ¾ÇÇÕ´Ï´Ù.
+	// ê¸°ë³¸ê°’ìœ¼ë¡œ ë©”ì‰¬ì˜ ìœ„ì¹˜ë¥¼ ë°˜í™˜í•˜ê±°ë‚˜ ë¡œê·¸ë¥¼ ì°ì–´ ë¬¸ì œë¥¼ íŒŒì•…í•©ë‹ˆë‹¤.
 	UE_LOG(LogTemp, Error, TEXT("Unknown Socket Tag: %s"), *SocketTag.ToString());
 	return GetMesh()->GetComponentLocation();
 }

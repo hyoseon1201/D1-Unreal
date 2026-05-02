@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Characters/D1Enemy.h"
@@ -144,7 +144,7 @@ void AD1Enemy::BeginPlay()
 			&AD1Enemy::HitReactTagChanged
 		);
 
-		// ½ÃÀÛÇÒ¶§ Ã¼·ÂÀ» Ã¤¿öÁÖ´Â ÃÊ±âÈ­ ÄÚµå
+		// ì‹œìž‘í• ë•Œ ì²´ë ¥ì„ ì±„ì›Œì£¼ëŠ” ì´ˆê¸°í™” ì½”ë“œ
 		OnHealthChanged.Broadcast(D1AS->GetHealth());
 		OnMaxHealthChanged.Broadcast(D1AS->GetMaxHealth());
 	}

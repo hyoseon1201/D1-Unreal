@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -43,6 +43,17 @@ struct FD1AbilityTagInfo
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
 	TSubclassOf<UGameplayAbility> Ability;
+
+	// Detail Info
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FText AbilityName = FText();
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly)
+	FText AbilityDescription = FText();
+
+	// 동적 데이터(런타임에 채움)
+	UPROPERTY(BlueprintReadOnly)
+	int32 Level = 0;
 };
 
 /**

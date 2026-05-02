@@ -51,7 +51,7 @@ public:
 	void AddToSkillPoints(int32 InPlayerLevel);
 
 	UFUNCTION(BlueprintNativeEvent)
-	int32 GetSpellPoints() const;
+	int32 GetSkillPoints() const;
 
 	UFUNCTION(BlueprintNativeEvent)
 	void LevelUp();

@@ -151,7 +151,7 @@ int32 AD1Hero::GetAttributePoints_Implementation() const
 	return D1PS->GetAttributePoints();
 }
 
-int32 AD1Hero::GetSpellPoints_Implementation() const
+int32 AD1Hero::GetSkillPoints_Implementation() const
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);

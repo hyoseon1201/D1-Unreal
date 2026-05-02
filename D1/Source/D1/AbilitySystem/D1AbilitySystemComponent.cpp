@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AbilitySystem/D1AbilitySystemComponent.h"
@@ -109,12 +109,12 @@ FGameplayTag UD1AbilitySystemComponent::GetAbilityTagFromSpec(const FGameplayAbi
 {
 	if (AbilitySpec.Ability)
 	{
-		// 1. ¾î¶² ¾îºô¸®Æ¼¸¦ °Ë»çÇÏ°í ÀÖ´ÂÁö Ãâ·Â
+		// 1. ì–´ë–¤ ì–´ë¹Œë¦¬í‹°ë¥¼ ê²€ì‚¬í•˜ê³  ìˆëŠ”ì§€ ì¶œë ¥
 		UE_LOG(LogTemp, Warning, TEXT("[GetAbilityTag] Checking Ability: %s"), *AbilitySpec.Ability->GetName());
 
 		for (FGameplayTag Tag : AbilitySpec.Ability.Get()->GetAssetTags())
 		{
-			// 2. ÀÌ ¾îºô¸®Æ¼°¡ ¹«½¼ ÅÂ±×µéÀ» °¡Áö°í ÀÖ´ÂÁö ÀüºÎ Ãâ·Â
+			// 2. ì´ ì–´ë¹Œë¦¬í‹°ê°€ ë¬´ìŠ¨ íƒœê·¸ë“¤ì„ ê°€ì§€ê³  ìˆëŠ”ì§€ ì „ë¶€ ì¶œë ¥
 			UE_LOG(LogTemp, Warning, TEXT("   - Found Tag in Ability: [%s]"), *Tag.ToString());
 
 			if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Abilities"))))
@@ -154,9 +154,25 @@ FGameplayTag UD1AbilitySystemComponent::GetStatusFromSpec(const FGameplayAbility
 	return FGameplayTag();
 }
 
+FGameplayAbilitySpec* UD1AbilitySystemComponent::GetSpecFromInputTag(const FGameplayTag& InputTag)
+{
+	ABILITYLIST_SCOPE_LOCK();
+	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
+	{
+		for (FGameplayTag Tag : AbilitySpec.DynamicAbilityTags)
+		{
+			if (Tag.MatchesTagExact(InputTag))
+			{
+				return &AbilitySpec;
+			}
+		}
+	}
+	return nullptr;
+}
+
 FGameplayAbilitySpec* UD1AbilitySystemComponent::GetSpecFromAbilityTag(const FGameplayTag& AbilityTag)
 {
-	FScopedAbilityListLock ActivateScopeLock(*this);
+	ABILITYLIST_SCOPE_LOCK();
 	for (FGameplayAbilitySpec& AbilitySpec : GetActivatableAbilities())
 	{
 		for (FGameplayTag Tag : AbilitySpec.Ability.Get()->GetAssetTags())
@@ -182,8 +198,32 @@ void UD1AbilitySystemComponent::UpgradeAttribute(const FGameplayTag& AttributeTa
 	}
 }
 
+void UD1AbilitySystemComponent::ClearSlot(const FGameplayTag& SlotTag)
+{
+	const FD1GameplayTags& Tags = FD1GameplayTags::Get();
+	for (FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		if (Spec.DynamicAbilityTags.HasTagExact(SlotTag))
+		{
+			Spec.DynamicAbilityTags.RemoveTag(SlotTag);
+
+			if (GetStatusFromSpec(Spec).MatchesTagExact(Tags.Abilities_Status_Equipped))
+			{
+				Spec.GetDynamicSpecSourceTags().RemoveTag(Tags.Abilities_Status_Equipped);
+				Spec.GetDynamicSpecSourceTags().AddTag(Tags.Abilities_Status_Unlocked);
+			}
+
+			MarkAbilitySpecDirty(Spec);
+			ClientUpdateAbilityStatus(GetAbilityTagFromSpec(Spec), GetStatusFromSpec(Spec), FGameplayTag(), Spec.Level);
+			break;
+		}
+	}
+}
+
 void UD1AbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 {
+	if (!GetOwner()->HasAuthority()) return;
+
 	UD1AbilityInfo* AbilityInfo = UD1AbilitySystemLibrary::GetAbilityInfo(GetAvatarActor());
 	if (!AbilityInfo)
 	{
@@ -210,22 +250,28 @@ void UD1AbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 		if (Info.ClassTag.IsValid() && !MyClassTag.MatchesTag(Info.ClassTag)) continue;
 		if (Level < Info.LevelRequirement) continue;
 
-		// 1. ÇØ´ç ÅÂ±×¸¦ °¡Áø ½ºÆåÀÌ ÀÌ¹Ì ÀÖ´ÂÁö È®ÀÎ
+		// 1. í•´ë‹¹ íƒœê·¸ë¥¼ ê°€ì§„ ìŠ¤í™ì´ ì´ë¯¸ ìˆëŠ”ì§€ í™•ì¸
 		FGameplayAbilitySpec* AbilitySpec = GetSpecFromAbilityTag(Info.AbilityTag);
 
 		if (AbilitySpec == nullptr)
 		{
-			// [½Å±Ô ºÎ¿©] ¾ÆÁ÷ ¾ø´Â ½ºÅ³ÀÎ °æ¿ì (º¸Åë »õ·Î¿î ·¹º§´ë¿¡ ÁøÀÔÇßÀ» ¶§)
+			// 1. ìŠ¤í™ ìƒì„± (ë ˆë²¨ 1)
 			FGameplayAbilitySpec NewSpec = FGameplayAbilitySpec(Info.Ability, 1);
+
+			// 2. ì´ˆê¸° ìƒíƒœë¥¼ Eligibleë¡œ ì„¤ì •
 			NewSpec.GetDynamicSpecSourceTags().AddTag(FD1GameplayTags::Get().Abilities_Status_Eligible);
+
+			// 3. ì„œë²„ ASCì— ë“±ë¡ (ë§¤ìš° ì¤‘ìš”!)
 			GiveAbility(NewSpec);
-			MarkAbilitySpecDirty(NewSpec);
+
+			// 4. í´ë¼ì´ì–¸íŠ¸ UIì— ì¦‰ì‹œ ë°©ì†¡
+			ClientUpdateAbilityStatus(Info.AbilityTag, FD1GameplayTags::Get().Abilities_Status_Eligible, FGameplayTag(), NewSpec.Level);
 
 			UE_LOG(LogTemp, Log, TEXT(">>> GIVING NEW ABILITY: [%s]"), *Info.AbilityTag.ToString());
 		}
 		else
 		{
-			// [±âÁ¸ ¾÷µ¥ÀÌÆ®] ÀÌ¹Ì ½ºÆåÀº ÀÖÁö¸¸, »óÅÂ ÅÂ±×°¡ ¾÷µ¥ÀÌÆ®µÇ¾î¾ß ÇÏ´Â °æ¿ì (¿¹: Locked -> Eligible)
+			// [ê¸°ì¡´ ì—…ë°ì´íŠ¸] ì´ë¯¸ ìŠ¤í™ì€ ìˆì§€ë§Œ, ìƒíƒœ íƒœê·¸ê°€ ì—…ë°ì´íŠ¸ë˜ì–´ì•¼ í•˜ëŠ” ê²½ìš° (ì˜ˆ: Locked -> Eligible)
 			FGameplayTag EligibleTag = FD1GameplayTags::Get().Abilities_Status_Eligible;
 			FGameplayTag LockedTag = FD1GameplayTags::Get().Abilities_Status_Locked;
 
@@ -234,13 +280,118 @@ void UD1AbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 				AbilitySpec->GetDynamicSpecSourceTags().RemoveTag(LockedTag);
 				AbilitySpec->GetDynamicSpecSourceTags().AddTag(EligibleTag);
 
-				// º¯°æ »çÇ×À» Å¬¶óÀÌ¾ğÆ®¿Í UI¿¡ ¾Ë¸²
+				// ë³€ê²½ ì‚¬í•­ì„ í´ë¼ì´ì–¸íŠ¸ì™€ UIì— ì•Œë¦¼
 				MarkAbilitySpecDirty(*AbilitySpec);
 
 				UE_LOG(LogTemp, Log, TEXT(">>> UPDATING EXISTING ABILITY: [%s] to Eligible"), *Info.AbilityTag.ToString());
+
+				ClientUpdateAbilityStatus(Info.AbilityTag, EligibleTag, FGameplayTag(), AbilitySpec->Level);
 			}
 		}
 	}
+}
+
+void UD1AbilitySystemComponent::ServerUpgradeAbility_Implementation(const FGameplayTag& AbilityTag)
+{
+	FGameplayAbilitySpec* AbilitySpec = GetSpecFromAbilityTag(AbilityTag);
+	if (!AbilitySpec)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Upgrade] Spec not found for Tag: %s"), *AbilityTag.ToString());
+		return;
+	}
+
+	AActor* Avatar = GetAvatarActor();
+	if (Avatar && Avatar->Implements<UPlayerInterface>())
+	{
+		// 1. í¬ì¸íŠ¸ ì²´í¬
+		const int32 CurrentPoints = IPlayerInterface::Execute_GetSkillPoints(Avatar);
+		UE_LOG(LogTemp, Log, TEXT("[Upgrade] Start - Ability: %s, Current Points: %d"), *AbilityTag.ToString(), CurrentPoints);
+
+		if (CurrentPoints <= 0)
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Upgrade] Failed - Not enough skill points."));
+			return;
+		}
+
+		const FD1GameplayTags& Tags = FD1GameplayTags::Get();
+		FGameplayTag StatusTag = GetStatusFromSpec(*AbilitySpec);
+		bool bAbilityUpgraded = false;
+
+		UE_LOG(LogTemp, Log, TEXT("[Upgrade] Current Status: %s, Current Level: %d"), *StatusTag.ToString(), AbilitySpec->Level);
+
+		// 2. [ë°°ìš°ê¸°] Eligible -> Unlocked
+		if (StatusTag.MatchesTagExact(Tags.Abilities_Status_Eligible))
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Upgrade] Action: Unlocking Ability (Eligible -> Unlocked)"));
+			AbilitySpec->GetDynamicSpecSourceTags().RemoveTag(Tags.Abilities_Status_Eligible);
+			AbilitySpec->GetDynamicSpecSourceTags().AddTag(Tags.Abilities_Status_Unlocked);
+			bAbilityUpgraded = true;
+		}
+		// 3. [ë ˆë²¨ì—…] Unlocked/Equipped -> Level Up
+		else if (StatusTag.MatchesTagExact(Tags.Abilities_Status_Unlocked) || StatusTag.MatchesTagExact(Tags.Abilities_Status_Equipped))
+		{
+			if (AbilitySpec->Level < 10)
+			{
+				AbilitySpec->Level += 1;
+				bAbilityUpgraded = true;
+				UE_LOG(LogTemp, Warning, TEXT("[Upgrade] Action: Level Up! New Level: %d"), AbilitySpec->Level);
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[Upgrade] Failed - Ability is already at Max Level (10)."));
+			}
+		}
+		else
+		{
+			// ë§Œì•½ ì´ ë¡œê·¸ê°€ ì°íŒë‹¤ë©´ ìƒíƒœ íƒœê·¸ ìì²´ê°€ ë¡œì§ ì™¸ì˜ ê²ƒ(ì˜ˆ: Locked)ìœ¼ë¡œ ì¡í˜€ìˆëŠ” ê²ë‹ˆë‹¤.
+			UE_LOG(LogTemp, Error, TEXT("[Upgrade] Failed - StatusTag '%s' is not valid for upgrade."), *StatusTag.ToString());
+		}
+
+		// 4. ì„±ê³µ ì‹œ ì²˜ë¦¬
+		if (bAbilityUpgraded)
+		{
+			IPlayerInterface::Execute_AddToSkillPoints(Avatar, -1);
+			MarkAbilitySpecDirty(*AbilitySpec);
+
+			FGameplayTag NewStatusTag = GetStatusFromSpec(*AbilitySpec);
+			UE_LOG(LogTemp, Log, TEXT("[Upgrade] Success - Remaining Points: %d, Final Status: %s"),
+				IPlayerInterface::Execute_GetSkillPoints(Avatar), *NewStatusTag.ToString());
+
+			FGameplayTag CurrentInputTag = GetInputTagFromSpec(*AbilitySpec);
+			ClientUpdateAbilityStatus(AbilityTag, NewStatusTag, CurrentInputTag, AbilitySpec->Level);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Upgrade] Avatar is null or doesn't implement UPlayerInterface."));
+	}
+}
+
+void UD1AbilitySystemComponent::ServerEquipAbility_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& SlotTag)
+{
+	ClearSlot(SlotTag);
+
+	FGameplayAbilitySpec* AbilitySpec = GetSpecFromAbilityTag(AbilityTag);
+	if (!AbilitySpec) return;
+
+	const FD1GameplayTags& Tags = FD1GameplayTags::Get();
+
+	// 1. [ìƒíƒœ ë³€ê²½] Unlocked -> Equipped (ì´ë¯¸ Equippedë¼ë©´ ìœ ì§€)
+	FGameplayTag CurrentStatus = GetStatusFromSpec(*AbilitySpec);
+	if (CurrentStatus.MatchesTagExact(Tags.Abilities_Status_Unlocked))
+	{
+		AbilitySpec->GetDynamicSpecSourceTags().RemoveTag(Tags.Abilities_Status_Unlocked);
+		AbilitySpec->GetDynamicSpecSourceTags().AddTag(Tags.Abilities_Status_Equipped);
+	}
+
+	// 2. [ì¸í’‹ ë³€ê²½] ìƒˆë¡œìš´ ì¸í’‹ íƒœê·¸ ë¶€ì—¬
+	AbilitySpec->DynamicAbilityTags.RemoveTag(GetInputTagFromSpec(*AbilitySpec));
+	AbilitySpec->DynamicAbilityTags.AddTag(SlotTag);
+
+	MarkAbilitySpecDirty(*AbilitySpec);
+
+	// ì´ì œ GetStatusFromSpecì„ í˜¸ì¶œí•˜ë©´ ë°©ê¸ˆ ë„£ì€ 'Equipped' íƒœê·¸ë¥¼ ì œëŒ€ë¡œ ì°¾ì•„ì˜µë‹ˆë‹¤.
+	ClientUpdateAbilityStatus(AbilityTag, GetStatusFromSpec(*AbilitySpec), SlotTag, AbilitySpec->Level);
 }
 
 void UD1AbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FGameplayTag& AttributeTag)
@@ -268,9 +419,13 @@ void UD1AbilitySystemComponent::OnRep_ActivateAbilities()
 	}
 }
 
-void UD1AbilitySystemComponent::ClientUpdateAbilityStatus_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag)
+void UD1AbilitySystemComponent::ClientUpdateAbilityStatus_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, const FGameplayTag& InputTag, int32 NewLevel)
 {
-	AbilityStatusChanged.Broadcast(AbilityTag, StatusTag);
+	UE_LOG(LogTemp, Warning, TEXT("[ClientRPC] Received - Tag: %s, Status: %s, NewLevel: %d"),
+		*AbilityTag.ToString(), *StatusTag.ToString(), NewLevel);
+
+	// ìê¸° Spec í™•ì¸ ì—†ì´ ì„œë²„ê°€ ì¤€ ê°’ì„ ì‹ ë¢°í•˜ê³  ë¸Œë¡œë“œìºìŠ¤íŠ¸
+	AbilityStatusChanged.Broadcast(AbilityTag, StatusTag, InputTag, NewLevel);
 }
 
 void UD1AbilitySystemComponent::ClientEffectApplied_Implementation(UAbilitySystemComponent* AbilitySystemComponent, const FGameplayEffectSpec& EffectSpec, FActiveGameplayEffectHandle ActiveEffectHandle)

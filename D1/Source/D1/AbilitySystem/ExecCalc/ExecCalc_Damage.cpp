@@ -1,4 +1,4 @@
-#include "AbilitySystem/ExecCalc/ExecCalc_Damage.h"
+ï»¿#include "AbilitySystem/ExecCalc/ExecCalc_Damage.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystem/Data/D1CharacterClassInfo.h"
@@ -40,7 +40,7 @@ UExecCalc_Damage::UExecCalc_Damage()
 
 void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
 {
-	// --- 1. ±âÃÊ Á¤º¸ ¹× ÀÎÅÍÆäÀÌ½º ÃßÃâ ---
+	// --- 1. ê¸°ì´ˆ ì •ë³´ ë° ì¸í„°í˜ì´ìŠ¤ ì¶”ì¶œ ---
 	const UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent();
 	const UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
 
@@ -64,7 +64,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	EvaluationParameters.SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	EvaluationParameters.TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
 
-	// --- 2. ¼Ó¼º Ä¸Ã³ (Attributes Capture) ---
+	// --- 2. ì†ì„± ìº¡ì²˜ (Attributes Capture) ---
 	float Armor = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().ArmorDef, EvaluationParameters, Armor);
 
@@ -77,12 +77,12 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	float CritDamage = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().CriticalHitDamageDef, EvaluationParameters, CritDamage);
 
-	// --- 3. Ä¿ºê Å×ÀÌºí µ¥ÀÌÅÍ ÃßÃâ (Global Config ±â¹İ) ---
-	// GetWorld()¸¦ ÅëÇØ Àü¿ª ¼³Á¤ ¿¡¼ÂÀ» °¡Á®¿É´Ï´Ù.
+	// --- 3. ì»¤ë¸Œ í…Œì´ë¸” ë°ì´í„° ì¶”ì¶œ (Global Config ê¸°ë°˜) ---
+	// GetWorld()ë¥¼ í†µí•´ ì „ì—­ ì„¤ì • ì—ì…‹ì„ ê°€ì ¸ì˜µë‹ˆë‹¤.
 	UD1AbilitySystemConfig* Config = UD1AbilitySystemLibrary::GetAbilitySystemConfig(SourceAvatar);
 
-	float Armor_K = 1000.f; // ±âº»°ª
-	float Pen_Coeff = 0.15f; // ±âº»°ª
+	float Armor_K = 1000.f; // ê¸°ë³¸ê°’
+	float Pen_Coeff = 0.15f; // ê¸°ë³¸ê°’
 
 	if (Config)
 	{
@@ -114,7 +114,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		UE_LOG(LogTemp, Error, TEXT("[ExecCalc] Fail: Unable to find AbilitySystemConfig! Check if assigned in GameMode."));
 	}
 
-	// --- 4. µ¥¹ÌÁö ¹× »ó¼¼ °è»ê ---
+	// --- 4. ë°ë¯¸ì§€ ë° ìƒì„¸ ê³„ì‚° ---
 	float Damage = 0.f;
 
 	for (FGameplayTag DamageTypeTag : FD1GameplayTags::Get().DamageTypes)
@@ -126,7 +126,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	UE_LOG(LogTemp, Warning, TEXT("--- Damage Calculation Details ---"));
 	UE_LOG(LogTemp, Log, TEXT("Raw Accumulated Damage: %.2f"), Damage);
 
-	// [¹æ¾î·Â °è»ê °ø½Ä Àû¿ë]
+	// [ë°©ì–´ë ¥ ê³„ì‚° ê³µì‹ ì ìš©]
 	const float EffectiveArmorPen = ArmorPenetration / (1.f + (SourceLevel * Pen_Coeff));
 	const float FinalArmor = FMath::Max<float>(0.f, Armor - EffectiveArmorPen);
 	const float DamageMultiplier = Armor_K / (FinalArmor + Armor_K);
@@ -136,7 +136,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	UE_LOG(LogTemp, Log, TEXT("Captured Armor: %.2f | Captured Pen: %.2f"), Armor, ArmorPenetration);
 	UE_LOG(LogTemp, Log, TEXT("Effective Pen: %.2f | Final Armor: %.2f | Multiplier: %.4f"), EffectiveArmorPen, FinalArmor, DamageMultiplier);
 
-	// [Ä¡¸íÅ¸ ÆÇÁ¤]
+	// [ì¹˜ëª…íƒ€ íŒì •]
 	const bool bIsCritical = FMath::FRand() * 100.f < CritChance;
 	if (bIsCritical)
 	{
@@ -144,14 +144,14 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		UE_LOG(LogTemp, Warning, TEXT("!!! CRITICAL HIT !!! Multiplier applied: %.2f"), CritDamage / 100.f);
 	}
 
-	// Context¿¡ Ä¡¸íÅ¸ ¿©ºÎ ÀúÀå (UI Ç¥½Ã¿ë)
+	// Contextì— ì¹˜ëª…íƒ€ ì—¬ë¶€ ì €ì¥ (UI í‘œì‹œìš©)
 	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
 	UD1AbilitySystemLibrary::SetIsCriticalHit(EffectContextHandle, bIsCritical);
 
 	UE_LOG(LogTemp, Warning, TEXT(">> FINAL DAMAGE TO APPLY: %.2f <<"), FinalDamage);
 	UE_LOG(LogTemp, Warning, TEXT("----------------------------------"));
 
-	// --- 5. °á°ú Ãâ·Â ---
+	// --- 5. ê²°ê³¼ ì¶œë ¥ ---
 	const FGameplayModifierEvaluatedData EvaluatedData(UD1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, FinalDamage);
 	OutExecutionOutput.AddOutputModifier(EvaluatedData);
 }
