@@ -7,6 +7,7 @@
 #include "UI/WidgetController/D1OverlayWidgetController.h"
 #include "UI/WidgetController/D1AttributeMenuWidgetController.h"
 #include "UI/WidgetController//D1SkillMenuWidgetController.h"
+#include "UI/WidgetController/D1InventoryWidgetController.h"
 #include "Blueprint/UserWidget.h"
 
 UD1OverlayWidgetController* AD1HUD::GetOverlayWidgetController(const FWidgetControllerParams& WCParams)
@@ -40,6 +41,17 @@ UD1SkillMenuWidgetController* AD1HUD::GetSkillMenuWidgetController(const FWidget
 		SkillMenuWidgetController->BindCallbacksToDependencies();
 	}
 	return SkillMenuWidgetController;
+}
+
+UD1InventoryWidgetController* AD1HUD::GetInventoryWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (InventoryWidgetController == nullptr)
+	{
+		InventoryWidgetController = NewObject<UD1InventoryWidgetController>(this, InventoryWidgetControllerClass);
+		InventoryWidgetController->SetWidgetControllerParams(WCParams);
+		InventoryWidgetController->BindCallbacksToDependencies();
+	}
+	return InventoryWidgetController;
 }
 
 void AD1HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS)

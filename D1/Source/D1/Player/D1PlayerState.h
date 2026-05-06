@@ -10,6 +10,7 @@
 class UAbilitySystemComponent;
 class UAttributeSet;
 class UD1LevelupInfo;
+class UD1InventoryComponent;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32 /*StatValue*/)
 
@@ -23,6 +24,7 @@ class D1_API AD1PlayerState : public APlayerState, public IAbilitySystemInterfac
 	
 public:
 	AD1PlayerState();
+	void BeginPlay();
 	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
@@ -41,6 +43,10 @@ public:
 	FORCEINLINE int32 GetAttributePoints() const { return AttributePoints; }
 	FORCEINLINE int32 GetSkillPoints() const { return SkillPoints; }
 
+	/** PlayerState에 부착된 인벤토리 컴포넌트를 반환 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	UD1InventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+
 	void AddToXP(int32 InXP);
 	void AddToLevel(int32 InLevel);
 	void AddToAttributePoints(int32 InPoints);
@@ -56,6 +62,9 @@ protected:
 
 	UPROPERTY()
 	TObjectPtr<UAttributeSet> AttributeSet;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Replicated, Category = "Inventory")
+	TObjectPtr<UD1InventoryComponent> InventoryComponent;
 
 private:
 

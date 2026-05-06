@@ -7,11 +7,13 @@
 #include "UI/HUD/D1HUD.h"
 #include "Player/D1PlayerState.h"
 #include "Game/D1GameModeBase.h"
+#include "Game/D1GameStateBase.h"
 #include "Interaction/CombatInterface.h"
 #include "D1AbilityTypes.h"
 #include "Engine/OverlapResult.h"
 #include "AbilitySystem/Data/D1AbilitySystemConfig.h"
 #include "UI/WidgetController/D1WidgetController.h"
+#include "Inventory/D1ItemRegistry.h"
 
 bool UD1AbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AD1HUD*& OutD1HUD)
 {
@@ -136,6 +138,61 @@ UD1AbilityInfo* UD1AbilitySystemLibrary::GetAbilityInfo(const UObject* WorldCont
 	const AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
 	if (D1GameMode == nullptr) return nullptr;
 	return D1GameMode->AbilityInfo;
+}
+
+UD1ItemData* UD1AbilitySystemLibrary::GetItemData(const UObject* WorldContextObject, const FName& ItemID)
+{
+	const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
+	if (!World)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GetItemData] World is NULL!"));
+		return nullptr;
+	}
+
+	const AGameStateBase* GameState = World->GetGameState();
+	if (!GameState)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GetItemData] GameState is NULL!"));
+		return nullptr;
+	}
+
+	const AD1GameStateBase* D1GS = Cast<AD1GameStateBase>(GameState);
+	if (!D1GS)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GetItemData] D1GameStateBase cast failed!"));
+		return nullptr;
+	}
+
+	if (!D1GS->ItemRegistry)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[GetItemData] ItemRegistry is NULL in GameState!"));
+		return nullptr;
+	}
+
+	UD1ItemData* ItemData = D1GS->ItemRegistry->FindItemData(ItemID);
+	if (ItemData)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[GetItemData] Found: %s"), *ItemID.ToString());
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[GetItemData] NOT Found: %s"), *ItemID.ToString());
+	}
+	return ItemData;
+}
+
+UD1InventoryWidgetController* UD1AbilitySystemLibrary::GetInventoryWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AD1HUD* D1HUD = nullptr;
+	const bool bSuccessfulParams = MakeWidgetControllerParams(WorldContextObject, WCParams, D1HUD);
+
+	if (bSuccessfulParams)
+	{
+		return D1HUD->GetInventoryWidgetController(WCParams);
+	}
+
+	return nullptr;
 }
 
 bool UD1AbilitySystemLibrary::IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle)

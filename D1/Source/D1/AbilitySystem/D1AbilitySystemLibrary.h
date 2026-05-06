@@ -12,6 +12,9 @@ class UD1AttributeMenuWidgetController;
 class UD1SkillMenuWidgetController;
 class UD1AbilitySystemConfig;
 class UD1AbilityInfo;
+class UD1ItemData;
+class UD1InventoryWidgetController;
+class AD1GameStateBase;
 class AD1HUD;
 struct FWidgetControllerParams;
 
@@ -47,6 +50,12 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")
 	static UD1AbilityInfo* GetAbilityInfo(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|ItemData", meta = (DefaultToSelf = "WorldContextObject"))
+	static UD1ItemData* GetItemData(const UObject* WorldContextObject, const FName& ItemID);
+
+	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static UD1InventoryWidgetController* GetInventoryWidgetController(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|GameplayEffects")
 	static bool IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle);

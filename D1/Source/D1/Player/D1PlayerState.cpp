@@ -5,6 +5,7 @@
 
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
+#include "Inventory/D1InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 
 AD1PlayerState::AD1PlayerState()
@@ -14,6 +15,8 @@ AD1PlayerState::AD1PlayerState()
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
 
 	AttributeSet = CreateDefaultSubobject<UD1AttributeSet>("AttributeSet");
+
+	InventoryComponent = CreateDefaultSubobject<UD1InventoryComponent>("InventoryComponent");
 
 	SetNetUpdateFrequency(100.f);
 }
@@ -26,6 +29,7 @@ void AD1PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 	DOREPLIFETIME(AD1PlayerState, XP);
 	DOREPLIFETIME(AD1PlayerState, AttributePoints);
 	DOREPLIFETIME(AD1PlayerState, SkillPoints);
+	DOREPLIFETIME(AD1PlayerState, InventoryComponent);
 }
 
 UAbilitySystemComponent* AD1PlayerState::GetAbilitySystemComponent() const
@@ -87,4 +91,15 @@ void AD1PlayerState::OnRep_AttributePoints(int32 OldAttributePoints)
 void AD1PlayerState::OnRep_SkillPoints(int32 OldSkillPoints)
 {
 	OnSkillPointsChangedDelegate.Broadcast(SkillPoints);
+}
+
+void AD1PlayerState::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 서버에서만 테스트 아이템 지급 (인벤토리 UI 테스트용)
+	if (HasAuthority() && InventoryComponent)
+	{
+		InventoryComponent->AddItem(FName("Potion_Health_Small"), 5);
+	}
 }

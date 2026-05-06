@@ -9,6 +9,8 @@
 class UD1CharacterClassInfo;
 class UD1AbilitySystemConfig;
 class UD1AbilityInfo;
+class UD1ItemRegistry;
+class AD1GameStateBase;
 
 /**
  * 
@@ -19,6 +21,9 @@ class D1_API AD1GameModeBase : public AGameModeBase
 	GENERATED_BODY()
 	
 public:
+	AD1GameModeBase();
+
+	virtual void PostInitializeComponents() override;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Characer Class Defaults")
 	TObjectPtr<UD1CharacterClassInfo> CharacterClassInfo;
@@ -28,4 +33,7 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Ability Info")
 	TObjectPtr<UD1AbilityInfo> AbilityInfo;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Item Data")
+	TObjectPtr<UD1ItemRegistry> ItemRegistry;
 };
