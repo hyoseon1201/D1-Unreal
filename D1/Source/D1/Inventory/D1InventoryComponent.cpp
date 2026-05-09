@@ -2,6 +2,12 @@
 
 #include "Inventory/D1InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
+#include "Inventory/D1ItemData.h"
+#include "Inventory/D1ItemRegistry.h"
+#include "Game/D1GameStateBase.h"
+#include "AbilitySystemInterface.h"
+#include "AbilitySystemComponent.h"
+#include "GameplayEffect.h"
 
 UD1InventoryComponent::UD1InventoryComponent()
 {
@@ -126,8 +132,80 @@ void UD1InventoryComponent::UseItemInternal(int32 SlotIndex)
 		return;
 	}
 
-	// TODO: ItemData 참조하여 실제 효과 적용 (철약, 버프 등)
-	UE_LOG(LogTemp, Log, TEXT("[Inventory] UseItem: %s, Count: %d"), *Slot.ItemID.ToString(), Slot.Count);
+	/** 서버에서만 실행 (RPC를 통해 호출되므로 원래 서버지만 안전 장치) */
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return;
+	}
 
+	/** 소유자(PlayerState)의 ASC 획득 */
+	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(Owner);
+	if (!ASCInterface)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UseItemInternal] Owner does not implement IAbilitySystemInterface"));
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = ASCInterface->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UseItemInternal] ASC is NULL"));
+		return;
+	}
+
+	/** GameState에서 ItemRegistry를 통해 메타데이터 룩업 */
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		return;
+	}
+
+	AGameStateBase* GameState = World->GetGameState();
+	if (!GameState)
+	{
+		return;
+	}
+
+	AD1GameStateBase* D1GS = Cast<AD1GameStateBase>(GameState);
+	if (!D1GS || !D1GS->ItemRegistry)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UseItemInternal] ItemRegistry not found in GameState"));
+		return;
+	}
+
+	UD1ItemData* ItemData = D1GS->ItemRegistry->FindItemData(Slot.ItemID);
+	if (!ItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UseItemInternal] ItemData not found for %s"), *Slot.ItemID.ToString());
+		return;
+	}
+
+	/** 소비 아이템만 사용 가능 */
+	if (ItemData->ItemType != EItemType::Consumable)
+	{
+		UE_LOG(LogTemp, Log, TEXT("[UseItemInternal] %s is not consumable (Type=%d)"), *Slot.ItemID.ToString(), (int32)ItemData->ItemType);
+		return;
+	}
+
+	/** UseEffect GE 적용 */
+	if (ItemData->UseEffect)
+	{
+		FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+		EffectContext.AddSourceObject(Owner);
+
+		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(ItemData->UseEffect, 1.0f, EffectContext);
+		if (SpecHandle.IsValid())
+		{
+			ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			UE_LOG(LogTemp, Log, TEXT("[UseItemInternal] Applied UseEffect for %s"), *Slot.ItemID.ToString());
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UseItemInternal] UseEffect is NULL for %s"), *Slot.ItemID.ToString());
+	}
+
+	/** 아이템 1개 소모 */
 	RemoveItem(SlotIndex, 1);
 }
