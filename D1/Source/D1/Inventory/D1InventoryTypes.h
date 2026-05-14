@@ -52,3 +52,18 @@ struct FD1InventoryItem
 	UPROPERTY(BlueprintReadOnly)
 	int32 SlotIndex = -1;
 };
+
+/**
+ * 장착 중인 장비 데이터 (TArray Replication용)
+ */
+USTRUCT(BlueprintType)
+struct FD1EquippedItem
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadOnly)
+	EEquipmentSlot EquipmentSlot = EEquipmentSlot::None;
+
+	UPROPERTY(BlueprintReadOnly)
+	FD1InventoryItem Item;
+};

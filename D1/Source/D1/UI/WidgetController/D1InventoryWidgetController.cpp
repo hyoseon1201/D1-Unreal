@@ -9,6 +9,7 @@ void UD1InventoryWidgetController::BroadcastInitialValues()
 {
 	// 위젯이 생성될 때 현재 인벤토리 상태를 한 번 브로드캐스트
 	OnInventoryChangedCallback();
+	OnEquippedItemsChangedCallback();
 }
 
 void UD1InventoryWidgetController::BindCallbacksToDependencies()
@@ -17,6 +18,7 @@ void UD1InventoryWidgetController::BindCallbacksToDependencies()
 	if (UD1InventoryComponent* IC = GetInventoryComponent())
 	{
 		IC->OnInventoryChanged.AddDynamic(this, &UD1InventoryWidgetController::OnInventoryChangedCallback);
+		IC->OnEquippedItemsChanged.AddDynamic(this, &UD1InventoryWidgetController::OnEquippedItemsChangedCallback);
 	}
 }
 
@@ -61,12 +63,58 @@ void UD1InventoryWidgetController::DiscardItem(int32 SlotIndex)
 	}
 }
 
+void UD1InventoryWidgetController::EquipItem(int32 SlotIndex)
+{
+	if (UD1InventoryComponent* IC = GetInventoryComponent())
+	{
+		IC->ServerEquipItem(SlotIndex);
+	}
+}
+
+void UD1InventoryWidgetController::UnequipItem(EEquipmentSlot Slot)
+{
+	if (UD1InventoryComponent* IC = GetInventoryComponent())
+	{
+		IC->ServerUnequipItem(Slot);
+	}
+}
+
 void UD1InventoryWidgetController::OnInventoryChangedCallback()
 {
 	if (UD1InventoryComponent* IC = GetInventoryComponent())
 	{
 		OnInventoryUpdated.Broadcast(IC->GetInventorySlots());
 	}
+}
+
+void UD1InventoryWidgetController::OnEquippedItemsChangedCallback()
+{
+	if (UD1InventoryComponent* IC = GetInventoryComponent())
+	{
+		OnEquippedItemsUpdated.Broadcast(IC->GetEquippedItems());
+	}
+}
+
+bool UD1InventoryWidgetController::IsSlotEquipped(EEquipmentSlot Slot) const
+{
+	if (UD1InventoryComponent* IC = GetInventoryComponent())
+	{
+		return IC->IsSlotEquipped(Slot);
+	}
+	return false;
+}
+
+FName UD1InventoryWidgetController::GetEquippedItemID(EEquipmentSlot Slot) const
+{
+	if (UD1InventoryComponent* IC = GetInventoryComponent())
+	{
+		const FD1InventoryItem* EquippedItem = IC->FindEquippedItem(Slot);
+		if (EquippedItem)
+		{
+			return EquippedItem->ItemID;
+		}
+	}
+	return NAME_None;
 }
 
 UD1InventoryComponent* UD1InventoryWidgetController::GetInventoryComponent() const

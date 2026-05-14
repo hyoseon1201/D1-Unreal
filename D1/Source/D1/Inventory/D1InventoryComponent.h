@@ -5,9 +5,11 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Inventory/D1InventoryTypes.h"
+#include "GameplayEffectTypes.h"
 #include "D1InventoryComponent.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryChanged);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnEquippedItemsChanged);
 
 /**
  * PlayerState에 부착되는 인벤토리 컴포넌트
@@ -27,6 +29,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FOnInventoryChanged OnInventoryChanged;
 
+	/** 장착 장비 변경 시 UI 등에서 수신 */
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FOnEquippedItemsChanged OnEquippedItemsChanged;
+
 	/** 서버 RPC: 아이템 사용 */
 	UFUNCTION(Server, Reliable)
 	void ServerUseItem(int32 SlotIndex);
@@ -38,6 +44,14 @@ public:
 	/** 서버 RPC: 아이템 버리기 */
 	UFUNCTION(Server, Reliable)
 	void ServerDiscardItem(int32 SlotIndex);
+
+	/** 서버 RPC: 장비 장착 */
+	UFUNCTION(Server, Reliable)
+	void ServerEquipItem(int32 InventorySlotIndex);
+
+	/** 서버 RPC: 장비 탈착 */
+	UFUNCTION(Server, Reliable)
+	void ServerUnequipItem(EEquipmentSlot Slot);
 
 	/** 서버 전용: 아이템 추가 (보상, 획득 등) */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
@@ -51,6 +65,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	const TArray<FD1InventoryItem>& GetInventorySlots() const { return InventorySlots; }
 
+	/** 현재 장착 중인 장비 목록 읽기 (클리언트용) */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	const TArray<FD1EquippedItem>& GetEquippedItems() const { return EquippedItems; }
+
+	/** 특정 부위에 장비가 장착되어 있는지 확인 */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool IsSlotEquipped(EEquipmentSlot Slot) const;
+
+	/** 특정 부위의 장착 아이템을 검색 (없으면 nullptr) */
+	const FD1InventoryItem* FindEquippedItem(EEquipmentSlot Slot) const;
+
 protected:
 	/** 최대 슬롯 수 */
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")
@@ -60,10 +85,27 @@ protected:
 	UPROPERTY(ReplicatedUsing = OnRep_Inventory)
 	TArray<FD1InventoryItem> InventorySlots;
 
+	/** 장착 중인 장비 (서버 권한, Replicated) */
+	UPROPERTY(ReplicatedUsing = OnRep_EquippedItems)
+	TArray<FD1EquippedItem> EquippedItems;
+
+	/** 서버 전용: 장착된 GE의 Active Handle (탈착 시 제거용) */
+	TMap<EEquipmentSlot, FActiveGameplayEffectHandle> EquippedEffectHandles;
+
 	/** 클라이언트 동기화 시 호출 */
 	UFUNCTION()
 	void OnRep_Inventory();
 
+	/** 클라이언트 동기화 시 호출 */
+	UFUNCTION()
+	void OnRep_EquippedItems();
+
 	/** 아이템 사용 실제 로직 (서버 전용) */
 	void UseItemInternal(int32 SlotIndex);
+
+	/** 장비 장착 실제 로직 (서버 전용) */
+	void EquipItemInternal(int32 InventorySlotIndex);
+
+	/** 장비 탈착 실제 로직 (서버 전용) */
+	void UnequipItemInternal(EEquipmentSlot Slot);
 };

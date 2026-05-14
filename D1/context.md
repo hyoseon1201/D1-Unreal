@@ -42,6 +42,31 @@
   - `[Client] ←RPC→ [Dedicated Server] ←HTTP/JSON→ [Web API Server] ←→ [DB]`
   - Dedicated Server가 검증 + 웹서버 요청, 클라이언트는 RPC만 호출
 
+### 7~8번 상세 (서버 아키텍처 설계 확정)
+- **클-서 통신 구조:**
+  - 클라이언트는 절대 웹서버에 직접 게임 패킷을 별내지 않음
+  - 로그인/매칭만 웹서버(HTTPS)를 통해 처리
+  - 실제 게임 플레이는 클라이언트 ↔ Dedicated Server가 직접 UE5 Replication/RPC로 통신
+- **유저 플로우:**
+  1. 클라이언트 → 웹서버: `POST /login` → JWT 발급
+  2. 클라이언트 → 웹서버: `GET /characters` (캐릭터 목록)
+  3. 클라이언트 → 웹서버: `POST /matchmaking/town` (캐릭터 선택)
+  4. 웹서버 → 클라이언트: IP, Port, SessionToken (일회용) 응답
+  5. 클라이언트 → Dedicated Server: `ClientTravel`로 직접 접속 (Token 전달)
+  6. Dedicated Server → 웹서버: `POST /verify-session` (Token 검증)
+  7. 검증 완료 → DB에서 영속 데이터 로드 → GAS AttributeSet 초기화 → 게임 시작
+- **마을 서버 vs 던전 서버 확장 전략:**
+  - 마을도 여러 채널(샤드)로 분리: 1채널당 50~100명 (Lost Ark/MapleStory 방식)
+  - 같은 UE5 서버 바이너리라도 커맨드라인 인자(`-TownServer`/`-DungeonServer`)로 모드 분리
+    - 마을 모드: AI 스폰 최소화, Physics Tick 낮춤, 전투 로직 비활성화
+    - 던전 모드: 풀 전투, AI/몬스터 스폰 활성화, 60Hz Tick
+  - K8s 등 컨테이너 환경에서 리소스 할량을 다르게 설정 (마을: 4Gi/2CPU, 던전: 1.5Gi/0.5CPU)
+  - 던전은 Stateless 인스턴스: 입장 시 생성, 클리어/퇴장 시 파괴 (K8s HPA 연동)
+- **주의사항:**
+  - 웹서버가 게임 패킷을 프록시하지 않음 (HTTP는 실시간 게임 통신에 부적합)
+  - SessionToken은 1회용, 데디 서버 인증 후 즉시 폐기
+  - 데디 서버 → 웹서버 통신 시 낮 API Key로 인증 (외부 노출 금지)
+
 ## 4. 코딩 규칙 (Coding Standards)
 - **Naming:** Unreal Coding Standard 준수 (PascalCase, 접두사 A, U, F 등)
 - **GAS:** AttributeSet과 GameplayAbility는 가급적 C++에서 정의하고 데이터는 DataAsset으로 관리.
@@ -65,3 +90,5 @@
   - `History/2026-05-05_WorkLog.md` — 인벤토리 UI 구현 (`WBP_Inventory`, `WBP_InventorySlot`, UniformGridPanel 동적 생성 60슬롯, 위젯 컨트롤러 연동, 닫기/열기 토글)
   - `History/2026-05-06_WorkLog.md` — GameState 기반 `GetItemData` 구조 개선, 인벤토리 상호작용 구현 (좌클릭 상세정보, 모달 팝업, 아이템 아이콘 표시 확인)
   - `History/2026-05-07_WorkLog.md` — 아이템 사용 기능 완성 (`UseItemInternal` GE 연동, WBP_ItemDetail UI 연동, 초기화 시점 이슈 해결)
+  - `History/2026-05-08_WorkLog.md` — 장비 장착/탈착 시스템 구현 (`ServerEquipItem`/`ServerUnequipItem`, `FD1EquippedItem`, `EquipEffect` GE Apply/Remove, WidgetController `EquipItem`/`UnequipItem` 추가)
+  - `History/2026-05-11_WorkLog.md` — 전체 프로젝트 로드맵 수립 (12주), 서버 아키텍처 설계 확정 (로그인→매칭→데디서버 접속 흐름, 마을/던전 서버 확장 전략, K8s 리소스 분리)

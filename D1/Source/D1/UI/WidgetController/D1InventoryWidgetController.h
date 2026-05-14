@@ -11,6 +11,7 @@ class UD1InventoryComponent;
 class UD1ItemData;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnInventoryUpdatedSignature, const TArray<FD1InventoryItem>&, InventorySlots);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnEquippedItemsUpdatedSignature, const TArray<FD1EquippedItem>&, EquippedItems);
 
 /**
  * 인벤토리 UI (WBP_Inventory)용 위젯 컨트롤러
@@ -37,6 +38,10 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "Inventory")
 	FOnInventoryUpdatedSignature OnInventoryUpdated;
 
+	/** 장착 장비 변경 시 UI 등에서 수신 */
+	UPROPERTY(BlueprintAssignable, Category = "Inventory")
+	FOnEquippedItemsUpdatedSignature OnEquippedItemsUpdated;
+
 	/** 아이템 사용 요청 (클리언트 -> 서버) */
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void UseItem(int32 SlotIndex);
@@ -49,10 +54,30 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Inventory")
 	void DiscardItem(int32 SlotIndex);
 
+	/** 장비 장착 요청 (클리언트 -> 서버) */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void EquipItem(int32 SlotIndex);
+
+	/** 장비 탈착 요청 (클리언트 -> 서버) */
+	UFUNCTION(BlueprintCallable, Category = "Inventory")
+	void UnequipItem(EEquipmentSlot Slot);
+
+	/** 특정 장비 슬롯에 아이템이 장착되어 있는지 확인 (UI 표시용) */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	bool IsSlotEquipped(EEquipmentSlot Slot) const;
+
+	/** 특정 장비 슬롯에 장착된 아이템 ID를 반환 (없으면 None) */
+	UFUNCTION(BlueprintPure, Category = "Inventory")
+	FName GetEquippedItemID(EEquipmentSlot Slot) const;
+
 protected:
 	/** InventoryComponent의 OnInventoryChanged에 연결될 콜백 */
 	UFUNCTION()
 	void OnInventoryChangedCallback();
+
+	/** InventoryComponent의 OnEquippedItemsChanged에 연결될 콜백 */
+	UFUNCTION()
+	void OnEquippedItemsChangedCallback();
 
 	/** PlayerState로부터 InventoryComponent를 안전하게 획득 */
 	UD1InventoryComponent* GetInventoryComponent() const;

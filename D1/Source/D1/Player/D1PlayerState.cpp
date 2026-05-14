@@ -101,5 +101,6 @@ void AD1PlayerState::BeginPlay()
 	if (HasAuthority() && InventoryComponent)
 	{
 		InventoryComponent->AddItem(FName("Potion_Health_Small"), 5);
+		InventoryComponent->AddItem(FName("Sword_Iron"), 1);
 	}
 }

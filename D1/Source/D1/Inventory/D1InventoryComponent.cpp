@@ -26,6 +26,7 @@ void UD1InventoryComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>
 	Super::GetLifetimeReplicatedProps(OutLifetimeProps);
 
 	DOREPLIFETIME(UD1InventoryComponent, InventorySlots);
+	DOREPLIFETIME(UD1InventoryComponent, EquippedItems);
 }
 
 void UD1InventoryComponent::ServerUseItem_Implementation(int32 SlotIndex)
@@ -208,4 +209,283 @@ void UD1InventoryComponent::UseItemInternal(int32 SlotIndex)
 
 	/** 아이템 1개 소모 */
 	RemoveItem(SlotIndex, 1);
+}
+
+void UD1InventoryComponent::ServerEquipItem_Implementation(int32 InventorySlotIndex)
+{
+	EquipItemInternal(InventorySlotIndex);
+}
+
+void UD1InventoryComponent::ServerUnequipItem_Implementation(EEquipmentSlot Slot)
+{
+	UnequipItemInternal(Slot);
+}
+
+bool UD1InventoryComponent::IsSlotEquipped(EEquipmentSlot Slot) const
+{
+	for (const FD1EquippedItem& Equipped : EquippedItems)
+	{
+		if (Equipped.EquipmentSlot == Slot)
+		{
+			return true;
+		}
+	}
+	return false;
+}
+
+const FD1InventoryItem* UD1InventoryComponent::FindEquippedItem(EEquipmentSlot Slot) const
+{
+	for (const FD1EquippedItem& Equipped : EquippedItems)
+	{
+		if (Equipped.EquipmentSlot == Slot)
+		{
+			return &Equipped.Item;
+		}
+	}
+	return nullptr;
+}
+
+void UD1InventoryComponent::EquipItemInternal(int32 InventorySlotIndex)
+{
+	UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] START SlotIndex=%d"), InventorySlotIndex);
+	
+	if (InventorySlotIndex < 0 || InventorySlotIndex >= MaxSlots)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: Invalid slot index %d (MaxSlots=%d)"), InventorySlotIndex, MaxSlots);
+		return;
+	}
+
+	FD1InventoryItem& Slot = InventorySlots[InventorySlotIndex];
+	UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] Slot[%d]: ItemID=%s, Count=%d"), InventorySlotIndex, *Slot.ItemID.ToString(), Slot.Count);
+	
+	if (Slot.ItemID.IsNone() || Slot.Count <= 0)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: Slot is empty"));
+		return;
+	}
+
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: No authority"));
+		return;
+	}
+
+	/** ItemRegistry에서 메타데이터 룩업 */
+	UWorld* World = GetWorld();
+	if (!World)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: World is NULL"));
+		return;
+	}
+
+	AGameStateBase* GameState = World->GetGameState();
+	if (!GameState)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: GameState is NULL"));
+		return;
+	}
+
+	AD1GameStateBase* D1GS = Cast<AD1GameStateBase>(GameState);
+	if (!D1GS || !D1GS->ItemRegistry)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: D1GameStateBase or ItemRegistry is NULL"));
+		return;
+	}
+
+	UD1ItemData* ItemData = D1GS->ItemRegistry->FindItemData(Slot.ItemID);
+	if (!ItemData)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: ItemData not found for %s"), *Slot.ItemID.ToString());
+		return;
+	}
+	
+	UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] Found ItemData: Name=%s, Type=%d, EquipSlot=%d"), 
+		*ItemData->ItemName.ToString(), (int32)ItemData->ItemType, (int32)ItemData->EquipmentSlot);
+
+	/** 장비 아이템인지 확인 */
+	if (ItemData->ItemType != EItemType::Equipment)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: %s is not Equipment (Type=%d)"), *Slot.ItemID.ToString(), (int32)ItemData->ItemType);
+		return;
+	}
+
+	EEquipmentSlot TargetSlot = ItemData->EquipmentSlot;
+	if (TargetSlot == EEquipmentSlot::None)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: EquipmentSlot is None for %s"), *Slot.ItemID.ToString());
+		return;
+	}
+
+	/** 해당 부위에 이미 장비가 있으면 탈착 */
+	if (IsSlotEquipped(TargetSlot))
+	{
+		UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] Slot %d already equipped, unequipping first"), (int32)TargetSlot);
+		UnequipItemInternal(TargetSlot);
+	}
+
+	/** ASC 획득 */
+	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(Owner);
+	if (!ASCInterface)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: Owner does not implement IAbilitySystemInterface"));
+		return;
+	}
+	UAbilitySystemComponent* ASC = ASCInterface->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: ASC is NULL"));
+		return;
+	}
+	
+	UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] ASC found on %s"), *Owner->GetName());
+
+	/** EquipEffect GE 적용 */
+	if (ItemData->EquipEffect)
+	{
+		FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+		EffectContext.AddSourceObject(Owner);
+
+		FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(ItemData->EquipEffect, 1.0f, EffectContext);
+		if (SpecHandle.IsValid())
+		{
+			FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			EquippedEffectHandles.Add(TargetSlot, ActiveHandle);
+			UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] SUCCESS: Applied EquipEffect for %s on slot %d"), 
+				*Slot.ItemID.ToString(), (int32)TargetSlot);
+			
+			/** 적용된 Attribute 변화 확인 */
+			if (ItemData->EquipEffect)
+			{
+				UGameplayEffect* EffectCDO = ItemData->EquipEffect.GetDefaultObject();
+				if (EffectCDO)
+				{
+					UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] GE Modifiers count: %d"), EffectCDO->Modifiers.Num());
+					for (const FGameplayModifierInfo& Mod : EffectCDO->Modifiers)
+					{
+						UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] GE Modifier: Attribute=%s, Op=%d"),
+							*Mod.Attribute.GetName(), (int32)Mod.ModifierOp);
+					}
+				}
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: SpecHandle is invalid for %s"), *Slot.ItemID.ToString());
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[EquipItemInternal] FAILED: EquipEffect is NULL for %s"), *Slot.ItemID.ToString());
+	}
+
+	/** 장착 목록에 추가 */
+	FD1EquippedItem EquippedItem;
+	EquippedItem.EquipmentSlot = TargetSlot;
+	EquippedItem.Item = Slot;
+	EquippedItem.Item.SlotIndex = -1;
+	EquippedItems.Add(EquippedItem);
+
+	/** 인벤토리에서 제거 */
+	RemoveItem(InventorySlotIndex, 1);
+	
+	UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] END: Added to EquippedItems, removed from inventory. Total equipped=%d"), EquippedItems.Num());
+
+	/** 현재 장착 상태 로그 출력 */
+	UE_LOG(LogTemp, Log, TEXT("[EquipItemInternal] === Current Equipped Items ==="));
+	if (EquippedItems.Num() == 0)
+	{
+		UE_LOG(LogTemp, Log, TEXT("  (No equipped items)"));
+	}
+	else
+	{
+		for (const FD1EquippedItem& Equipped : EquippedItems)
+		{
+			UE_LOG(LogTemp, Log, TEXT("  Slot[%d]: ItemID=%s, Count=%d"),
+				(int32)Equipped.EquipmentSlot, *Equipped.Item.ItemID.ToString(), Equipped.Item.Count);
+		}
+	}
+
+	OnEquippedItemsChanged.Broadcast();
+}
+
+void UD1InventoryComponent::UnequipItemInternal(EEquipmentSlot Slot)
+{
+	UE_LOG(LogTemp, Log, TEXT("[UnequipItemInternal] START Slot=%d"), (int32)Slot);
+	
+	if (Slot == EEquipmentSlot::None)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UnequipItemInternal] FAILED: Slot is None"));
+		return;
+	}
+
+	const FD1InventoryItem* EquippedItem = FindEquippedItem(Slot);
+	if (!EquippedItem)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UnequipItemInternal] FAILED: No item equipped on slot %d"), (int32)Slot);
+		return;
+	}
+	
+	UE_LOG(LogTemp, Log, TEXT("[UnequipItemInternal] Found equipped item: %s"), *EquippedItem->ItemID.ToString());
+
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UnequipItemInternal] FAILED: No authority"));
+		return;
+	}
+
+	/** ASC 획득 및 GE 제거 */
+	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(Owner);
+	if (ASCInterface)
+	{
+		UAbilitySystemComponent* ASC = ASCInterface->GetAbilitySystemComponent();
+		if (ASC && EquippedEffectHandles.Contains(Slot))
+		{
+			FActiveGameplayEffectHandle Handle = EquippedEffectHandles[Slot];
+			ASC->RemoveActiveGameplayEffect(Handle);
+			UE_LOG(LogTemp, Log, TEXT("[UnequipItemInternal] SUCCESS: Removed EquipEffect Handle for %s from slot %d"), 
+				*EquippedItem->ItemID.ToString(), (int32)Slot);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[UnequipItemInternal] WARNING: ASC or Handle not found for slot %d"), (int32)Slot);
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UnequipItemInternal] WARNING: Owner does not implement IAbilitySystemInterface"));
+	}
+	EquippedEffectHandles.Remove(Slot);
+
+	/** 인벤토리에 되돌리기 (빈 슬롯이 없으면 실패) */
+	if (!AddItem(EquippedItem->ItemID, EquippedItem->Count))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[UnequipItemInternal] Inventory full! Dropping item %s"), *EquippedItem->ItemID.ToString());
+		// TODO: 월드에 아이템 드랍 처리 (Phase 2)
+	}
+	else
+	{
+		UE_LOG(LogTemp, Log, TEXT("[UnequipItemInternal] Item returned to inventory: %s"), *EquippedItem->ItemID.ToString());
+	}
+
+	/** 장착 목록에서 제거 */
+	for (int32 i = EquippedItems.Num() - 1; i >= 0; --i)
+	{
+		if (EquippedItems[i].EquipmentSlot == Slot)
+		{
+			EquippedItems.RemoveAt(i);
+			UE_LOG(LogTemp, Log, TEXT("[UnequipItemInternal] Removed from EquippedItems array"));
+			break;
+		}
+	}
+	
+	UE_LOG(LogTemp, Log, TEXT("[UnequipItemInternal] END: Total equipped=%d"), EquippedItems.Num());
+
+	OnEquippedItemsChanged.Broadcast();
+}
+
+void UD1InventoryComponent::OnRep_EquippedItems()
+{
+	OnEquippedItemsChanged.Broadcast();
 }

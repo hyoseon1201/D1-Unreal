@@ -44,7 +44,7 @@ public:
 	int32 MaxStack = 1;
 
 	/** 아이콘 텍스처 */
-	UPROPERTY(BlueprintReadOnly, Category = "Item Visual")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item Visual")
 	TObjectPtr<UTexture2D> Icon;
 
 	// --- 장비 아이템 전용 ---
