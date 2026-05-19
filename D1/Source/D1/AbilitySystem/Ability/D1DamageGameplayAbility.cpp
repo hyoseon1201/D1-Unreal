@@ -8,6 +8,13 @@
 
 void UD1DamageGameplayAbility::CauseDamage(AActor* TargetActor)
 {
+	AActor* OwningActor = GetOwningActorFromActorInfo();
+	const ENetRole Role = OwningActor ? OwningActor->GetLocalRole() : ROLE_None;
+	const FString RoleStr = UEnum::GetValueAsString(Role);
+	
+	UE_LOG(LogTemp, Warning, TEXT("[CauseDamage] Role=%s, Ability=%s, Target=%s"),
+		*RoleStr, *GetName(), *GetNameSafe(TargetActor));
+	
 	FGameplayEffectSpecHandle DamageSpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass, 1.f);
 
 	for (TTuple<FGameplayTag, FScalableFloat> Pair : DamageTypes)

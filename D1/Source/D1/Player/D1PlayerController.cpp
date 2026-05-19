@@ -135,6 +135,14 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 	}
 	else
 	{
+		// GAS Ability 실행 중(예: 대시)에는 우클릭으로 AutoRun을 시작하지 않도록 태그 체크
+		if (GetASC() && GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputPressed))
+		{
+			FollowTime = 0.f;
+			bTargeting = false;
+			return;
+		}
+
 		APawn* ControlledPawn = GetPawn();
 		if (FollowTime <= ShortPressThreshold && ControlledPawn)
 		{
@@ -249,6 +257,15 @@ void AD1PlayerController::UnHighlightActor(AActor* InActor)
 void AD1PlayerController::AutoRun()
 {
 	if (!bAutoRunning) return;
+
+	// GAS Ability 실행 중(예: 대시, 스턴 등)에는 AutoRun을 즉시 중단
+	if (GetASC() && (GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputPressed) ||
+					 GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputHeld)))
+	{
+		bAutoRunning = false;
+		return;
+	}
+
 	if (APawn* ControlledPawn = GetPawn())
 	{
 		const FVector LocationOnSpline = Spline->FindLocationClosestToWorldLocation(ControlledPawn->GetActorLocation(), ESplineCoordinateSpace::World);

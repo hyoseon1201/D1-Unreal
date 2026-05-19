@@ -63,12 +63,16 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 
 	/* Active Ability Tags */
 	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
+	GameplayTags.Abilities_Physical_ChargeDash = Manager.AddNativeGameplayTag(FName("Abilities.Physical.ChargeDash"), FString("Warrior | ChargeDash Rush and Slam Attack"));
+	GameplayTags.Abilities_Heal = Manager.AddNativeGameplayTag(FName("Abilities.Heal"), FString("Heal | Self Recovery Ability"));
+	GameplayTags.Abilities_StunStrike = Manager.AddNativeGameplayTag(FName("Abilities.StunStrike"), FString("StunStrike | Crowd Control Ability"));
 	GameplayTags.Abilities_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Abilities.Physical.GroundSword"), FString("Warrior | GroundSword Ability"));
 	GameplayTags.Abilities_Physical_WhirlwindCharge = Manager.AddNativeGameplayTag(FName("Abilities.Physical.WhirlwindCharge"), FString("Warrior | WhirlwindCharge Ability"));
 
 	/* Passive Ability Tags */
 	GameplayTags.Abilities_TestPassive = Manager.AddNativeGameplayTag(FName("Abilities.TestPassive"), FString("Warrior | TestPassive Ability"));
 
+	/* Common Ability Tags */
 	GameplayTags.Abilities_HitReact = Manager.AddNativeGameplayTag(FName("Abilities.HitReact"), FString("HitReact Ability"));
 
 	GameplayTags.Abilities_Status_Locked = Manager.AddNativeGameplayTag(FName("Abilities.Status.Locked"), FString("Ability Locked"));
@@ -80,17 +84,25 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Abilities_Type_Passive = Manager.AddNativeGameplayTag(FName("Abilities.Type.Passive"), FString("Ability Type Passive"));
 	GameplayTags.Abilities_Type_None = Manager.AddNativeGameplayTag(FName("Abilities.Type.None"), FString("Ability Type None"));
 
-	/* Ability Tags */
+	/* Class Tags */
 	GameplayTags.Class_Warrior = Manager.AddNativeGameplayTag(FName("Class.Warrior"), FString("Warrior Class"));
 
 	/* Cooldown Tags */
+	GameplayTags.Cooldown_Physical_ChargeDash = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.ChargeDash"), FString("ChargeDash Ability Cooldown"));
+	GameplayTags.Cooldown_Heal = Manager.AddNativeGameplayTag(FName("Cooldown.Heal"), FString("Heal Ability Cooldown"));
+	GameplayTags.Cooldown_StunStrike = Manager.AddNativeGameplayTag(FName("Cooldown.StunStrike"), FString("StunStrike Ability Cooldown"));
 	GameplayTags.Cooldown_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.GroundSword"), FString("GroundSword Ability Cooldown"));
 	GameplayTags.Cooldown_Physical_WhirlwindCharge = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.WhirlwindCharge"), FString("WhirlwindCharge Ability Cooldown"));
 
+	/* State Tags */
+	GameplayTags.State_Invincible = Manager.AddNativeGameplayTag(FName("State.Invincible"), FString("Invincible state (no damage taken)"));
+	GameplayTags.State_Stunned = Manager.AddNativeGameplayTag(FName("State.Stunned"), FString("Stunned state (movement and abilities blocked)"));
+
+	/* Damage Tags */
 	GameplayTags.Damage = Manager.AddNativeGameplayTag(FName("Damage"), FString("Damage"));
 	GameplayTags.Damage_Physical = Manager.AddNativeGameplayTag(FName("Damage.Physical"), FString("Physical Damage"));
-
 	GameplayTags.DamageTypes.Add(GameplayTags.Damage_Physical);
 
+	/* Effect Tags */
 	GameplayTags.Effects_HitReact = Manager.AddNativeGameplayTag(FName("Effects.HitReact"), FString("HitReact"));
 }

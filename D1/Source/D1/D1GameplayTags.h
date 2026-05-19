@@ -64,19 +64,25 @@ public:
 
 	/* Active Ability Tags */
 	FGameplayTag Abilities_Attack;
+	FGameplayTag Abilities_Physical_ChargeDash;
+	FGameplayTag Abilities_Heal;
+	FGameplayTag Abilities_StunStrike;
 	FGameplayTag Abilities_Physical_GroundSword;
 	FGameplayTag Abilities_Physical_WhirlwindCharge;
 
 	/* Passive Ability Tags */
 	FGameplayTag Abilities_TestPassive;
-	
+
+	/* Common Ability Tags */
 	FGameplayTag Abilities_HitReact;
 
+	/* SkillMenu Ability Status Tags */
 	FGameplayTag Abilities_Status_Locked;
 	FGameplayTag Abilities_Status_Eligible;
 	FGameplayTag Abilities_Status_Unlocked;
 	FGameplayTag Abilities_Status_Equipped;
 
+	/* SkillMenu Ability Type Tags */
 	FGameplayTag Abilities_Type_Active;
 	FGameplayTag Abilities_Type_Passive;
 	FGameplayTag Abilities_Type_None;
@@ -85,13 +91,22 @@ public:
 	FGameplayTag Class_Warrior;
 
 	/* Cooldown Tags */
+	FGameplayTag Cooldown_Physical_ChargeDash;
+	FGameplayTag Cooldown_Heal;
+	FGameplayTag Cooldown_StunStrike;
 	FGameplayTag Cooldown_Physical_GroundSword;
 	FGameplayTag Cooldown_Physical_WhirlwindCharge;
 
+	/* State Tags */
+	FGameplayTag State_Invincible;
+	FGameplayTag State_Stunned;
+
+	/* Damage Tags */
 	FGameplayTag Damage;
 	FGameplayTag Damage_Physical;
-	TArray<FGameplayTag> DamageTypes;
+	TArray<FGameplayTag> DamageTypes;  // Registered damage types for lookup
 
+	/* Effect Tags */
 	FGameplayTag Effects_HitReact;
 
 
