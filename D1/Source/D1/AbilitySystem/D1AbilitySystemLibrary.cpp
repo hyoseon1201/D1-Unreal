@@ -101,6 +101,21 @@ void UD1AbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldCo
 	ASC->ApplyGameplayEffectSpecToSelf(*VitalAttributesSpecHandle.Data.Get());
 }
 
+void UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(const UObject* WorldContextObject, UAbilitySystemComponent* ASC)
+{
+	if (!IsValid(ASC)) return;
+
+	UD1CharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
+	if (!CharacterClassInfo) return;
+
+	AActor* AvatarActor = ASC->GetAvatarActor();
+
+	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
+	SecondaryAttributesContextHandle.AddSourceObject(AvatarActor);
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, 1.f, SecondaryAttributesContextHandle);
+	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+}
+
 void UD1AbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
 {
 	UD1CharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);

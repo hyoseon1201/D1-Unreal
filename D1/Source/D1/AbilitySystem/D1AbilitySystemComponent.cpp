@@ -406,6 +406,10 @@ void UD1AbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FGam
 	{
 		IPlayerInterface::Execute_AddToAttributePoints(GetAvatarActor(), -1);
 	}
+
+	// Primary Attribute 변경 후 Secondary Attribute Base Value 재계산
+	// (Instant GE이므로 기존 Add Modifier(장비, 버프)는 그대로 유지됨)
+	UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(GetAvatarActor(), this);
 }
 
 void UD1AbilitySystemComponent::OnRep_ActivateAbilities()

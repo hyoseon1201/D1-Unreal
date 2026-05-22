@@ -23,7 +23,7 @@
 | 6 | 인벤토리 시스템 (언리얼 납부) | ✅ 완료 |
 | 7 | 웹서버 연동 (로비/인벤토리/스탯 영속화) | ⏳ 대기 |
 | 8 | 로비/던전 분리 (Gameplay Mode) | ⏳ 대기 |
-| 9 | 다양한 어빌리티 추가 개발 | 🔄 진행 예정 |
+| 9 | 다양한 어빌리티 추가 개발 | 🔄 진행 중 (ChargeDash 완료, Heal/StunStrike 예정) |
 
 ### 6번 상세 (완료)
 - **Phase 1 (언리얼 납부, 완료):** 웹서버 없이 언리얼 낶에서만 동작하는 인벤토리 시스템 구축
@@ -50,14 +50,29 @@
   - 탈착 시 인벤토리 자동 반환 (`UnequipItem` → `AddItem` → 첫 빈 슬롯)
   - 멀티플레이어 테스트 완료 (Net Mode: Play as Client, 2인 동시 접속 정상)
 
-### 9번 상세 (어빌리티 추가 개발 계획)
-- **추가할 핵심 어빌리티 3개 (GAS 기반):**
-  1. **대시/회피 (Dash/Evasion)**
-     - 입력: Enhanced Input Action (Space 또는 Shift)
-     - 동작: Ability Task `UAbilityTask_ApplyRootMotionConstantForce` 또는 `UAbilityTask_MoveToLocation`
-     - 효과: 순간 이동 + `Duration GE`로 무적 태그 부여 (0.2~0.5초)
-     - 쿨타임: 3~5초 (GAS Cooldown Tag: `Abilities.Dash.Cooldown`)
-     - 마나 소모: 0 (또는 소량)
+### 9번 상세 (어빌리티 추가 개발)
+- **1. ChargeDash (대시/회피) — 구현 완료:**
+  - **C++:** `UDashToLocation` (AbilityTask) 신규 생성 (`AbilitySystem/AbilityTask/DashToLocation.h/.cpp`)
+    - 서버에서만 `CMC->Velocity`를 설정 (Direction × Speed). 클라이언트는 CMC Replicate/보간으로 자연스럽게 따라감.
+    - `MOVE_Flying` 모드로 지형/경사 영향 차단, `GroundFriction=0`, `BrakingDecelerationWalking=0`으로 감속 제거.
+    - Duration 후 실제 이동 거리가 설정 거리의 70% 미만이면 `OnHitWall` 발송, 아니면 `OnDashComplete` 발송.
+    - AbilityTask 생명주기에 종속된 Timer 사용 → Ability 중단(스턴/죽음) 시 자동 정리.
+    - 클라이언트에서도 `OnDashComplete`/`OnHitWall` delegate 발송 → Montage Jump 등 로컬 처리 가능.
+  - **BP (`GA_ChargeDash`):**
+    - `ActivateAbility` 즉시 `SetActorRotation` (Teleport=true)로 마우스 방향 즉시 회전.
+    - `CreateDashToLocation` (Async) + `PlayMontageAndWait` (Async)를 **동시에** 실행.
+    - `OnDashComplete` → `Get Anim Instance` → `Montage Jump to Section Name` (Slam) 연결.
+    - `EndAbility`는 오직 `PlayMontageAndWait`의 `OnCompleted/BlendOut/Interrupted`에서만 호출.
+  - **Animation (`AM_ChargeDash`):**
+    - `EnableRootMotion = false` (CMC Velocity 기반 이동이므로 RootMotion 불필요).
+    - Section 구조: Charge (돌진 자세) → Slam (내리치기, `Next=None`) → Recover (사용 안 함).
+    - `AN_SlamImpact` AnimNotify에서 `CauseDamage` (HasAuthority guard).
+  - **입력 블록:**
+    - `GA_ChargeDash`의 `ActivationOwnedTags`에 `Player.Block.InputPressed`, `Player.Block.InputHeld` 추가.
+    - `D1PlayerController.cpp` 수정: `AutoRun()` 및 `AbilityInputTagReleased()`에서 태그 체크 → Ability 실행 중 우클릭 AutoRun 시작/진행 차단.
+  - **결론:** 리븐 E 스타일의 "자세 잡고 돌진 → 내리치기 → 바로 원위치" 구현 완료. 거리/시간은 Blueprint에서 조절 가능 (`Speed = Distance / Duration`).
+
+- **추가할 핵심 어빌리티 2개 (GAS 기반):**
   2. **자기 힐/보호막 (Self Heal / Shield)**
      - 입력: 힐 키 (예: Q)
      - 동작: Instant 또는 Duration GE로 `Health` 회복 또는 `IncomingDamage` 감소 (Shield)
@@ -146,3 +161,4 @@
   - `History/2026-05-11_WorkLog.md` — 전체 프로젝트 로드맵 수립 (12주), 서버 아키텍처 설계 확정 (로그인→매칭→데디서버 접속 흐름, 마을/던전 서버 확장 전략, K8s 리소스 분리)
   - `History/2026-05-12_WorkLog.md` — 장비 장착/탈착 UI 및 기능 완성, 멀티플레이어 2인 테스트 완료, 인벤토리 Phase 1 마무리
   - `Docs/AbilityDesign_2026-05-12.md` — 추가 어빌리티 3개 기획서 (Dash/Heal/StunStrike), 6주 완성 로드맵 확정
+  - `History/2026-05-20_WorkLog.md` — `UDashToLocation` AbilityTask 구현 완료, `GA_ChargeDash` 리븐 E 스타일 대시 완성, `D1PlayerController` AutoRun 태그 블록 수정, 몽타주 Section Jump 적용

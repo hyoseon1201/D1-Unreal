@@ -42,6 +42,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")
 	static void InitializeDefaultAttributes(const UObject* WorldContextObject, ECharacterClass CharacterClass, float Level, UAbilitySystemComponent* ASC);
 
+	/** Primary Attribute가 변경될 때 Secondary Attribute Base Value만 재계산 (Instant GE이므로 기존 Add Modifier 유지) */
+	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")
+	static void RecalculateSecondaryAttributes(const UObject* WorldContextObject, UAbilitySystemComponent* ASC);
+
 	UFUNCTION(BlueprintCallable, Category = "D1AbilitySystemLibrary|CharacterClassDefaults")
 	static void GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass);
 
