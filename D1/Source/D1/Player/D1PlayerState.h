@@ -11,6 +11,7 @@ class UAbilitySystemComponent;
 class UAttributeSet;
 class UD1LevelupInfo;
 class UD1InventoryComponent;
+class UD1GameInstance;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32 /*StatValue*/)
 
@@ -29,6 +30,14 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
+
+	/** Ability System이 이미 초기화되었는지 여부 (ClientTravel 등 맵 이동 시 중복 초기화 방지) */
+	UPROPERTY(Replicated)
+	bool bAbilitySystemInitialized = false;
+
+	/** 현재 맵에서 Ability 사용(전투/버프/회복 등)이 허용되는가? (GameMode에 의해 설정, Replicated) */
+	UPROPERTY(Replicated)
+	bool bAbilitiesAllowed = true;
 
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UD1LevelupInfo> LevelUpInfo;
@@ -54,6 +63,13 @@ public:
 
 	void SetXP(int32 InXP);
 	void SetLevel(int32 InLevel);
+
+	/**
+	 * GameInstance에 저장된 Travel 데이터가 있으면 복원.
+	 * PossessedBy보다 먼저 호출되어야 bAbilitySystemInitialized 등이 올바르게 복원됨.
+	 */
+	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
+	bool RestoreTravelDataIfNeeded();
 
 protected:
 

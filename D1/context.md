@@ -21,9 +21,9 @@
 | 4 | Attribute Menu, Skill Menu 위젯 연결 | ✅ 완료 |
 | 5 | HUD 스킬 아이콘 및 쿨타임 표시 | ✅ 완료 |
 | 6 | 인벤토리 시스템 (언리얼 납부) | ✅ 완료 |
-| 7 | 웹서버 연동 (로비/인벤토리/스탯 영속화) | ⏳ 대기 |
-| 8 | 로비/던전 분리 (Gameplay Mode) | ⏳ 대기 |
-| 9 | 다양한 어빌리티 추가 개발 | 🔄 진행 중 (ChargeDash 완료, Heal/StunStrike 예정) |
+| 7 | 웹서버 연동 (로비/인벤토리/스탯 영속화) | ⏳ Phase 3 이월 |
+| 8 | 로비/던전 분리 (Gameplay Mode) | ✅ 완료 (GameInstance 임시 저장으로 데이터 유지) |
+| 9 | 다양한 어빌리티 추가 개발 | ✅ 완료 (ChargeDash, Focus, Heal) |
 
 ### 6번 상세 (완료)
 - **Phase 1 (언리얼 납부, 완료):** 웹서버 없이 언리얼 낶에서만 동작하는 인벤토리 시스템 구축
@@ -72,36 +72,67 @@
     - `D1PlayerController.cpp` 수정: `AutoRun()` 및 `AbilityInputTagReleased()`에서 태그 체크 → Ability 실행 중 우클릭 AutoRun 시작/진행 차단.
   - **결론:** 리븐 E 스타일의 "자세 잡고 돌진 → 내리치기 → 바로 원위치" 구현 완료. 거리/시간은 Blueprint에서 조절 가능 (`Speed = Distance / Duration`).
 
-- **추가할 핵심 어빌리티 2개 (GAS 기반):**
-  2. **자기 힐/보호막 (Self Heal / Shield)**
-     - 입력: 힐 키 (예: Q)
-     - 동작: Instant 또는 Duration GE로 `Health` 회복 또는 `IncomingDamage` 감소 (Shield)
-     - 효과: `GameplayCue`로 힐 이펙트 표시, 서버-클라이언트 동기화
-     - 쿨타임: 10~15초
-     - 마나 소모: MaxMana의 20~30%
-  3. **적 넉백/스턴 (Knockback / Stun)**
-     - 입력: 스킬 키 (예: E)
-     - 동작: `LineTrace` 또는 `SphereOverlap`로 적 탐색 → `GameplayEffect`로 `Stun` 태그 부여
-     - 효과: 대상 `CharacterMovementComponent`에 impulse 적용 (넉백), `Stun` 태그 시 Ability 입력 차단
-     - 쿨타임: 8~12초
-     - 마나 소모: 중간
+  - **2. Focus (버프) — 구현 완료:**
+    - **효과:** Duration 10초, AttackPower Add +30 (Secondary Attribute 직접 버프)
+    - **GE:** `GE_Focus` (Duration GE, `Status.Buff.Focus` Granted Tag)
+    - **BP (`GA_Focus`):** `ApplyGameplayEffectToOwner` + `PlayMontageAndWait`, 입력 블록 태그 적용
+    - **GameplayCue:** `GameplayCue.Buff.Focus` 태그 등록 (지속 오라용)
+    - **Cooldown:** `GE_Cooldown_Focus` (12초)
+
+  - **3. Heal (자기 회복) — 구현 완료:**
+    - **효과:** Instant GE, Health Add +200, Mana Cost -30
+    - **GE:** `GE_Heal` (Instant), `GE_Cost_Mana_Heal`, `GE_Cooldown_Heal` (10초)
+    - **BP (`GA_Heal`):** `ApplyGameplayEffectToOwner` (HasAuthority) + `PlayMontageAndWait`
+    - **애니메이션:** 짧은 캐스팅 몽타주 (기존 애니메이션 재활용)
+
+  - **4. 패시브 4개 — 예정 (로비/던전 이후 또는 병행):**
+    - **불굴의 의지:** HP 30% 이하 IncomingDamage -20%
+    - **마나 재생:** 초당 Mana +2 (Periodic Infinite GE)
+    - **강인함:** MaxHealth +100 (Infinite GE)
+    - **전투 본능:** AttackPower +10% (Infinite GE)
+    - **구현 방식:** Startup Abilities 등록 + Infinite GE 자동 적용 (`OnSpawn` Activation Policy)
+
 - **이미 구현된 어빌리티:**
   - 근접 기본 공격 (Instant GE + LineTrace)
   - 광역 스킬 (Projectile → 폭발 Area GE)
-  - 패시브 (테스트용 Infinite GE)
+  - ChargeDash (Dash + CMC Velocity 기반 이동)
+  - Focus (버프)
+  - Heal (자기 회복)
 - **어빌리티 완료 후 산출물:**
-  - 기동/생존/CC 시스템을 포함한 전투 루프 완성
+  - 기동/생존/버프 시스템을 포함한 전투 루프 완성
   - Skill Menu에 5~6개 스킬 아이콘 + 쿨타임 표시
   - GAS `Cooldown`, `Cost`, `GameplayCue`, `Ability Task` 학습 완료
 
+### 8번 상세 (로비/던전 분리 — 구현 완료)
+- **문제:** PIE `ClientTravel` 시 새 `PlayerState`가 생성되어 `AttributePoints`, `Primary Attributes`, `bAbilitySystemInitialized`가 기본값으로 리셋됨
+- **원인:** PIE에서는 `ClientTravel`이 기존 `PlayerState`를 유지하지 않고 새로 생성함 (Standalone/Listen Server에서도 동일)
+- **해결책:** `GameInstance` 임시 저장 패턴 (PIE에서도 `GameInstance`는 살아있음)
+  - **`UD1GameInstance` 신규 생성:** `SavePlayerStateData` / `RestorePlayerStateData` / `ClearSavedData`
+    - 저장 항목: `bAbilitySystemInitialized`, `AttributePoints`, `Level`, `XP`, `Strength`, `Intelligence`, `Dexterity`, `Luck`
+  - **`AD1PlayerController::PreClientTravel` 오버라이드:** Engine이 `ClientTravel` 직전에 자동 호출 → `PlayerState` + `AttributeSet` 데이터를 `GameInstance`에 저장
+  - **`AD1Hero::PossessedBy` 수정:** `InitAbilityActorInfo()` 직후 `D1PS->RestoreTravelDataIfNeeded()` 호출
+    - `InitializeDefaultAttributes()` **실행 전**에 `bAbilitySystemInitialized`와 Primary Attribute를 복원
+    - `bInit=TRUE` 복원 시 → `InitializeDefaultAttributes()` **스킵** (Primary GE 덮어쓰기 방지)
+    - 대신 `Secondary GE + Vital GE`만 **재적용** (새 `AttributeSet`에는 이들이 필요함)
+  - **`DefaultEngine.ini`:** `GameInstanceClass=/Script/D1.D1GameInstance` 추가 (Project Settings에서 설정)
+- **결과:** Town → Dungeon 이동 시 스탯 투자한 Primary Attribute(Strength 등), 남은 AttributePoints, `bAbilitySystemInitialized` 상태가 정상 유지됨
+- **한계:** `GameInstance` 임시 저장은 세션 내 맵 이동용. 세션 종료 후에는 웹서버 영속화(Phase 3) 필요.
+- **관련 파일:**
+  - `D1GameInstance.h/.cpp` (신규)
+  - `D1PlayerController.h/.cpp` (`PreClientTravel` 추가)
+  - `D1PlayerState.h/.cpp` (`RestoreTravelDataIfNeeded()` 추가)
+  - `D1Hero.cpp` (`PossessedBy` 복원 호출, Secondary+Vital 재적용)
+  - `D1GameModeBase.cpp` (`PostLogin` 디버그 로그)
+  - `DefaultEngine.ini` (`GameInstanceClass` 설정)
+
 ### 6주 완성 로드맵 (현실적인 Scope)
 - **개발자 경험:** Spring Boot 1년 (오랜만에 복귀), EC2 직접 배포 경험 있음
-- **일정:**
-  - **Week 1 (현재):** 어빌리티 3개 (대시, 힐, 넉백) + PIE 테스트
-  - **Week 2~3:** Spring Boot 서버 개발 (로그인 API, JWT, 캐릭터 CRUD, 인벤토리 Save/Load)
-  - **Week 4:** 언리얼 ↔ 웹서버 통합 (HTTP 모듈, 로그인 UI, 캐릭터 선택, 데이터 동기화)
-  - **Week 5:** 마을/던전 분리 (간소화: 혼자 입장 버튼, GameMode 분리, ClientTravel)
-  - **Week 6:** 통합 테스트 + Windows Dedicated Server 빌드 + 데모 영상 촬영
+- **일정 (포트폴리오용 Scope 재조정):**
+  - **Week 1 (완료):** 어빌리티 시스템 완성 (ChargeDash, Focus, Heal) + PIE 테스트
+  - **Week 2 (현재):** 마을/던전 분리 (GameMode, ClientTravel, 입장/퇴장 흐름)
+  - **Week 3:** 던전 내 전투 루프 (몬스터 스폰, AI, 보상 시스템)
+  - **Week 4:** 통합 테스트 + Windows Dedicated Server 빌드 + 데모 영상 촬영
+  - **Phase 3 (이월):** Spring Boot 웹서버 (로그인, 영속화), Linux 서버 빌드
 - **Scope 축소 확정:**
   - 매치메이킹 없음 (혼자 입장)
   - Linux 서버 빌드 Phase 3로 이월
@@ -162,3 +193,5 @@
   - `History/2026-05-12_WorkLog.md` — 장비 장착/탈착 UI 및 기능 완성, 멀티플레이어 2인 테스트 완료, 인벤토리 Phase 1 마무리
   - `Docs/AbilityDesign_2026-05-12.md` — 추가 어빌리티 3개 기획서 (Dash/Heal/StunStrike), 6주 완성 로드맵 확정
   - `History/2026-05-20_WorkLog.md` — `UDashToLocation` AbilityTask 구현 완료, `GA_ChargeDash` 리븐 E 스타일 대시 완성, `D1PlayerController` AutoRun 태그 블록 수정, 몽타주 Section Jump 적용
+  - `History/2026-05-25_WorkLog.md` — `GA_Focus` 버프 Ability 완성 (AttackPower +30, 10초 지속, GameplayCue 태그 등록), `GA_Heal` 자기 회복 Ability 완성 (Instant GE, Health +200), Secondary Init GE를 Instant Duration으로 변경하여 장비/버프 Add Modifier 정상 작동, `RecalculateSecondaryAttributes` 함수 추가 (스탯 투자 시 Secondary 재계산)
+  - `History/2026-05-26_WorkLog.md` — `ClientTravel` PlayerState 리셋 버그 해결. `D1GameInstance` 임시 저장 패턴 적용 (`SavePlayerStateData`/`RestorePlayerDataIfNeeded`). `PreClientTravel` 오버라이드로 Travel 직전 자동 저장. `PossessedBy`에서 복원 → `bAbilitySystemInitialized` 및 Primary Attributes 유지. Secondary+Vital GE는 새 AttributeSet에 재적용. Town ↔ Dungeon 데이터 유지 확인.

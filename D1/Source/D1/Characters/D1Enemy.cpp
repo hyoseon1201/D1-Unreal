@@ -14,6 +14,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "D1GameplayTags.h"
+#include "Game/D1GameModeDungeon.h"
 
 AD1Enemy::AD1Enemy()
 {
@@ -61,10 +62,22 @@ int32 AD1Enemy::GetPlayerLevel_Implementation()
 
 void AD1Enemy::Die()
 {
-	SetLifeSpan(LifeSpan);
-	if (D1AIController)
+	if (HasAuthority())
 	{
-		D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
+		SetLifeSpan(LifeSpan);
+		if (D1AIController)
+		{
+			D1AIController->GetBlackboardComponent()->SetValueAsBool(FName("Dead"), true);
+		}
+
+		// 보스 사망 시 던전 클리어 처리
+		if (bIsBoss)
+		{
+			if (AD1GameModeDungeon* GM = Cast<AD1GameModeDungeon>(GetWorld()->GetAuthGameMode()))
+			{
+				GM->OnBossDefeated();
+			}
+		}
 	}
 	Super::Die();
 }

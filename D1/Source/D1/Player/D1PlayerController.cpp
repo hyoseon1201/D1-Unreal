@@ -1,6 +1,5 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "Player/D1PlayerController.h"
 
 #include "EnhancedInputSubsystems.h"
@@ -9,12 +8,19 @@
 #include "Components/SplineComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
+#include "AbilitySystem/D1AttributeSet.h"
 #include "D1GameplayTags.h"
 #include "Interaction/HighlightInterface.h"
 #include "NavigationSystem.h"
 #include "NavigationPath.h"
 #include "GameFramework/Character.h"
 #include "UI/Widget/D1DamageTextComponent.h"
+#include "UI/Widget/D1UserWidget.h"
+#include "UI/WidgetController/D1DungeonResultWidgetController.h"
+#include "AbilitySystem/D1AbilitySystemLibrary.h"
+#include "Game/D1GameInstance.h"
+#include "Game/D1GameModeBase.h"
+#include "Player/D1PlayerState.h"
 
 AD1PlayerController::AD1PlayerController()
 {
@@ -73,11 +79,6 @@ void AD1PlayerController::SetupInputComponent()
 
 void AD1PlayerController::Move(const FInputActionValue& InputActionValue)
 {
-	if (GetASC() && GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputPressed))
-	{
-		return;
-	}
-
 	const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
 	const FRotator Rotation = GetControlRotation();
 	const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -104,6 +105,20 @@ void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 		bTargeting = ThisActor ? true : false;
 		bAutoRunning = false;
 	}
+
+	// ★ 마을(Town)에서는 전투/버프/회복 등 Ability 사용 불가
+	// RMB(우클릭 이동)은 Ability가 아니므로 제외
+	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB) && !CanUseAbilities())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[AbilityBlock] InputTag=%s BLOCKED (bAbilitiesAllowed=false)"), *InputTag.ToString());
+		return;
+	}
+
+	UE_LOG(LogTemp, Warning, TEXT("[AbilityInput] Pressed Tag=%s, CanUse=%s, HasASC=%s"),
+		*InputTag.ToString(),
+		CanUseAbilities() ? TEXT("TRUE") : TEXT("FALSE"),
+		GetASC() ? TEXT("TRUE") : TEXT("FALSE"));
+
 	if (GetASC())
 	{
 		GetASC()->AbilityInputTagPressed(InputTag);
@@ -119,9 +134,18 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 
 	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
-		if (GetASC())
+		// ★ 마을(Town)에서는 Ability 사용 불가
+		if (CanUseAbilities() && GetASC())
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[AbilityInput] Released Tag=%s, CanUse=TRUE"), *InputTag.ToString());
 			GetASC()->AbilityInputTagReleased(InputTag);
+		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[AbilityInput] Released Tag=%s BLOCKED (CanUse=%s, HasASC=%s)"),
+				*InputTag.ToString(),
+				CanUseAbilities() ? TEXT("TRUE") : TEXT("FALSE"),
+				GetASC() ? TEXT("TRUE") : TEXT("FALSE"));
 		}
 		return;
 	}
@@ -135,34 +159,34 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 	}
 	else
 	{
-		// GAS Ability 실행 중(예: 대시)에는 우클릭으로 AutoRun을 시작하지 않도록 태그 체크
+		// GAS Ability 실행 중(예: 대시, 스턴 등)에는 우클릭으로 AutoRun을 시작하지 않도록 태그 체크
 		if (GetASC() && GetASC()->HasMatchingGameplayTag(FD1GameplayTags::Get().Player_Block_InputPressed))
 		{
 			FollowTime = 0.f;
-			bTargeting = false;
-			return;
 		}
-
-		APawn* ControlledPawn = GetPawn();
-		if (FollowTime <= ShortPressThreshold && ControlledPawn)
+		else
 		{
-			if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
+			APawn* ControlledPawn = GetPawn();
+			if (FollowTime <= ShortPressThreshold && ControlledPawn)
 			{
-				Spline->ClearSplinePoints();
-				for (const FVector& PointLoc : NavPath->PathPoints)
+				if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), CachedDestination))
 				{
-					Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
-				}
-				if (NavPath->PathPoints.Num() > 0)
-				{
-					CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
-					bAutoRunning = true;
+					Spline->ClearSplinePoints();
+					for (const FVector& PointLoc : NavPath->PathPoints)
+					{
+						Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+					}
+					if (NavPath->PathPoints.Num() > 0)
+					{
+						CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
+						bAutoRunning = true;
+					}
 				}
 			}
-		}
 
-		FollowTime = 0.f;
-		bTargeting = false;
+			FollowTime = 0.f;
+			bTargeting = false;
+		}
 	}
 }
 
@@ -175,7 +199,8 @@ void AD1PlayerController::AbilityInputTagHeld(FGameplayTag InputTag)
 
 	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB))
 	{
-		if (GetASC())
+		// ★ 마을(Town)에서는 Ability 사용 불가
+		if (CanUseAbilities() && GetASC())
 		{
 			GetASC()->AbilityInputTagHeld(InputTag);
 		}
@@ -251,6 +276,93 @@ void AD1PlayerController::UnHighlightActor(AActor* InActor)
 	if (IsValid(InActor) && InActor->Implements<UHighlightInterface>())
 	{
 		IHighlightInterface::Execute_UnHighlightActor(InActor);
+	}
+}
+
+void AD1PlayerController::PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
+{
+	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
+
+	UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] PreClientTravel called. URL=%s, Type=%d, Seamless=%s"),
+		*PendingURL, (int32)TravelType, bIsSeamlessTravel ? TEXT("TRUE") : TEXT("FALSE"));
+
+	// ClientTravel 직전 PlayerState + Primary Attribute 데이터를 GameInstance에 저장
+	if (UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance()))
+	{
+		if (AD1PlayerState* PS = GetPlayerState<AD1PlayerState>())
+		{
+			if (const UD1AttributeSet* AS = Cast<UD1AttributeSet>(PS->GetAttributeSet()))
+			{
+				GI->SavePlayerStateData(
+					PS->GetAttributePoints(), PS->GetPlayerLevel(), PS->GetXP(),
+					AS->GetStrength(), AS->GetIntelligence(),
+					AS->GetDexterity(), AS->GetLuck());
+			}
+			else
+			{
+				UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PreClientTravel: AttributeSet is NULL!"));
+			}
+		}
+		else
+		{
+			UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PreClientTravel: PlayerState is NULL!"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PreClientTravel: GameInstance is NOT UD1GameInstance! GetGameInstance()=%s"),
+			*GetNameSafe(GetGameInstance()));
+	}
+}
+
+void AD1PlayerController::TravelToMap(const FString& MapName)
+{
+	// PreClientTravel이 자동으로 호출되므로 별도 저장 불필요
+	ClientTravel(MapName, TRAVEL_Absolute);
+}
+
+bool AD1PlayerController::CanUseAbilities() const
+{
+	if (const AD1PlayerState* PS = GetPlayerState<AD1PlayerState>())
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[CanUseAbilities] PS found. bAbilitiesAllowed=%s"),
+			PS->bAbilitiesAllowed ? TEXT("TRUE") : TEXT("FALSE"));
+		return PS->bAbilitiesAllowed;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[CanUseAbilities] PS NOT found. Defaulting to TRUE"));
+	return true; // PlayerState가 없으면 기본 허용
+}
+
+void AD1PlayerController::ClientShowDungeonResult_Implementation(const TArray<FText>& AcquiredItems)
+{
+	if (IsLocalController() && DungeonResultWidgetClass)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[Dungeon] Showing result widget on client. Items=%d"), AcquiredItems.Num());
+
+		// WidgetController 패턴으로 DungeonResultWidget 생성
+		if (UD1DungeonResultWidgetController* WC = UD1AbilitySystemLibrary::GetDungeonResultWidgetController(this))
+		{
+			UUserWidget* ResultWidget = CreateWidget<UUserWidget>(this, DungeonResultWidgetClass);
+			if (ResultWidget)
+			{
+				// 위젯에 WC 연결 (UD1UserWidget 기반이면 SetWidgetController 호출)
+				if (UD1UserWidget* D1Widget = Cast<UD1UserWidget>(ResultWidget))
+				{
+					D1Widget->SetWidgetController(WC);
+				}
+
+				ResultWidget->AddToViewport();
+
+				// 바인딩 완료 후 획득 아이템 데이터 세팅 → Delegate 발송
+				WC->SetAcquiredItems(AcquiredItems);
+
+				// 입력 모드를 UI 전용으로 변경
+				FInputModeUIOnly InputMode;
+				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				SetInputMode(InputMode);
+				bShowMouseCursor = true;
+			}
+		}
 	}
 }
 

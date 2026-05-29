@@ -13,7 +13,9 @@
 #include "Engine/OverlapResult.h"
 #include "AbilitySystem/Data/D1AbilitySystemConfig.h"
 #include "UI/WidgetController/D1WidgetController.h"
+#include "UI/WidgetController/D1DungeonResultWidgetController.h"
 #include "Inventory/D1ItemRegistry.h"
+#include "AbilitySystem/D1AttributeSet.h"
 
 bool UD1AbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AD1HUD*& OutD1HUD)
 {
@@ -103,17 +105,61 @@ void UD1AbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldCo
 
 void UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(const UObject* WorldContextObject, UAbilitySystemComponent* ASC)
 {
-	if (!IsValid(ASC)) return;
+	UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Function entered."));
+
+	if (!IsValid(ASC))
+	{
+		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] ASC is invalid!"));
+		return;
+	}
 
 	UD1CharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
-	if (!CharacterClassInfo) return;
+	if (!CharacterClassInfo)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] CharacterClassInfo is null!"));
+		return;
+	}
 
 	AActor* AvatarActor = ASC->GetAvatarActor();
+	int32 CurrentLevel = 1;
+	if (AvatarActor && AvatarActor->Implements<UCombatInterface>())
+	{
+		CurrentLevel = ICombatInterface::Execute_GetPlayerLevel(AvatarActor);
+	}
+
+	// 기존 SecondaryAttributes GE를 모두 제거 (중복 적용 방지 + Base Value 강제 갱신)
+	FGameplayEffectQuery Query;
+	Query.EffectDefinition = CharacterClassInfo->SecondaryAttributes;
+	int32 RemovedCount = ASC->RemoveActiveEffects(Query);
+	UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Removed %d existing SecondaryAttributes effects."), RemovedCount);
 
 	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
 	SecondaryAttributesContextHandle.AddSourceObject(AvatarActor);
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, 1.f, SecondaryAttributesContextHandle);
-	ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, (float)CurrentLevel, SecondaryAttributesContextHandle);
+	
+	if (SecondaryAttributesSpecHandle.IsValid())
+	{
+		FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+		UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Applied. Handle=%s, Valid=%s"),
+			*ActiveHandle.ToString(), ActiveHandle.IsValid() ? TEXT("TRUE") : TEXT("FALSE"));
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] Failed to create spec!"));
+	}
+
+	// 결과 확인
+	const TArray<UAttributeSet*>& SpawnedAttributes = ASC->GetSpawnedAttributes();
+	if (const UD1AttributeSet* D1AS = Cast<UD1AttributeSet>(SpawnedAttributes.Num() > 0 ? SpawnedAttributes[0] : nullptr))
+	{
+		FGameplayAttribute ArmorAttr = UD1AttributeSet::GetArmorAttribute();
+		float ArmorAfter = ArmorAttr.GetNumericValue(D1AS);
+		UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Level=%d, ArmorAfter=%.1f"), CurrentLevel, ArmorAfter);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] Failed to find UD1AttributeSet for result check!"));
+	}
 }
 
 void UD1AbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextObject, UAbilitySystemComponent* ASC, ECharacterClass CharacterClass)
@@ -143,9 +189,23 @@ void UD1AbilitySystemLibrary::GiveStartupAbilities(const UObject* WorldContextOb
 
 UD1CharacterClassInfo* UD1AbilitySystemLibrary::GetCharacterClassInfo(const UObject* WorldContextObject)
 {
-	const AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject));
-	if (D1GameMode == nullptr) return nullptr;
-	return D1GameMode->CharacterClassInfo;
+	// 방법 1: WorldContextObject에서 직접 GameMode 찾기 (기존 방식)
+	if (const AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(UGameplayStatics::GetGameMode(WorldContextObject)))
+	{
+		return D1GameMode->CharacterClassInfo;
+	}
+	
+	// 방법 2: WorldContextObject에서 World를 얻어서 GameMode 직접 찾기 (Fallback)
+	if (const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull))
+	{
+		if (const AD1GameModeBase* D1GameMode = Cast<AD1GameModeBase>(World->GetAuthGameMode()))
+		{
+			return D1GameMode->CharacterClassInfo;
+		}
+	}
+	
+	UE_LOG(LogTemp, Error, TEXT("[GetCharacterClassInfo] Failed to find CharacterClassInfo. Check BP_GameMode settings."));
+	return nullptr;
 }
 
 UD1AbilityInfo* UD1AbilitySystemLibrary::GetAbilityInfo(const UObject* WorldContextObject)
@@ -205,6 +265,20 @@ UD1InventoryWidgetController* UD1AbilitySystemLibrary::GetInventoryWidgetControl
 	if (bSuccessfulParams)
 	{
 		return D1HUD->GetInventoryWidgetController(WCParams);
+	}
+
+	return nullptr;
+}
+
+UD1DungeonResultWidgetController* UD1AbilitySystemLibrary::GetDungeonResultWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AD1HUD* D1HUD = nullptr;
+	const bool bSuccessfulParams = MakeWidgetControllerParams(WorldContextObject, WCParams, D1HUD);
+
+	if (bSuccessfulParams)
+	{
+		return D1HUD->GetDungeonResultWidgetController(WCParams);
 	}
 
 	return nullptr;

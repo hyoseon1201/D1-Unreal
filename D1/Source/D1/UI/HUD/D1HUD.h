@@ -13,6 +13,7 @@ class UAbilitySystemComponent;
 class UAttributeSet;
 class UD1SkillMenuWidgetController;
 class UD1InventoryWidgetController;
+class UD1DungeonResultWidgetController;
 struct FWidgetControllerParams;
 
 /**
@@ -29,6 +30,7 @@ public:
 	UD1AttributeMenuWidgetController* GetAttributeMenuWidgetController(const FWidgetControllerParams& WCParams);
 	UD1SkillMenuWidgetController* GetSkillMenuWidgetController(const FWidgetControllerParams& WCParams);
 	UD1InventoryWidgetController* GetInventoryWidgetController(const FWidgetControllerParams& WCParams);
+	UD1DungeonResultWidgetController* GetDungeonResultWidgetController(const FWidgetControllerParams& WCParams);
 
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
@@ -62,4 +64,10 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UD1InventoryWidgetController> InventoryWidgetControllerClass;
+
+	UPROPERTY()
+	TObjectPtr<UD1DungeonResultWidgetController> DungeonResultWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UD1DungeonResultWidgetController> DungeonResultWidgetControllerClass;
 };

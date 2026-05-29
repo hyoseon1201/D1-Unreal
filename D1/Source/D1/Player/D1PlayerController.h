@@ -14,6 +14,7 @@ class USplineComponent;
 class UD1AbilitySystemComponent;
 class UD1DamageTextComponent;
 struct FInputActionValue;
+class AD1GameModeBase;
 
 /**
  * 
@@ -30,8 +31,23 @@ public:
 	UFUNCTION(Client, Reliable)
 	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit);
 
+	/** 지정된 맵으로 ClientTravel을 실행한다. (BP_DungeonPortal 등에서 호출) */
+	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
+	void TravelToMap(const FString& MapName);
+
+	/** 현재 GameMode에서 Ability 사용이 허용되는가? (Town=false, Dungeon=true) */
+	UFUNCTION(BlueprintPure, Category = "D1|GameMode Rules")
+	bool CanUseAbilities() const;
+
+	/** 던전 보스 처치 시 클라이언트에게 결과 위젯을 띄우라고 지시 (획득 아이템 데이터 포함) */
+	UFUNCTION(Client, Reliable, Category = "D1|Dungeon")
+	void ClientShowDungeonResult(const TArray<FText>& AcquiredItems);
+
 protected:
 	virtual void BeginPlay() override;
+
+	/** ClientTravel 직전에 호출됨. PlayerState 데이터를 GameInstance에 저장 */
+	virtual void PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel) override;
 
 	virtual void SetupInputComponent() override;
 
@@ -80,4 +96,8 @@ private:
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UD1DamageTextComponent> DamageTextComponentClass;
+
+	/** 던전 클리어 시 표시할 결과 위젯 클래스 */
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<class UUserWidget> DungeonResultWidgetClass;
 };

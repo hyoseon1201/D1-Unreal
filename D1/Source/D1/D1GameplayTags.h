@@ -69,6 +69,7 @@ public:
 	FGameplayTag Abilities_StunStrike;
 	FGameplayTag Abilities_Physical_GroundSword;
 	FGameplayTag Abilities_Physical_WhirlwindCharge;
+	FGameplayTag Abilities_Buff_Focus;
 
 	/* Passive Ability Tags */
 	FGameplayTag Abilities_TestPassive;
@@ -96,6 +97,10 @@ public:
 	FGameplayTag Cooldown_StunStrike;
 	FGameplayTag Cooldown_Physical_GroundSword;
 	FGameplayTag Cooldown_Physical_WhirlwindCharge;
+	FGameplayTag Cooldown_Buff_Focus;
+
+	/* Status Tags */
+	FGameplayTag Status_Buff_Focus;
 
 	/* State Tags */
 	FGameplayTag State_Invincible;

@@ -43,19 +43,55 @@ void AD1Hero::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
+	UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] D1Hero::PossessedBy called. Pawn=%s, Controller=%s"),
+		*GetName(), *GetNameSafe(NewController));
+
 	// Init ability actor info for the Server
+	// 맵 이동(ClientTravel) 후에도 새 Pawn의 ASC 참조를 갱신해야 하므로 항상 호출
 	InitAbilityActorInfo();
-	InitializeDefaultAttributes();
-	AddCharacterAbilities();
 
 	if (AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>())
 	{
+		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] PlayerState found. bAbilitySystemInitialized=%s, AttributePoints=%d, Level=%d"),
+			D1PS->bAbilitySystemInitialized ? TEXT("TRUE") : TEXT("FALSE"),
+			D1PS->GetAttributePoints(),
+			D1PS->GetPlayerLevel());
+
+		// 1. Attribute 초기화 (처음 한 번만)
+		// Primary Attribute 기본값 설정
+		if (!D1PS->bAbilitySystemInitialized)
+		{
+			InitializeDefaultAttributes();
+			D1PS->bAbilitySystemInitialized = true;
+
+			UE_LOG(LogTemp, Log, TEXT("[TravelDebug] PossessedBy: InitializeDefaultAttributes executed. Level [%d]"), D1PS->GetPlayerLevel());
+		}
+		else
+		{
+			// Travel: Secondary + Vital만 재적용 (Primary는 아래 Restore에서 Override)
+			ApplyEffectToSelf(DefaultSecondaryAttributes, (float)D1PS->GetPlayerLevel());
+			ApplyEffectToSelf(DefaultVitalAttributes, (float)D1PS->GetPlayerLevel());
+
+			UE_LOG(LogTemp, Log, TEXT("[TravelDebug] PossessedBy: Secondary+Vital re-applied. Level [%d]"), D1PS->GetPlayerLevel());
+		}
+
+		// 2. GameInstance에서 저장된 데이터 복원 (Primary Attribute Override)
+		// InitializeDefaultAttributes 이후에 실행하여 기본값을 덮어씀
+		D1PS->RestoreTravelDataIfNeeded();
+
+		// 3. Ability는 항상 재등록 (맵 이동 시 새 Pawn의 새 ASC에 필요)
+		// AddCharacterAbilities 내부에서 중복 체크됨
+		AddCharacterAbilities();
+
+		// 4. Ability 상태(잠금/해금)는 레벨에 따라 변하므로 항상 업데이트
 		if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(GetAbilitySystemComponent()))
 		{
 			D1ASC->UpdateAbilityStatuses(D1PS->GetPlayerLevel());
-
-			UE_LOG(LogTemp, Log, TEXT("PossessedBy: Initialized abilities for Level [%d]"), D1PS->GetPlayerLevel());
 		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PlayerState NOT found in PossessedBy!"));
 	}
 }
 

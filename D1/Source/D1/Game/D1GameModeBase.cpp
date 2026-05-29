@@ -2,6 +2,7 @@
 
 #include "Game/D1GameModeBase.h"
 #include "Game/D1GameStateBase.h"
+#include "Player/D1PlayerState.h"
 
 AD1GameModeBase::AD1GameModeBase()
 {
@@ -15,5 +16,23 @@ void AD1GameModeBase::PostInitializeComponents()
 	if (AD1GameStateBase* D1GS = Cast<AD1GameStateBase>(GameState))
 	{
 		D1GS->ItemRegistry = ItemRegistry;
+	}
+}
+
+void AD1GameModeBase::PostLogin(APlayerController* NewPlayer)
+{
+	Super::PostLogin(NewPlayer);
+
+	if (AD1PlayerState* PS = Cast<AD1PlayerState>(NewPlayer->PlayerState))
+	{
+		// GameMode의 Ability 허용 규칙을 PlayerState에 동기화 (클리언트에서도 접근 가능)
+		PS->bAbilitiesAllowed = AreAbilitiesAllowed();
+
+		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] GameMode::PostLogin. PS=%p, bInit=%s, bAbilitiesAllowed=%s, AttrPoints=%d, Level=%d"),
+			PS,
+			PS->bAbilitySystemInitialized ? TEXT("TRUE") : TEXT("FALSE"),
+			PS->bAbilitiesAllowed ? TEXT("TRUE") : TEXT("FALSE"),
+			PS->GetAttributePoints(),
+			PS->GetPlayerLevel());
 	}
 }

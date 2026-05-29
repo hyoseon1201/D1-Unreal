@@ -8,6 +8,7 @@
 #include "UI/WidgetController/D1AttributeMenuWidgetController.h"
 #include "UI/WidgetController//D1SkillMenuWidgetController.h"
 #include "UI/WidgetController/D1InventoryWidgetController.h"
+#include "UI/WidgetController/D1DungeonResultWidgetController.h"
 #include "Blueprint/UserWidget.h"
 
 UD1OverlayWidgetController* AD1HUD::GetOverlayWidgetController(const FWidgetControllerParams& WCParams)
@@ -52,6 +53,17 @@ UD1InventoryWidgetController* AD1HUD::GetInventoryWidgetController(const FWidget
 		InventoryWidgetController->BindCallbacksToDependencies();
 	}
 	return InventoryWidgetController;
+}
+
+UD1DungeonResultWidgetController* AD1HUD::GetDungeonResultWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (DungeonResultWidgetController == nullptr)
+	{
+		DungeonResultWidgetController = NewObject<UD1DungeonResultWidgetController>(this, DungeonResultWidgetControllerClass);
+		DungeonResultWidgetController->SetWidgetControllerParams(WCParams);
+		DungeonResultWidgetController->BindCallbacksToDependencies();
+	}
+	return DungeonResultWidgetController;
 }
 
 void AD1HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS)

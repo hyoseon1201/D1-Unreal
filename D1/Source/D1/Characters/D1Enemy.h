@@ -60,6 +60,10 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	float LifeSpan = 3.f;
 
+	/** true면 이 몬스터는 보스. 사망 시 던전 클리어 처리 */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
+	bool bIsBoss = false;
+
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	TObjectPtr<AActor> CombatTarget;
 

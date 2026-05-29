@@ -57,7 +57,7 @@ private:
 	FTimerHandle TickTimerHandle;
 
 	UFUNCTION()
-	void TickTask();
+	void TickTask();  // Timer callback (not overriding UGameplayTask::TickTask)
 
 	void FinishTask();
 };

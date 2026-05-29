@@ -68,6 +68,7 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Abilities_StunStrike = Manager.AddNativeGameplayTag(FName("Abilities.StunStrike"), FString("StunStrike | Crowd Control Ability"));
 	GameplayTags.Abilities_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Abilities.Physical.GroundSword"), FString("Warrior | GroundSword Ability"));
 	GameplayTags.Abilities_Physical_WhirlwindCharge = Manager.AddNativeGameplayTag(FName("Abilities.Physical.WhirlwindCharge"), FString("Warrior | WhirlwindCharge Ability"));
+	GameplayTags.Abilities_Buff_Focus = Manager.AddNativeGameplayTag(FName("Abilities.Buff.Focus"), FString("Buff | Focus — AttackPower buff with weapon VFX"));
 
 	/* Passive Ability Tags */
 	GameplayTags.Abilities_TestPassive = Manager.AddNativeGameplayTag(FName("Abilities.TestPassive"), FString("Warrior | TestPassive Ability"));
@@ -93,6 +94,10 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Cooldown_StunStrike = Manager.AddNativeGameplayTag(FName("Cooldown.StunStrike"), FString("StunStrike Ability Cooldown"));
 	GameplayTags.Cooldown_Physical_GroundSword = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.GroundSword"), FString("GroundSword Ability Cooldown"));
 	GameplayTags.Cooldown_Physical_WhirlwindCharge = Manager.AddNativeGameplayTag(FName("Cooldown.Physical.WhirlwindCharge"), FString("WhirlwindCharge Ability Cooldown"));
+	GameplayTags.Cooldown_Buff_Focus = Manager.AddNativeGameplayTag(FName("Cooldown.Buff.Focus"), FString("Focus Buff Ability Cooldown"));
+
+	/* Status Tags */
+	GameplayTags.Status_Buff_Focus = Manager.AddNativeGameplayTag(FName("Status.Buff.Focus"), FString("Focus buff active status"));
 
 	/* State Tags */
 	GameplayTags.State_Invincible = Manager.AddNativeGameplayTag(FName("State.Invincible"), FString("Invincible state (no damage taken)"));

@@ -19,6 +19,12 @@ void UD1AbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<U
 {
 	for (TSubclassOf<UGameplayAbility> AbilityClass : StartupAbilities)
 	{
+		// 이미 동일한 Ability Class가 부여되어 있으면 스킵 (중복 초기화 방지)
+		if (FindAbilitySpecFromClass(AbilityClass) != nullptr)
+		{
+			continue;
+		}
+
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
 		if (const UD1GameplayAbility* D1Ability = Cast<UD1GameplayAbility>(AbilitySpec.Ability))
 		{
@@ -40,6 +46,12 @@ void UD1AbilitySystemComponent::AddCharacterPassiveAbilities(const TArray<TSubcl
 {
 	for (TSubclassOf<UGameplayAbility> AbilityClass : StartupPassiveAbilities)
 	{
+		// 이미 동일한 Ability Class가 부여되어 있으면 스킵
+		if (FindAbilitySpecFromClass(AbilityClass) != nullptr)
+		{
+			continue;
+		}
+
 		FGameplayAbilitySpec AbilitySpec = FGameplayAbilitySpec(AbilityClass, 1);
 		GiveAbilityAndActivateOnce(AbilitySpec);
 	}
@@ -189,12 +201,27 @@ FGameplayAbilitySpec* UD1AbilitySystemComponent::GetSpecFromAbilityTag(const FGa
 
 void UD1AbilitySystemComponent::UpgradeAttribute(const FGameplayTag& AttributeTag)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[Client] UpgradeAttribute called. Tag=%s, Avatar=%s"),
+		*AttributeTag.ToString(), *GetNameSafe(GetAvatarActor()));
+
 	if (GetAvatarActor()->Implements<UPlayerInterface>())
 	{
-		if (IPlayerInterface::Execute_GetAttributePoints(GetAvatarActor()) > 0)
+		int32 Points = IPlayerInterface::Execute_GetAttributePoints(GetAvatarActor());
+		UE_LOG(LogTemp, Warning, TEXT("[Client] AttributePoints=%d"), Points);
+
+		if (Points > 0)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("[Client] Calling ServerUpgradeAttribute..."));
 			ServerUpgradeAttribute(AttributeTag);
 		}
+		else
+		{
+			UE_LOG(LogTemp, Warning, TEXT("[Client] No points left!"));
+		}
+	}
+	else
+	{
+		UE_LOG(LogTemp, Error, TEXT("[Client] AvatarActor does not implement UPlayerInterface!"));
 	}
 }
 
@@ -396,20 +423,25 @@ void UD1AbilitySystemComponent::ServerEquipAbility_Implementation(const FGamepla
 
 void UD1AbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FGameplayTag& AttributeTag)
 {
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] ServerUpgradeAttribute_Implementation called! Tag=%s"), *AttributeTag.ToString());
+
 	FGameplayEventData Payload;
 	Payload.EventTag = AttributeTag;
 	Payload.EventMagnitude = 1.f;
 
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetAvatarActor(), AttributeTag, Payload);
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] SendGameplayEventToActor done."));
 
 	if (GetAvatarActor()->Implements<UPlayerInterface>())
 	{
 		IPlayerInterface::Execute_AddToAttributePoints(GetAvatarActor(), -1);
+		UE_LOG(LogTemp, Warning, TEXT("[SERVER] AttributePoints decremented."));
 	}
 
 	// Primary Attribute 변경 후 Secondary Attribute Base Value 재계산
-	// (Instant GE이므로 기존 Add Modifier(장비, 버프)는 그대로 유지됨)
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] Calling RecalculateSecondaryAttributes..."));
 	UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(GetAvatarActor(), this);
+	UE_LOG(LogTemp, Warning, TEXT("[SERVER] RecalculateSecondaryAttributes done."));
 }
 
 void UD1AbilitySystemComponent::OnRep_ActivateAbilities()
