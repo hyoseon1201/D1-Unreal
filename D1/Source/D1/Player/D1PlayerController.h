@@ -100,4 +100,36 @@ private:
 	/** 던전 클리어 시 표시할 결과 위젯 클래스 */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<class UUserWidget> DungeonResultWidgetClass;
+
+	/** 던전 입장 UI 위젯 클래스 (WBP_DungeonEntry) */
+	UPROPERTY(EditDefaultsOnly, Category = "UI")
+	TSubclassOf<class UUserWidget> DungeonEntryWidgetClass;
+
+	/** 던전 입장 UI를 화면에 표시 (BP_DungeonPortal BeginOverlap에서 호출) */
+	UFUNCTION(BlueprintCallable, Category = "D1|UI")
+	void ShowDungeonEntryUI();
+
+	/** 파티 생성 요청 (서버에서 GameStateTown 처리) */
+	UFUNCTION(Server, Reliable, Category = "D1|Party")
+	void Server_CreateParty();
+
+	/** 파티 탈퇴 요청 */
+	UFUNCTION(Server, Reliable, Category = "D1|Party")
+	void Server_LeaveParty();
+
+	/** 준비 상태 설정 */
+	UFUNCTION(Server, Reliable, Category = "D1|Party")
+	void Server_SetReady(bool bReady);
+
+	/** 던전 선택 (파티장 전용) */
+	UFUNCTION(Server, Reliable, Category = "D1|Party")
+	void Server_SetSelectedDungeon(const FString& DungeonMap);
+
+	/** 던전 시작 (파티장 전용, 모든 파티원 이동) */
+	UFUNCTION(Server, Reliable, Category = "D1|Party")
+	void Server_StartDungeon();
+
+	/** 클라이언트에게 로딩 화면 표시 지시 */
+	UFUNCTION(Client, Reliable, Category = "D1|UI")
+	void ClientShowLoadingScreen(const FText& LoadingText);
 };

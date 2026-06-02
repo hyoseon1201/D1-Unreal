@@ -20,6 +20,8 @@
 #include "AbilitySystem/D1AbilitySystemLibrary.h"
 #include "Game/D1GameInstance.h"
 #include "Game/D1GameModeBase.h"
+#include "Game/D1GameModeTown.h"
+#include "Game/D1GameStateTown.h"
 #include "Player/D1PlayerState.h"
 
 AD1PlayerController::AD1PlayerController()
@@ -335,35 +337,66 @@ bool AD1PlayerController::CanUseAbilities() const
 
 void AD1PlayerController::ClientShowDungeonResult_Implementation(const TArray<FText>& AcquiredItems)
 {
-	if (IsLocalController() && DungeonResultWidgetClass)
+	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] ClientShowDungeonResult START. IsLocal=%s, HasWidgetClass=%s, Items=%d"),
+		IsLocalController() ? TEXT("TRUE") : TEXT("FALSE"),
+		DungeonResultWidgetClass ? TEXT("TRUE") : TEXT("FALSE"),
+		AcquiredItems.Num());
+
+	if (!IsLocalController())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[Dungeon] Showing result widget on client. Items=%d"), AcquiredItems.Num());
-
-		// WidgetController 패턴으로 DungeonResultWidget 생성
-		if (UD1DungeonResultWidgetController* WC = UD1AbilitySystemLibrary::GetDungeonResultWidgetController(this))
-		{
-			UUserWidget* ResultWidget = CreateWidget<UUserWidget>(this, DungeonResultWidgetClass);
-			if (ResultWidget)
-			{
-				// 위젯에 WC 연결 (UD1UserWidget 기반이면 SetWidgetController 호출)
-				if (UD1UserWidget* D1Widget = Cast<UD1UserWidget>(ResultWidget))
-				{
-					D1Widget->SetWidgetController(WC);
-				}
-
-				ResultWidget->AddToViewport();
-
-				// 바인딩 완료 후 획득 아이템 데이터 세팅 → Delegate 발송
-				WC->SetAcquiredItems(AcquiredItems);
-
-				// 입력 모드를 UI 전용으로 변경
-				FInputModeUIOnly InputMode;
-				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				SetInputMode(InputMode);
-				bShowMouseCursor = true;
-			}
-		}
+		UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] SKIP: Not local controller"));
+		return;
 	}
+
+	if (!DungeonResultWidgetClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DungeonUI] FAIL: DungeonResultWidgetClass is NULL! Assign WBP_DungeonResult in BP_D1PlayerController"));
+		return;
+	}
+
+	// WidgetController 패턴으로 DungeonResultWidget 생성
+	UD1DungeonResultWidgetController* WC = UD1AbilitySystemLibrary::GetDungeonResultWidgetController(this);
+	if (!WC)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DungeonUI] FAIL: GetDungeonResultWidgetController returned NULL!"));
+		return;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] WC created OK. WC=%p"), WC);
+
+	UUserWidget* ResultWidget = CreateWidget<UUserWidget>(this, DungeonResultWidgetClass);
+	if (!ResultWidget)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DungeonUI] FAIL: CreateWidget returned NULL! WidgetClass=%s"), *GetNameSafe(DungeonResultWidgetClass));
+		return;
+	}
+	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] CreateWidget OK. Widget=%p"), ResultWidget);
+
+	// 위젯에 WC 연결 (UD1UserWidget 기반이면 SetWidgetController 호출)
+	if (UD1UserWidget* D1Widget = Cast<UD1UserWidget>(ResultWidget))
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] Cast to UD1UserWidget OK. Calling SetWidgetController..."));
+		D1Widget->SetWidgetController(WC);
+	}
+	else
+	{
+		UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] Cast to UD1UserWidget FAILED. Widget is not UD1UserWidget subclass."));
+	}
+
+	ResultWidget->AddToViewport();
+	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] AddToViewport OK"));
+
+	// 바인딩 완료 후 획득 아이템 데이터 세팅 → Delegate 발송
+	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] Calling WC->SetAcquiredItems with %d items..."), AcquiredItems.Num());
+	WC->SetAcquiredItems(AcquiredItems);
+	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] SetAcquiredItems DONE. Delegate should have fired."));
+
+	// 입력 모드를 UI 전용으로 변경
+	FInputModeUIOnly InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+
+	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] ClientShowDungeonResult COMPLETE"));
 }
 
 void AD1PlayerController::AutoRun()
@@ -390,4 +423,105 @@ void AD1PlayerController::AutoRun()
 			bAutoRunning = false;
 		}
 	}
+}
+
+void AD1PlayerController::ShowDungeonEntryUI()
+{
+	if (!IsLocalController())
+	{
+		return;
+	}
+
+	if (!DungeonEntryWidgetClass)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DungeonEntry] DungeonEntryWidgetClass is NULL! Assign WBP_DungeonEntry in BP_D1PlayerController"));
+		return;
+	}
+
+	UUserWidget* EntryWidget = CreateWidget<UUserWidget>(this, DungeonEntryWidgetClass);
+	if (!EntryWidget)
+	{
+		UE_LOG(LogTemp, Error, TEXT("[DungeonEntry] CreateWidget failed!"));
+		return;
+	}
+
+	EntryWidget->AddToViewport();
+
+	// UI 입력 모드로 전환
+	FInputModeUIOnly InputMode;
+	InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+	SetInputMode(InputMode);
+	bShowMouseCursor = true;
+
+	UE_LOG(LogTemp, Log, TEXT("[DungeonEntry] ShowDungeonEntryUI completed."));
+}
+
+void AD1PlayerController::Server_CreateParty_Implementation()
+{
+	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	{
+		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
+		{
+			GSTown->ServerCreateParty(PS->GetPlayerName());
+		}
+	}
+}
+
+void AD1PlayerController::Server_LeaveParty_Implementation()
+{
+	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	{
+		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
+		{
+			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayer(PS->GetPlayerName()))
+			{
+				GSTown->ServerLeaveParty(Party->PartyId, PS->GetPlayerName());
+			}
+		}
+	}
+}
+
+void AD1PlayerController::Server_SetReady_Implementation(bool bReady)
+{
+	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	{
+		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
+		{
+			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayer(PS->GetPlayerName()))
+			{
+				GSTown->ServerSetReady(Party->PartyId, PS->GetPlayerName(), bReady);
+			}
+		}
+	}
+}
+
+void AD1PlayerController::Server_SetSelectedDungeon_Implementation(const FString& DungeonMap)
+{
+	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	{
+		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
+		{
+			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayer(PS->GetPlayerName()))
+			{
+				if (Party->IsLeader(PS->GetPlayerName()))
+				{
+					GSTown->ServerSelectDungeon(Party->PartyId, DungeonMap);
+				}
+			}
+		}
+	}
+}
+
+void AD1PlayerController::Server_StartDungeon_Implementation()
+{
+	if (AD1GameModeTown* GameModeTown = Cast<AD1GameModeTown>(GetWorld()->GetAuthGameMode()))
+	{
+		GameModeTown->StartDungeonForParty(this);
+	}
+}
+
+void AD1PlayerController::ClientShowLoadingScreen_Implementation(const FText& LoadingText)
+{
+	// TODO: 로딩 위젯 표시 (Phase 2에서 WBP_Loading 구현)
+	UE_LOG(LogTemp, Log, TEXT("[Loading] ShowLoadingScreen: %s"), *LoadingText.ToString());
 }

@@ -128,6 +128,11 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 		// ★ bAbilitySystemInitialized는 복원하지 않음
 		// 맵 이동 시 Ability 재등록을 위해 false로 유지
 
+		// 복원 전 현재 값 저장 (변경 여부 비교용)
+		const int32 OldAttributePointsBeforeRestore = AttributePoints;
+		const int32 OldLevelBeforeRestore = Level;
+		const int32 OldXPBeforeRestore = XP;
+
 		// 1. 스칼라 값 복원
 		AttributePoints = SavedAttrPts;
 		Level = SavedLvl;
@@ -145,10 +150,19 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 				SavedStr, SavedInt, SavedDex, SavedLuc);
 		}
 
-		// 3. OnRep 호출로 UI/Delegate 갱신
-		OnRep_AttributePoints(AttributePoints);
-		OnRep_Level(Level);
-		OnRep_XP(XP);
+		// 3. 값이 실제로 변경되었을 때만 OnRep 호출 (맵 이동 시 레벨업 이펙트 중복 방지)
+		if (AttributePoints != OldAttributePointsBeforeRestore)
+		{
+			OnRep_AttributePoints(AttributePoints);
+		}
+		if (Level != OldLevelBeforeRestore)
+		{
+			OnRep_Level(Level);
+		}
+		if (XP != OldXPBeforeRestore)
+		{
+			OnRep_XP(XP);
+		}
 
 		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] RestoreTravelDataIfNeeded. AFTER: bInit=%s, AttrPts=%d, Level=%d, XP=%d"),
 			bAbilitySystemInitialized ? TEXT("TRUE") : TEXT("FALSE"),

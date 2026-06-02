@@ -24,6 +24,7 @@
 | 7 | 웹서버 연동 (로비/인벤토리/스탯 영속화) | ⏳ Phase 3 이월 |
 | 8 | 로비/던전 분리 (Gameplay Mode) | ✅ 완료 (GameInstance 임시 저장으로 데이터 유지) |
 | 9 | 다양한 어빌리티 추가 개발 | ✅ 완료 (ChargeDash, Focus, Heal) |
+| 10 | 던전 전투 루프 (몬스터/보스/클리어) | 🔄 진행중 (보스 사망 감지, 결과창 뼈대, Ability 재등록 버그 수정) |
 
 ### 6번 상세 (완료)
 - **Phase 1 (언리얼 납부, 완료):** 웹서버 없이 언리얼 낶에서만 동작하는 인벤토리 시스템 구축
@@ -108,29 +109,61 @@
 - **원인:** PIE에서는 `ClientTravel`이 기존 `PlayerState`를 유지하지 않고 새로 생성함 (Standalone/Listen Server에서도 동일)
 - **해결책:** `GameInstance` 임시 저장 패턴 (PIE에서도 `GameInstance`는 살아있음)
   - **`UD1GameInstance` 신규 생성:** `SavePlayerStateData` / `RestorePlayerStateData` / `ClearSavedData`
-    - 저장 항목: `bAbilitySystemInitialized`, `AttributePoints`, `Level`, `XP`, `Strength`, `Intelligence`, `Dexterity`, `Luck`
+    - 저장 항목: `AttributePoints`, `Level`, `XP`, `Strength`, `Intelligence`, `Dexterity`, `Luck` (bAbilitySystemInitialized은 제외)
   - **`AD1PlayerController::PreClientTravel` 오버라이드:** Engine이 `ClientTravel` 직전에 자동 호출 → `PlayerState` + `AttributeSet` 데이터를 `GameInstance`에 저장
-  - **`AD1Hero::PossessedBy` 수정:** `InitAbilityActorInfo()` 직후 `D1PS->RestoreTravelDataIfNeeded()` 호출
-    - `InitializeDefaultAttributes()` **실행 전**에 `bAbilitySystemInitialized`와 Primary Attribute를 복원
-    - `bInit=TRUE` 복원 시 → `InitializeDefaultAttributes()` **스킵** (Primary GE 덮어쓰기 방지)
-    - 대신 `Secondary GE + Vital GE`만 **재적용** (새 `AttributeSet`에는 이들이 필요함)
+  - **`AD1Hero::PossessedBy` 수정:** 
+    - 순서: `InitializeDefaultAttributes()` (기본값) → `RestoreTravelDataIfNeeded()` (GameInstance 값으로 Override) → `AddCharacterAbilities()` (항상 재등록)
+    - `bAbilitySystemInitialized`는 복원하지 않음 → 맵 이동 시 Ability를 새 ASC에 재등록
+    - `Secondary GE + Vital GE` 재적용 (새 `AttributeSet`에 필요)
   - **`DefaultEngine.ini`:** `GameInstanceClass=/Script/D1.D1GameInstance` 추가 (Project Settings에서 설정)
-- **결과:** Town → Dungeon 이동 시 스탯 투자한 Primary Attribute(Strength 등), 남은 AttributePoints, `bAbilitySystemInitialized` 상태가 정상 유지됨
+- **결과:** Town → Dungeon 이동 시 스탯 투자한 Primary Attribute(Strength 등), 남은 AttributePoints, `bAbilitySystemInitialized` 상태가 정상 유지됨. **맵 이동 후에도 Ability(좌클릭 기본공격 포함)가 정상 작동.**
 - **한계:** `GameInstance` 임시 저장은 세션 내 맵 이동용. 세션 종료 후에는 웹서버 영속화(Phase 3) 필요.
 - **관련 파일:**
   - `D1GameInstance.h/.cpp` (신규)
   - `D1PlayerController.h/.cpp` (`PreClientTravel` 추가)
   - `D1PlayerState.h/.cpp` (`RestoreTravelDataIfNeeded()` 추가)
-  - `D1Hero.cpp` (`PossessedBy` 복원 호출, Secondary+Vital 재적용)
+  - `D1Hero.cpp` (`PossessedBy` 순서 변경)
   - `D1GameModeBase.cpp` (`PostLogin` 디버그 로그)
   - `DefaultEngine.ini` (`GameInstanceClass` 설정)
+
+### 10번 상세 (던전 전투 루프 — 진행중)
+- **구현 완료:**
+  - **보스 사망 감지:** `D1Enemy::Die()`에 `HasAuthority()` 가드 + `bIsBoss` 체크 → `GameModeDungeon::OnBossDefeated()` 호출
+  - **Dungeon 클리어 알림 (멀티플레이어):** `OnBossDefeated()` → 모든 `PlayerController` 순회 → `ClientShowDungeonResult(const TArray<FText>& AcquiredItems)` Client RPC
+  - **WidgetController 패턴 적용:** `D1DungeonResultWidgetController` (D1WidgetController 상속) → 획득 아이템 목록 관리
+    - `D1HUD::GetDungeonResultWidgetController()`, `D1AbilitySystemLibrary::GetDungeonResultWidgetController()` 추가
+  - **PlayerController:** `ClientShowDungeonResult_Implementation()`에서 WC 연결 → `SetAcquiredItems()` 호출 → Delegate 발송 → Blueprint 바인딩
+  - **RPC 데이터 전달:** 획득 아이템을 `TArray<FText>`로 RPC에 실어서 보내, 위젯 생성 이후 데이터 세팅 → 타이밍 이슈 해결
+- **구현 완료 (Blueprint):**
+  - `WBP_DungeonResult` 생성 (`UD1UserWidget` 상속)
+  - `Event Construct`에서 `GetHUD` → `GetDungeonResultWidgetController` → `OnAcquiredItemsChanged` 바인딩 → `Update Item List`
+  - "Return to Town" 버튼 → `TravelToMap("Town")` 호출
+  - `BP_D1PlayerController`의 `Dungeon Result Widget Class`에 `WBP_DungeonResult` 할당 → 보스 처치 후 결과 UI 정상 표시 ✅
+- **Critical Bug Fix (Ability 재등록):**
+  - **문제:** ClientTravel 후 Dungeon에서 좌클릭 기본공격 Ability가 작동하지 않음
+  - **원인:** `bAbilitySystemInitialized`를 GameInstance에 저장/복원 → `PossessedBy`에서 `AddCharacterAbilities()`가 스킵됨 → 새 Pawn의 ASC에 Ability가 등록되지 않음
+  - **해결:** 
+    - GameInstance 저장 항목에서 `bAbilitySystemInitialized` 제거
+    - `D1Hero::PossessedBy` 순서 변경: `InitializeDefaultAttributes()` → `RestoreTravelDataIfNeeded()` (Primary Override) → `AddCharacterAbilities()` (항상 재등록)
+    - `AddCharacterAbilities()` 내부에서 중복 Spec은 `FindAbilitySpecFromClass`로 자동 스킵되므로 안전
+- **Bug Fix (레벨업 이펙트 중복):**
+  - **문제:** Town → Dungeon 이동 시 이미 Lv.1인 상태에서 레벨업 사운드/이펙트가 다시 재생됨
+  - **원인:** `RestoreTravelDataIfNeeded()`에서 값 복원 후 무조건 `OnRep_Level/XP/AttributePoints` 호출 → Blueprint 위젯에서 "값 변경"으로 인식
+  - **해결:** 복원 전 현재 값 저장 → 복원 후 **실제로 달라졌을 때만** `OnRep_*` 호출 (`D1PlayerState.cpp` 수정)
+- **관련 파일:
+  - `D1GameModeDungeon.h/.cpp` (신규: `OnBossDefeated()`)
+  - `D1DungeonResultWidgetController.h/.cpp` (신규)
+  - `D1Enemy.h/.cpp` (`bIsBoss`, `HasAuthority()` 가드)
+  - `D1PlayerController.h/.cpp` (`ClientShowDungeonResult()`)
+  - `D1GameInstance.h/.cpp` (저장 항목에서 `bAbilitySystemInitialized` 제거)
+  - `D1Hero.cpp` (`PossessedBy` 순서 변경)
 
 ### 6주 완성 로드맵 (현실적인 Scope)
 - **개발자 경험:** Spring Boot 1년 (오랜만에 복귀), EC2 직접 배포 경험 있음
 - **일정 (포트폴리오용 Scope 재조정):**
   - **Week 1 (완료):** 어빌리티 시스템 완성 (ChargeDash, Focus, Heal) + PIE 테스트
-  - **Week 2 (현재):** 마을/던전 분리 (GameMode, ClientTravel, 입장/퇴장 흐름)
-  - **Week 3:** 던전 내 전투 루프 (몬스터 스폰, AI, 보상 시스템)
+  - **Week 2 (완료):** 마을/던전 분리 (GameMode, ClientTravel, 입장/퇴장 흐름)
+  - **Week 3 (현재):** 던전 내 전투 루프 (몬스터 스폰, AI, 보상 시스템)
   - **Week 4:** 통합 테스트 + Windows Dedicated Server 빌드 + 데모 영상 촬영
   - **Phase 3 (이월):** Spring Boot 웹서버 (로그인, 영속화), Linux 서버 빌드
 - **Scope 축소 확정:**
@@ -194,4 +227,4 @@
   - `Docs/AbilityDesign_2026-05-12.md` — 추가 어빌리티 3개 기획서 (Dash/Heal/StunStrike), 6주 완성 로드맵 확정
   - `History/2026-05-20_WorkLog.md` — `UDashToLocation` AbilityTask 구현 완료, `GA_ChargeDash` 리븐 E 스타일 대시 완성, `D1PlayerController` AutoRun 태그 블록 수정, 몽타주 Section Jump 적용
   - `History/2026-05-25_WorkLog.md` — `GA_Focus` 버프 Ability 완성 (AttackPower +30, 10초 지속, GameplayCue 태그 등록), `GA_Heal` 자기 회복 Ability 완성 (Instant GE, Health +200), Secondary Init GE를 Instant Duration으로 변경하여 장비/버프 Add Modifier 정상 작동, `RecalculateSecondaryAttributes` 함수 추가 (스탯 투자 시 Secondary 재계산)
-  - `History/2026-05-26_WorkLog.md` — `ClientTravel` PlayerState 리셋 버그 해결. `D1GameInstance` 임시 저장 패턴 적용 (`SavePlayerStateData`/`RestorePlayerDataIfNeeded`). `PreClientTravel` 오버라이드로 Travel 직전 자동 저장. `PossessedBy`에서 복원 → `bAbilitySystemInitialized` 및 Primary Attributes 유지. Secondary+Vital GE는 새 AttributeSet에 재적용. Town ↔ Dungeon 데이터 유지 확인.
+  - `History/2026-05-26_WorkLog.md` — `ClientTravel` PlayerState 리셋 버그 해결. `D1GameInstance` 임시 저장 패턴 적용. `PreClientTravel` 오버라이드로 Travel 직전 자동 저장. `PossessedBy`에서 복원 → Primary Attributes 유지. Secondary+Vital GE 재적용. Town ↔ Dungeon 데이터 유지 확인. 던전 결과 위젯 시스템 (`WBP_DungeonResult`, `D1DungeonResultWidgetController`) 및 보스 사망 감지 구현. 레벨업 이펙트 중복 버그 수정 (`RestoreTravelDataIfNeeded`에서 값 실제 변경 시에만 `OnRep` 호출).
