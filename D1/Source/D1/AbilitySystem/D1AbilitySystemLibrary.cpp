@@ -14,6 +14,7 @@
 #include "AbilitySystem/Data/D1AbilitySystemConfig.h"
 #include "UI/WidgetController/D1WidgetController.h"
 #include "UI/WidgetController/D1DungeonResultWidgetController.h"
+#include "UI/WidgetController/D1DungeonPartyWidgetController.h"
 #include "Inventory/D1ItemRegistry.h"
 #include "AbilitySystem/D1AttributeSet.h"
 
@@ -279,6 +280,20 @@ UD1DungeonResultWidgetController* UD1AbilitySystemLibrary::GetDungeonResultWidge
 	if (bSuccessfulParams)
 	{
 		return D1HUD->GetDungeonResultWidgetController(WCParams);
+	}
+
+	return nullptr;
+}
+
+UD1DungeonPartyWidgetController* UD1AbilitySystemLibrary::GetDungeonPartyWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AD1HUD* D1HUD = nullptr;
+	const bool bSuccessfulParams = MakeWidgetControllerParams(WorldContextObject, WCParams, D1HUD);
+
+	if (bSuccessfulParams)
+	{
+		return D1HUD->GetDungeonPartyWidgetController(WCParams);
 	}
 
 	return nullptr;

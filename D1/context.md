@@ -25,6 +25,7 @@
 | 8 | 로비/던전 분리 (Gameplay Mode) | ✅ 완료 (GameInstance 임시 저장으로 데이터 유지) |
 | 9 | 다양한 어빌리티 추가 개발 | ✅ 완료 (ChargeDash, Focus, Heal) |
 | 10 | 던전 전투 루프 (몬스터/보스/클리어) | 🔄 진행중 (보스 사망 감지, 결과창 뼈대, Ability 재등록 버그 수정) |
+| 11 | 마을 파티 시스템 (파티 생성/참가/던전 입장) | ✅ 완료 (D1GameStateTown 파티 관리, D1GameModeTown 던전 이동) |
 
 ### 6번 상세 (완료)
 - **Phase 1 (언리얼 납부, 완료):** 웹서버 없이 언리얼 낶에서만 동작하는 인벤토리 시스템 구축
@@ -158,6 +159,33 @@
   - `D1GameInstance.h/.cpp` (저장 항목에서 `bAbilitySystemInitialized` 제거)
   - `D1Hero.cpp` (`PossessedBy` 순서 변경)
 
+### 11번 상세 (마을 파티 시스템 — 구현 완료)
+- **목표:** 마을에서 플레이어들이 파티를 결성하고 파티장이 던전 입장을 트리거할 수 있는 시스템
+- **구현 내용:**
+  - **`FD1PartyMemberInfo` (USTRUCT):** 파티 멤버 정보 (PlayerName, bIsReady)
+  - **`FD1PartyInfo` (USTRUCT):** 파티 정보 (PartyId, LeaderName, Members, SelectedDungeon)
+    - `HasMember()`, `IsLeader()`, `IsAllReady()` 헬퍼 함수 포함
+  - **`AD1GameStateTown` (AGameStateBase 상속, 신규):** 마을 전용 GameState, 파티 목록 관리
+    - `Parties` (TArray<FD1PartyInfo>, `ReplicatedUsing = OnRep_Parties`): 서버→클라이언트 자동 복제
+    - `OnRep_Parties()`: 클라이언트에서 `OnPartiesChangedDelegate` 브로드캐스트 → Blueprint UI 갱신
+    - `ServerCreateParty(LeaderName)`: 중복 가입 체크 후 파티 생성. 파티장은 기본 준비 완료 상태
+    - `ServerDisbandParty(PartyId)`: 파티 해산
+    - `ServerJoinParty(PartyId, PlayerName)`: 최대 4인 제한, 중복 가입 방지
+    - `ServerLeaveParty(PartyId, PlayerName)`: 파티장 탈퇴 시 파티 자동 해산
+    - `ServerSetReady(PartyId, PlayerName, bReady)`: 준비 상태 토글
+    - `ServerSelectDungeon(PartyId, DungeonMap)`: 파티장이 던전 맵 선택
+    - `FindPartyByPlayer(PlayerName)`: PlayerName으로 소속 파티 포인터 반환 (일반/const 오버로드)
+    - `GeneratePartyId()`: 순번 카운터 방식 고유 ID 발급
+    - 모든 변경 후 `OnRep_Parties()` 수동 호출 (서버에서는 OnRep 자동 미호출 보완)
+  - **`AD1GameModeTown` (AD1GameModeBase 상속, 신규):** 마을 전용 GameMode
+    - 생성자에서 `GameStateClass = AD1GameStateTown::StaticClass()` 설정
+    - `AreAbilitiesAllowed() override → false`: 마을에서 전투/버프/회복 Ability 전체 차단
+    - `StartDungeonForParty(LeaderPC)`: 파티장 PC를 받아 → GameStateTown에서 파티 조회 → 모든 파티원 PlayerController를 순회하여 `D1PC->TravelToMap(TargetDungeon)` 호출
+    - `ShowLoadingForPartyMembers()`: Phase 2 예정 (현재 TravelToMap이 로딩 유발하므로 미구현)
+- **관련 파일:**
+  - `D1GameStateTown.h/.cpp` (신규)
+  - `D1GameModeTown.h/.cpp` (신규)
+
 ### 6주 완성 로드맵 (현실적인 Scope)
 - **개발자 경험:** Spring Boot 1년 (오랜만에 복귀), EC2 직접 배포 경험 있음
 - **일정 (포트폴리오용 Scope 재조정):**
@@ -228,3 +256,4 @@
   - `History/2026-05-20_WorkLog.md` — `UDashToLocation` AbilityTask 구현 완료, `GA_ChargeDash` 리븐 E 스타일 대시 완성, `D1PlayerController` AutoRun 태그 블록 수정, 몽타주 Section Jump 적용
   - `History/2026-05-25_WorkLog.md` — `GA_Focus` 버프 Ability 완성 (AttackPower +30, 10초 지속, GameplayCue 태그 등록), `GA_Heal` 자기 회복 Ability 완성 (Instant GE, Health +200), Secondary Init GE를 Instant Duration으로 변경하여 장비/버프 Add Modifier 정상 작동, `RecalculateSecondaryAttributes` 함수 추가 (스탯 투자 시 Secondary 재계산)
   - `History/2026-05-26_WorkLog.md` — `ClientTravel` PlayerState 리셋 버그 해결. `D1GameInstance` 임시 저장 패턴 적용. `PreClientTravel` 오버라이드로 Travel 직전 자동 저장. `PossessedBy`에서 복원 → Primary Attributes 유지. Secondary+Vital GE 재적용. Town ↔ Dungeon 데이터 유지 확인. 던전 결과 위젯 시스템 (`WBP_DungeonResult`, `D1DungeonResultWidgetController`) 및 보스 사망 감지 구현. 레벨업 이펙트 중복 버그 수정 (`RestoreTravelDataIfNeeded`에서 값 실제 변경 시에만 `OnRep` 호출).
+  - (날짜 미상) — 마을 파티 시스템 구현. `AD1GameStateTown` (파티 목록 Replicated 관리, Create/Join/Leave/Ready/SelectDungeon 서버 전용 함수). `AD1GameModeTown` (GameStateTown 연동, `StartDungeonForParty`로 파티원 일괄 TravelToMap, 마을 Ability 차단 `AreAbilitiesAllowed=false`).

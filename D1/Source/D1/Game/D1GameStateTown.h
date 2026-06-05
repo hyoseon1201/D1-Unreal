@@ -12,40 +12,40 @@ class AD1PlayerController;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnPartiesChanged);
 
 /** 파티 멤버 정보 (GameStateTown에 의해 관리) */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FD1PartyMemberInfo
 {
 	GENERATED_BODY()
 
 	/** 플레이어 이름 (PlayerState->GetPlayerName) */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	FString PlayerName;
 
 	/** 준비 완료 여부 */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	bool bIsReady = false;
 };
 
 /** 파티 정보 */
-USTRUCT()
+USTRUCT(BlueprintType)
 struct FD1PartyInfo
 {
 	GENERATED_BODY()
 
 	/** 고유 파티 ID */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	int32 PartyId = INDEX_NONE;
 
 	/** 파티장 플레이어 이름 */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	FString LeaderName;
 
 	/** 파티원 목록 (리더 포함) */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	TArray<FD1PartyMemberInfo> Members;
 
 	/** 선택된 던전 맵 이름 */
-	UPROPERTY()
+	UPROPERTY(BlueprintReadOnly)
 	FString SelectedDungeon = TEXT("Dungeon");
 
 	/** 특정 플레이어가 이 파티에 속해있는가? */
@@ -134,13 +134,14 @@ public:
 	/** 다음 사용할 파티 ID 생성 (서버 전용) */
 	int32 GeneratePartyId();
 
-protected:
-	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
-
-	/** 파티 목록이 변경되었을 때 브로드캐스트할 델리게이트 (블루프린트 바인딩용) */
+	/** 파티 목록이 변경되었을 때 브로드캐스트할 델리게이트 (WidgetController / Blueprint 바인딩용) */
 	UPROPERTY(BlueprintAssignable, Category = "Party")
 	FOnPartiesChanged OnPartiesChangedDelegate;
 
+protected:
+	virtual void GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const override;
+
+private:
 	/** 파티 ID 생성용 카운터 */
 	int32 NextPartyId = 1;
 };

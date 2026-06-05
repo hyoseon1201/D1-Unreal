@@ -467,6 +467,17 @@ void AD1PlayerController::Server_CreateParty_Implementation()
 	}
 }
 
+void AD1PlayerController::Server_JoinParty_Implementation(int32 PartyId)
+{
+	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	{
+		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
+		{
+			GSTown->ServerJoinParty(PartyId, PS->GetPlayerName());
+		}
+	}
+}
+
 void AD1PlayerController::Server_LeaveParty_Implementation()
 {
 	if (APlayerState* PS = GetPlayerState<APlayerState>())

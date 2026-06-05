@@ -17,17 +17,17 @@ struct FInputActionValue;
 class AD1GameModeBase;
 
 /**
- * 
+ *
  */
 UCLASS()
 class D1_API AD1PlayerController : public APlayerController
 {
 	GENERATED_BODY()
-	
+
 public:
 	AD1PlayerController();
 	virtual void PlayerTick(float DeltaTime) override;
-	
+
 	UFUNCTION(Client, Reliable)
 	void ShowDamageNumber(float DamageAmount, ACharacter* TargetCharacter, bool bCriticalHit);
 
@@ -42,6 +42,32 @@ public:
 	/** 던전 보스 처치 시 클라이언트에게 결과 위젯을 띄우라고 지시 (획득 아이템 데이터 포함) */
 	UFUNCTION(Client, Reliable, Category = "D1|Dungeon")
 	void ClientShowDungeonResult(const TArray<FText>& AcquiredItems);
+
+	// ─── 파티 Server RPC (WidgetController / Blueprint에서 호출) ───────────
+
+	/** 파티 생성 요청 — 본인이 파티장이 됨 */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
+	void Server_CreateParty();
+
+	/** 특정 파티에 참가 요청 */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
+	void Server_JoinParty(int32 PartyId);
+
+	/** 현재 파티에서 탈퇴 (파티장이면 파티 해산) */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
+	void Server_LeaveParty();
+
+	/** 준비 상태 설정 */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
+	void Server_SetReady(bool bReady);
+
+	/** 던전 선택 (파티장 전용) */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
+	void Server_SetSelectedDungeon(const FString& DungeonMap);
+
+	/** 던전 시작 (파티장 전용, 모든 파티원 이동) */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
+	void Server_StartDungeon();
 
 protected:
 	virtual void BeginPlay() override;
@@ -92,7 +118,7 @@ private:
 	float AutoRunAcceptanceRadius = 50.f;
 
 	UPROPERTY(VisibleAnywhere)
-	TObjectPtr< USplineComponent> Spline;
+	TObjectPtr<USplineComponent> Spline;
 
 	UPROPERTY(EditDefaultsOnly)
 	TSubclassOf<UD1DamageTextComponent> DamageTextComponentClass;
@@ -108,26 +134,6 @@ private:
 	/** 던전 입장 UI를 화면에 표시 (BP_DungeonPortal BeginOverlap에서 호출) */
 	UFUNCTION(BlueprintCallable, Category = "D1|UI")
 	void ShowDungeonEntryUI();
-
-	/** 파티 생성 요청 (서버에서 GameStateTown 처리) */
-	UFUNCTION(Server, Reliable, Category = "D1|Party")
-	void Server_CreateParty();
-
-	/** 파티 탈퇴 요청 */
-	UFUNCTION(Server, Reliable, Category = "D1|Party")
-	void Server_LeaveParty();
-
-	/** 준비 상태 설정 */
-	UFUNCTION(Server, Reliable, Category = "D1|Party")
-	void Server_SetReady(bool bReady);
-
-	/** 던전 선택 (파티장 전용) */
-	UFUNCTION(Server, Reliable, Category = "D1|Party")
-	void Server_SetSelectedDungeon(const FString& DungeonMap);
-
-	/** 던전 시작 (파티장 전용, 모든 파티원 이동) */
-	UFUNCTION(Server, Reliable, Category = "D1|Party")
-	void Server_StartDungeon();
 
 	/** 클라이언트에게 로딩 화면 표시 지시 */
 	UFUNCTION(Client, Reliable, Category = "D1|UI")
