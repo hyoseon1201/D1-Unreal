@@ -27,11 +27,11 @@ void UD1DungeonPartyWidgetController::BroadcastInitialValues()
 
 // ─── 파티 액션 ───────────────────────────────────────────────────────────────
 
-void UD1DungeonPartyWidgetController::CreateParty()
+void UD1DungeonPartyWidgetController::CreateParty(const FString& DungeonMap, const FString& PartyName)
 {
 	if (AD1PlayerController* PC = GetD1PC())
 	{
-		PC->Server_CreateParty();
+		PC->Server_CreateParty(DungeonMap, PartyName);
 	}
 }
 

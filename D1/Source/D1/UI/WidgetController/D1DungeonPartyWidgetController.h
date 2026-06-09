@@ -37,9 +37,9 @@ public:
 
 	// ─── 파티 액션 (Blueprint 버튼에서 호출) ─────────────────────────────
 
-	/** 새 파티 생성 (본인이 파티장) */
+	/** 새 파티 생성 (본인이 파티장). 생성 시점에 선택된 던전 맵 이름과 방 제목을 함께 전달 */
 	UFUNCTION(BlueprintCallable, Category = "Party")
-	void CreateParty();
+	void CreateParty(const FString& DungeonMap, const FString& PartyName);
 
 	/** 특정 파티에 참가 */
 	UFUNCTION(BlueprintCallable, Category = "Party")

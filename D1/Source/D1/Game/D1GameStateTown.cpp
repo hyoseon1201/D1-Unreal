@@ -20,7 +20,7 @@ void AD1GameStateTown::OnRep_Parties()
 	OnPartiesChangedDelegate.Broadcast();
 }
 
-bool AD1GameStateTown::ServerCreateParty(const FString& LeaderName)
+bool AD1GameStateTown::ServerCreateParty(const FString& LeaderName, int32 LeaderLevel, const FString& DungeonMap, const FString& PartyName)
 {
 	if (HasAuthority() == false)
 	{
@@ -34,12 +34,18 @@ bool AD1GameStateTown::ServerCreateParty(const FString& LeaderName)
 		return false;
 	}
 
+	// 방 제목이 비어있으면 기본값으로 채워줌
+	const FString FinalPartyName = PartyName.IsEmpty() ? FString::Printf(TEXT("%s의 파티"), *LeaderName) : PartyName;
+
 	FD1PartyInfo NewParty;
 	NewParty.PartyId = GeneratePartyId();
 	NewParty.LeaderName = LeaderName;
+	NewParty.PartyName = FinalPartyName;
+	NewParty.SelectedDungeon = DungeonMap;
 
 	FD1PartyMemberInfo Leader;
 	Leader.PlayerName = LeaderName;
+	Leader.PlayerLevel = LeaderLevel;
 	Leader.bIsReady = true; // 파티장은 기본적으로 준비 완료
 	NewParty.Members.Add(Leader);
 
@@ -70,7 +76,7 @@ bool AD1GameStateTown::ServerDisbandParty(int32 PartyId)
 	return false;
 }
 
-bool AD1GameStateTown::ServerJoinParty(int32 PartyId, const FString& PlayerName)
+bool AD1GameStateTown::ServerJoinParty(int32 PartyId, const FString& PlayerName, int32 PlayerLevel)
 {
 	if (HasAuthority() == false)
 	{
@@ -88,7 +94,7 @@ bool AD1GameStateTown::ServerJoinParty(int32 PartyId, const FString& PlayerName)
 	{
 		if (Party.PartyId == PartyId)
 		{
-			if (Party.Members.Num() >= 4) // 최대 4인
+			if (Party.Members.Num() >= Party.MaxMembers) // 파티별 최대 인원 검증 (데이터 기준, UI 표시값과 항상 일치)
 			{
 				UE_LOG(LogTemp, Warning, TEXT("[Party] PartyId=%d is full."), PartyId);
 				return false;
@@ -96,6 +102,7 @@ bool AD1GameStateTown::ServerJoinParty(int32 PartyId, const FString& PlayerName)
 
 			FD1PartyMemberInfo NewMember;
 			NewMember.PlayerName = PlayerName;
+			NewMember.PlayerLevel = PlayerLevel;
 			NewMember.bIsReady = false;
 			Party.Members.Add(NewMember);
 

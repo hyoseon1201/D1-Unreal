@@ -45,9 +45,9 @@ public:
 
 	// ─── 파티 Server RPC (WidgetController / Blueprint에서 호출) ───────────
 
-	/** 파티 생성 요청 — 본인이 파티장이 됨 */
+	/** 파티 생성 요청 — 본인이 파티장이 됨. 생성 시점에 선택된 던전과 방 제목을 함께 지정 */
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
-	void Server_CreateParty();
+	void Server_CreateParty(const FString& DungeonMap, const FString& PartyName);
 
 	/** 특정 파티에 참가 요청 */
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
@@ -130,6 +130,10 @@ private:
 	/** 던전 입장 UI 위젯 클래스 (WBP_DungeonEntry) */
 	UPROPERTY(EditDefaultsOnly, Category = "UI")
 	TSubclassOf<class UUserWidget> DungeonEntryWidgetClass;
+
+	/** 던전 입장 UI 위젯 캐시 (중복 생성 방지) */
+	UPROPERTY()
+	TObjectPtr<UUserWidget> DungeonEntryWidgetInstance;
 
 	/** 던전 입장 UI를 화면에 표시 (BP_DungeonPortal BeginOverlap에서 호출) */
 	UFUNCTION(BlueprintCallable, Category = "D1|UI")

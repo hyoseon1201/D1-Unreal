@@ -23,6 +23,7 @@
 #include "Game/D1GameModeTown.h"
 #include "Game/D1GameStateTown.h"
 #include "Player/D1PlayerState.h"
+#include "Interaction/CombatInterface.h"
 
 AD1PlayerController::AD1PlayerController()
 {
@@ -432,20 +433,26 @@ void AD1PlayerController::ShowDungeonEntryUI()
 		return;
 	}
 
+	// 이미 생성된 위젯이 뷰포트에 있으면 중복 생성하지 않음
+	if (DungeonEntryWidgetInstance && DungeonEntryWidgetInstance->IsInViewport())
+	{
+		return;
+	}
+
 	if (!DungeonEntryWidgetClass)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[DungeonEntry] DungeonEntryWidgetClass is NULL! Assign WBP_DungeonEntry in BP_D1PlayerController"));
 		return;
 	}
 
-	UUserWidget* EntryWidget = CreateWidget<UUserWidget>(this, DungeonEntryWidgetClass);
-	if (!EntryWidget)
+	DungeonEntryWidgetInstance = CreateWidget<UUserWidget>(this, DungeonEntryWidgetClass);
+	if (!DungeonEntryWidgetInstance)
 	{
 		UE_LOG(LogTemp, Error, TEXT("[DungeonEntry] CreateWidget failed!"));
 		return;
 	}
 
-	EntryWidget->AddToViewport();
+	DungeonEntryWidgetInstance->AddToViewport();
 
 	// UI 입력 모드로 전환
 	FInputModeUIOnly InputMode;
@@ -456,26 +463,42 @@ void AD1PlayerController::ShowDungeonEntryUI()
 	UE_LOG(LogTemp, Log, TEXT("[DungeonEntry] ShowDungeonEntryUI completed."));
 }
 
-void AD1PlayerController::Server_CreateParty_Implementation()
+void AD1PlayerController::Server_CreateParty_Implementation(const FString& DungeonMap, const FString& PartyName)
 {
-	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	APlayerState* PS = GetPlayerState<APlayerState>();
+	AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState());
+	if (!PS || !GSTown) return;
+
+	// 캐릭터 레벨 읽기 (CombatInterface)
+	int32 PlayerLevel = 1;
+	if (APawn* MyPawn = GetPawn())
 	{
-		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
+		if (MyPawn->Implements<UCombatInterface>())
 		{
-			GSTown->ServerCreateParty(PS->GetPlayerName());
+			PlayerLevel = ICombatInterface::Execute_GetPlayerLevel(MyPawn);
 		}
 	}
+
+	GSTown->ServerCreateParty(PS->GetPlayerName(), PlayerLevel, DungeonMap, PartyName);
 }
 
 void AD1PlayerController::Server_JoinParty_Implementation(int32 PartyId)
 {
-	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	APlayerState* PS = GetPlayerState<APlayerState>();
+	AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState());
+	if (!PS || !GSTown) return;
+
+	// 캐릭터 레벨 읽기 (CombatInterface)
+	int32 PlayerLevel = 1;
+	if (APawn* MyPawn = GetPawn())
 	{
-		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
+		if (MyPawn->Implements<UCombatInterface>())
 		{
-			GSTown->ServerJoinParty(PartyId, PS->GetPlayerName());
+			PlayerLevel = ICombatInterface::Execute_GetPlayerLevel(MyPawn);
 		}
 	}
+
+	GSTown->ServerJoinParty(PartyId, PS->GetPlayerName(), PlayerLevel);
 }
 
 void AD1PlayerController::Server_LeaveParty_Implementation()

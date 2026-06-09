@@ -21,6 +21,10 @@ struct FD1PartyMemberInfo
 	UPROPERTY(BlueprintReadOnly)
 	FString PlayerName;
 
+	/** 파티 가입 시점의 캐릭터 레벨 (스냅샷) */
+	UPROPERTY(BlueprintReadOnly)
+	int32 PlayerLevel = 1;
+
 	/** 준비 완료 여부 */
 	UPROPERTY(BlueprintReadOnly)
 	bool bIsReady = false;
@@ -40,9 +44,17 @@ struct FD1PartyInfo
 	UPROPERTY(BlueprintReadOnly)
 	FString LeaderName;
 
+	/** 파티 방 제목 (목록에 표시될 이름) */
+	UPROPERTY(BlueprintReadOnly)
+	FString PartyName;
+
 	/** 파티원 목록 (리더 포함) */
 	UPROPERTY(BlueprintReadOnly)
 	TArray<FD1PartyMemberInfo> Members;
+
+	/** 파티 최대 인원 수 (서버 검증과 UI 표시가 항상 일치하도록 데이터에 포함) */
+	UPROPERTY(BlueprintReadOnly)
+	int32 MaxMembers = 4;
 
 	/** 선택된 던전 맵 이름 */
 	UPROPERTY(BlueprintReadOnly)
@@ -101,9 +113,9 @@ public:
 	UFUNCTION()
 	void OnRep_Parties();
 
-	/** 새로운 파티 생성 (서버 전용). 성공 여부 반환. */
+	/** 새로운 파티 생성 (서버 전용). 생성 시점에 선택된 던전과 방 제목을 함께 지정. 성공 여부 반환. */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
-	bool ServerCreateParty(const FString& LeaderName);
+	bool ServerCreateParty(const FString& LeaderName, int32 LeaderLevel, const FString& DungeonMap, const FString& PartyName);
 
 	/** 파티 해산 (서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
@@ -111,7 +123,7 @@ public:
 
 	/** 파티에 멤버 추가 (서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
-	bool ServerJoinParty(int32 PartyId, const FString& PlayerName);
+	bool ServerJoinParty(int32 PartyId, const FString& PlayerName, int32 PlayerLevel);
 
 	/** 파티에서 멤버 제거 (서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))

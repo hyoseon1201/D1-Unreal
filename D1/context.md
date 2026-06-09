@@ -1,7 +1,7 @@
 # 프로젝트 개요: D1
 
 ## 1. 핵심 기술 스택
-- **엔진:** Unreal Engine 5 (UE5)
+- **엔진:** Unreal Engine 5.7 (UE_5.7, BuildSettingsVersion.V6, EngineIncludeOrderVersion.Unreal5_7)
 - **언어:** C++ (주력), Blueprints (필요 시)
 - **프레임워크:** Gameplay Ability System (GAS)
 - **네트워킹:** 전용 서버 (Dedicated Server) 기반 멀티플레이어
@@ -25,16 +25,16 @@
 | 8 | 로비/던전 분리 (Gameplay Mode) | ✅ 완료 (GameInstance 임시 저장으로 데이터 유지) |
 | 9 | 다양한 어빌리티 추가 개발 | ✅ 완료 (ChargeDash, Focus, Heal) |
 | 10 | 던전 전투 루프 (몬스터/보스/클리어) | 🔄 진행중 (보스 사망 감지, 결과창 뼈대, Ability 재등록 버그 수정) |
-| 11 | 마을 파티 시스템 (파티 생성/참가/던전 입장) | ✅ 완료 (D1GameStateTown 파티 관리, D1GameModeTown 던전 이동) |
+| 11 | 마을 파티 시스템 (파티 생성/참가/던전 입장) | 🔄 진행중 (C++ 백엔드 완료, 파티 UI 구현 중) |
 
 ### 6번 상세 (완료)
-- **Phase 1 (언리얼 납부, 완료):** 웹서버 없이 언리얼 낶에서만 동작하는 인벤토리 시스템 구축
+- **Phase 1 (언리얼 내부, 완료):** 웹서버 없이 언리얼 내에서만 동작하는 인벤토리 시스템 구축
   - `UD1ItemData` (UPrimaryDataAsset): 아이템 메타데이터 (이름, 아이콘, 설명, 최대중첩, 효과 등)
   - `FD1InventoryItem` (USTRUCT): 인벤토리 슬롯 (ItemID, Count, InstanceData)
   - `UD1InventoryComponent` (UActorComponent): PlayerState에 부착, 실제 인벤토리 로직 담당
     - `ServerUseItem()`, `ServerMoveItem()`, `ServerDiscardItem()` (RPC)
     - `AddItem()`, `RemoveItem()` (서버 전용)
-  - `WBP_Inventory` / `WBP_InventorySlot` (Blueprint): UI (클이언트)
+  - `WBP_Inventory` / `WBP_InventorySlot` (Blueprint): UI (클라이언트)
   - 데이터 저장 위치: PlayerState 또는 InventoryComponent 메모리 (세션 종료 시 휘발)
 - **Phase 2 (웹서버 연동, 예정):**
   - Dedicated Server를 웹서버 Proxy로 두어 HTTP/REST 통신
@@ -44,7 +44,7 @@
 - **인벤토리-웹서버 통신 원칙:**
   - `[Client] ←RPC→ [Dedicated Server] ←HTTP/JSON→ [Web API Server] ←→ [DB]`
   - Dedicated Server가 검증 + 웹서버 요청, 클라이언트는 RPC만 호출
-- **Phase 1 완료:** 웹서버 없이 언리얼 낶에서만 동작하는 인벤토리 시스템 전체 완성
+- **Phase 1 완료:** 웹서버 없이 언리얼 내에서만 동작하는 인벤토리 시스템 전체 완성
   - 소비 아이템 사용 (GE 연동, HP 회복 확인)
   - 장비 장착/탈착 (Server RPC, EquipEffect GE Apply/Remove)
   - 장착 슬롯 UI (`WBP_EquipmentSlot` 7개: Weapon~Ring)
@@ -151,7 +151,7 @@
   - **문제:** Town → Dungeon 이동 시 이미 Lv.1인 상태에서 레벨업 사운드/이펙트가 다시 재생됨
   - **원인:** `RestoreTravelDataIfNeeded()`에서 값 복원 후 무조건 `OnRep_Level/XP/AttributePoints` 호출 → Blueprint 위젯에서 "값 변경"으로 인식
   - **해결:** 복원 전 현재 값 저장 → 복원 후 **실제로 달라졌을 때만** `OnRep_*` 호출 (`D1PlayerState.cpp` 수정)
-- **관련 파일:
+- **관련 파일:**
   - `D1GameModeDungeon.h/.cpp` (신규: `OnBossDefeated()`)
   - `D1DungeonResultWidgetController.h/.cpp` (신규)
   - `D1Enemy.h/.cpp` (`bIsBoss`, `HasAuthority()` 가드)
@@ -159,40 +159,88 @@
   - `D1GameInstance.h/.cpp` (저장 항목에서 `bAbilitySystemInitialized` 제거)
   - `D1Hero.cpp` (`PossessedBy` 순서 변경)
 
-### 11번 상세 (마을 파티 시스템 — 구현 완료)
+### 11번 상세 (마을 파티 시스템 — 진행중)
 - **목표:** 마을에서 플레이어들이 파티를 결성하고 파티장이 던전 입장을 트리거할 수 있는 시스템
-- **구현 내용:**
-  - **`FD1PartyMemberInfo` (USTRUCT):** 파티 멤버 정보 (PlayerName, bIsReady)
-  - **`FD1PartyInfo` (USTRUCT):** 파티 정보 (PartyId, LeaderName, Members, SelectedDungeon)
-    - `HasMember()`, `IsLeader()`, `IsAllReady()` 헬퍼 함수 포함
-  - **`AD1GameStateTown` (AGameStateBase 상속, 신규):** 마을 전용 GameState, 파티 목록 관리
-    - `Parties` (TArray<FD1PartyInfo>, `ReplicatedUsing = OnRep_Parties`): 서버→클라이언트 자동 복제
-    - `OnRep_Parties()`: 클라이언트에서 `OnPartiesChangedDelegate` 브로드캐스트 → Blueprint UI 갱신
-    - `ServerCreateParty(LeaderName)`: 중복 가입 체크 후 파티 생성. 파티장은 기본 준비 완료 상태
-    - `ServerDisbandParty(PartyId)`: 파티 해산
-    - `ServerJoinParty(PartyId, PlayerName)`: 최대 4인 제한, 중복 가입 방지
-    - `ServerLeaveParty(PartyId, PlayerName)`: 파티장 탈퇴 시 파티 자동 해산
-    - `ServerSetReady(PartyId, PlayerName, bReady)`: 준비 상태 토글
-    - `ServerSelectDungeon(PartyId, DungeonMap)`: 파티장이 던전 맵 선택
-    - `FindPartyByPlayer(PlayerName)`: PlayerName으로 소속 파티 포인터 반환 (일반/const 오버로드)
-    - `GeneratePartyId()`: 순번 카운터 방식 고유 ID 발급
-    - 모든 변경 후 `OnRep_Parties()` 수동 호출 (서버에서는 OnRep 자동 미호출 보완)
-  - **`AD1GameModeTown` (AD1GameModeBase 상속, 신규):** 마을 전용 GameMode
-    - 생성자에서 `GameStateClass = AD1GameStateTown::StaticClass()` 설정
-    - `AreAbilitiesAllowed() override → false`: 마을에서 전투/버프/회복 Ability 전체 차단
-    - `StartDungeonForParty(LeaderPC)`: 파티장 PC를 받아 → GameStateTown에서 파티 조회 → 모든 파티원 PlayerController를 순회하여 `D1PC->TravelToMap(TargetDungeon)` 호출
-    - `ShowLoadingForPartyMembers()`: Phase 2 예정 (현재 TravelToMap이 로딩 유발하므로 미구현)
-- **관련 파일:**
-  - `D1GameStateTown.h/.cpp` (신규)
-  - `D1GameModeTown.h/.cpp` (신규)
 
-### 6주 완성 로드맵 (현실적인 Scope)
+#### C++ 백엔드 (완료)
+- **`FD1PartyMemberInfo` (USTRUCT, BlueprintType):**
+  - `PlayerName` (FString): 플레이어 식별자
+  - `PlayerLevel` (int32, 기본값=1): 파티 가입 시점 캐릭터 레벨 스냅샷 (CombatInterface로 읽어서 저장)
+  - `bIsReady` (bool): 준비 완료 여부
+- **`FD1PartyInfo` (USTRUCT, BlueprintType):**
+  - `PartyId` (int32): 고유 파티 ID
+  - `LeaderName` (FString): 파티장 이름
+  - `PartyName` (FString): 방 제목 (목록 표시용, 비어있으면 서버에서 "OOO의 파티"로 자동 채움)
+  - `Members` (TArray<FD1PartyMemberInfo>): 파티원 목록 (리더 포함)
+  - `MaxMembers` (int32, 기본값=4): 파티 최대 인원 (서버 검증 + UI 표시 모두 이 값 기준)
+  - `SelectedDungeon` (FString): 선택된 던전 맵 이름 (내부 식별자, 생성 시 함께 지정)
+  - `HasMember()`, `IsLeader()`, `IsAllReady()` 헬퍼 함수 포함
+- **`AD1GameStateTown` (AGameStateBase 상속):** 마을 전용 GameState, 파티 목록 관리
+  - `Parties` (TArray<FD1PartyInfo>, `ReplicatedUsing = OnRep_Parties`): 서버→클라이언트 자동 복제
+  - `OnRep_Parties()`: 클라이언트에서 `OnPartiesChangedDelegate` 브로드캐스트 → WidgetController 연동
+  - `ServerCreateParty(LeaderName, LeaderLevel, DungeonMap, PartyName)`: 파티 생성, 리더 레벨/던전/방제목 즉시 설정
+  - `ServerDisbandParty(PartyId)`: 파티 해산
+  - `ServerJoinParty(PartyId, PlayerName, PlayerLevel)`: `MaxMembers` 기준 인원 검증, 중복 가입 방지
+  - `ServerLeaveParty(PartyId, PlayerName)`: 파티장 탈퇴 시 파티 자동 해산
+  - `ServerSetReady(PartyId, PlayerName, bReady)`: 준비 상태 토글
+  - `ServerSelectDungeon(PartyId, DungeonMap)`: 파티장이 던전 맵 선택
+  - `FindPartyByPlayer(PlayerName)`: PlayerName으로 소속 파티 포인터 반환 (일반/const 오버로드)
+  - `GeneratePartyId()`: 순번 카운터 방식 고유 ID 발급
+- **`AD1GameModeTown` (AD1GameModeBase 상속):** 마을 전용 GameMode
+  - `AreAbilitiesAllowed() override → false`: 마을에서 전투 Ability 전체 차단
+  - `StartDungeonForParty(LeaderPC)`: 파티원 전원 `TravelToMap(TargetDungeon)` 호출
+- **`AD1PlayerController` 파티 Server RPC (public, BlueprintCallable):**
+  - `Server_CreateParty(DungeonMap, PartyName)`: 파티 생성 (CombatInterface로 레벨 읽어서 전달)
+  - `Server_JoinParty(PartyId)`: 참가 (레벨 스냅샷 함께 전달)
+  - `Server_LeaveParty()`, `Server_SetReady(bReady)`, `Server_SetSelectedDungeon(DungeonMap)`, `Server_StartDungeon()`
+  - `ShowDungeonEntryUI()`: 던전 포탈 Overlap 시 호출, `DungeonEntryWidgetInstance` 캐싱으로 중복 생성 방지
+- **`UD1DungeonPartyWidgetController` (UD1WidgetController 상속, 신규):**
+  - `OnPartiesUpdated` 델리게이트 (TArray<FD1PartyInfo>) — `OnRep_Parties` → Broadcast 체인
+  - `BroadcastInitialValues()`: 위젯 생성 시 현재 `GameStateTown->Parties` 스냅샷 1회 전달
+  - `BindCallbacksToDependencies()`: `OnPartiesChangedDelegate`에 바인딩
+  - Blueprint Callable 액션: `CreateParty(DungeonMap, PartyName)`, `JoinParty(PartyId)`, `LeaveParty()`, `SetReady(bReady)`, `SelectDungeon(DungeonMap)`, `StartDungeon()`
+  - Blueprint Pure 쿼리: `IsInParty()`, `IsPartyLeader()`, `GetMyParty()` (없으면 PartyId=INDEX_NONE 반환)
+  - `D1HUD::GetDungeonPartyWidgetController()`, `D1AbilitySystemLibrary::GetDungeonPartyWidgetController()` 추가
+
+#### UI 아키텍처 (구현 중)
+- **위젯 구조:**
+  ```
+  WBP_DungeonEntry (Full Screen Overlay, CreateWidget+AddToViewport)
+   ├─ WBP_DungeonList (좌측, 하드코딩 던전 목록)
+   ├─ Widget Switcher (우측)
+   │   ├─ Index 0: WBP_EmptyState (던전 미선택)
+   │   ├─ Index 1: WBP_PartyInfo (파티 소속 시)
+   │   └─ Index 2: WBP_PartyList (던전 선택, 파티 미소속)
+   │       └─ Scroll Box → WBP_PartyListItem (동적 생성)
+   └─ WBP_CreatePartyPopup (기본 Collapsed, Visibility 토글)
+  ```
+- **핵심 패턴: `RefreshPartyPanel()` 공통 함수**
+  - `WBP_DungeonEntry` 멤버 변수: `CachedParties`, `SelectedDungeonMapName` (FString, 내부 식별자)
+  - `OnPartiesUpdated(Parties)` → CachedParties 갱신 → `RefreshPartyPanel()` 호출
+  - `OnDungeonSelected(DungeonMapName)` → SelectedDungeonMapName 갱신 → `RefreshPartyPanel()` 호출
+  - `RefreshPartyPanel()` 분기: `IsInParty()?` → Index1 | `!SelectedDungeonMapName.Empty?` → Index2(필터링) | else → Index0
+- **`WBP_PartyListItem`:** 동적 생성 리프 위젯, WidgetController 불필요
+  - `SetPartyInfo(FD1PartyInfo)` 함수로 데이터 주입 (PartyName, Members.Num()/MaxMembers, 참가 버튼)
+  - 참가 버튼 → `OnJoinRequested(PartyId)` 이벤트 디스패처 Broadcast (버블업)
+- **`WBP_CreatePartyPopup`:** 정적 자식 위젯, Visibility 토글 방식 모달
+  - `OnPartyCreateConfirmed(PartyName)` 이벤트 디스패처 → Entry에서 Construct 시 Bind
+  - Entry가 `SelectedDungeonMapName` + `PartyName` 조합하여 `WidgetController.CreateParty()` 호출
+- **멀티플레이어 버그 수정:** 던전 포탈 BeginOverlap에서 `OtherActor == GetPlayerPawn(0)` 체크 추가 (모든 클라이언트에 UI 뜨는 문제 방지)
+
+#### 관련 파일
+  - `D1GameStateTown.h/.cpp` (구조체 필드 다수 추가, 함수 시그니처 변경)
+  - `D1GameModeTown.h/.cpp`
+  - `D1PlayerController.h/.cpp` (파티 RPC 6개 public 이동, ShowDungeonEntryUI, CombatInterface include 추가)
+  - `D1DungeonPartyWidgetController.h/.cpp` (신규)
+  - `D1HUD.h/.cpp` (GetDungeonPartyWidgetController 추가)
+  - `D1AbilitySystemLibrary.h/.cpp` (GetDungeonPartyWidgetController 추가)
+
+### 로드맵 (포트폴리오용 Scope)
 - **개발자 경험:** Spring Boot 1년 (오랜만에 복귀), EC2 직접 배포 경험 있음
-- **일정 (포트폴리오용 Scope 재조정):**
-  - **Week 1 (완료):** 어빌리티 시스템 완성 (ChargeDash, Focus, Heal) + PIE 테스트
-  - **Week 2 (완료):** 마을/던전 분리 (GameMode, ClientTravel, 입장/퇴장 흐름)
-  - **Week 3 (현재):** 던전 내 전투 루프 (몬스터 스폰, AI, 보상 시스템)
-  - **Week 4:** 통합 테스트 + Windows Dedicated Server 빌드 + 데모 영상 촬영
+- **일정 (진행 현황 기준):**
+  - **✅ 완료:** 어빌리티 시스템 (ChargeDash, Focus, Heal), 마을/던전 분리 (GameMode, ClientTravel), 인벤토리 Phase 1, 던전 결과창
+  - **🔄 진행중:** 던전 전투 루프 (보스 사망 감지 완료, AI/보상 미완), 마을 파티 시스템 UI
+  - **⏳ 남은 작업:** 파티 UI 완성 → 멀티플레이어 파티 던전 입장 테스트 → Windows Dedicated Server 빌드 → 데모 영상 촬영
   - **Phase 3 (이월):** Spring Boot 웹서버 (로그인, 영속화), Linux 서버 빌드
 - **Scope 축소 확정:**
   - 매치메이킹 없음 (혼자 입장)
@@ -203,7 +251,7 @@
 
 ### 7~8번 상세 (서버 아키텍처 설계 확정)
 - **클-서 통신 구조:**
-  - 클라이언트는 절대 웹서버에 직접 게임 패킷을 별내지 않음
+  - 클라이언트는 절대 웹서버에 직접 게임 패킷을 보내지 않음
   - 로그인/매칭만 웹서버(HTTPS)를 통해 처리
   - 실제 게임 플레이는 클라이언트 ↔ Dedicated Server가 직접 UE5 Replication/RPC로 통신
 - **유저 플로우:**
@@ -219,12 +267,12 @@
   - 같은 UE5 서버 바이너리라도 커맨드라인 인자(`-TownServer`/`-DungeonServer`)로 모드 분리
     - 마을 모드: AI 스폰 최소화, Physics Tick 낮춤, 전투 로직 비활성화
     - 던전 모드: 풀 전투, AI/몬스터 스폰 활성화, 60Hz Tick
-  - K8s 등 컨테이너 환경에서 리소스 할량을 다르게 설정 (마을: 4Gi/2CPU, 던전: 1.5Gi/0.5CPU)
+  - K8s 등 컨테이너 환경에서 리소스 할당을 다르게 설정 (마을: 4Gi/2CPU, 던전: 1.5Gi/0.5CPU)
   - 던전은 Stateless 인스턴스: 입장 시 생성, 클리어/퇴장 시 파괴 (K8s HPA 연동)
 - **주의사항:**
   - 웹서버가 게임 패킷을 프록시하지 않음 (HTTP는 실시간 게임 통신에 부적합)
   - SessionToken은 1회용, 데디 서버 인증 후 즉시 폐기
-  - 데디 서버 → 웹서버 통신 시 낮 API Key로 인증 (외부 노출 금지)
+  - 데디 서버 → 웹서버 통신 시 별도 API Key로 인증 (외부 노출 금지)
 
 ## 4. 코딩 규칙 (Coding Standards)
 - **Naming:** Unreal Coding Standard 준수 (PascalCase, 접두사 A, U, F 등)
@@ -237,8 +285,16 @@
 - **작업 시작 전 `CONTEXT.md`를 먼저 읽고 전체 상황을 파악할 것.**
 - 코드를 수정하기 전 해당 파일의 전체 구조를 먼저 파악할 것.
 - 수정 시 기존 멀티플레이어 동기화 로직이 깨지지 않도록 `Replicated` 변수 및 RPC 체크 필수.
-- 새로운 기능을 추가할 땐 먼저 `Source/` 폴다 안의 기존 클래스들과의 의존성을 검토할 것.
+- 새로운 기능을 추가할 땐 먼저 `Source/` 폴더 안의 기존 클래스들과의 의존성을 검토할 것.
 - **`CONTEXT.md`에 작업 이력을 갱신할 것.** (사용자 지시: 2026-05-02)
+- **엔진 버전은 반드시 UE_5.7 기준.** `C:\Program Files\Epic Games\UE_5.7\` 경로 사용. UE_5.4 등 다른 버전 경로 사용 시 빌드 실패 (`BuildSettingsVersion.V6` 오류).
+- **Server RPC (`UFUNCTION(Server, Reliable)`)는 반드시 `public:` 섹션에 선언해야** WidgetController 등 외부 클래스에서 호출 가능. `private:`에 있으면 C2248 접근 불가 에러 발생.
+- **WidgetController 신규 추가 시 반드시 3곳을 함께 수정:**
+  1. `UD1WidgetController` 상속 클래스 신규 생성 (`.h/.cpp`)
+  2. `D1HUD.h/.cpp` — getter 함수, `TObjectPtr<UXxx>` 멤버 변수, `TSubclassOf<UXxx>` Class 변수 추가
+  3. `D1AbilitySystemLibrary.h/.cpp` — `UFUNCTION(BlueprintPure)` static getter 추가
+- **UHT 캐시 문제:** `UFUNCTION` 시그니처 변경 후 빌드 에러 시 (`.gen.cpp`가 구 시그니처를 참조) → Visual Studio에서 `Rebuild` 시도, 그래도 안 되면 `Intermediate/` 폴더 삭제 후 프로젝트 파일 재생성(`Generate Visual Studio project files`) 후 재빌드.
+- **멀티플레이어 UI 주의:** 월드에 복제된 다른 플레이어 Pawn도 Overlap 이벤트를 발생시킴 → UI 표시 전 반드시 `OtherActor == Get Player Pawn(0)` 체크 필수.
 
 ## 6. 작업 이력
 - 상세 작업 내역은 `History/` 폴다의 날짜별 문서를 참조
@@ -257,3 +313,4 @@
   - `History/2026-05-25_WorkLog.md` — `GA_Focus` 버프 Ability 완성 (AttackPower +30, 10초 지속, GameplayCue 태그 등록), `GA_Heal` 자기 회복 Ability 완성 (Instant GE, Health +200), Secondary Init GE를 Instant Duration으로 변경하여 장비/버프 Add Modifier 정상 작동, `RecalculateSecondaryAttributes` 함수 추가 (스탯 투자 시 Secondary 재계산)
   - `History/2026-05-26_WorkLog.md` — `ClientTravel` PlayerState 리셋 버그 해결. `D1GameInstance` 임시 저장 패턴 적용. `PreClientTravel` 오버라이드로 Travel 직전 자동 저장. `PossessedBy`에서 복원 → Primary Attributes 유지. Secondary+Vital GE 재적용. Town ↔ Dungeon 데이터 유지 확인. 던전 결과 위젯 시스템 (`WBP_DungeonResult`, `D1DungeonResultWidgetController`) 및 보스 사망 감지 구현. 레벨업 이펙트 중복 버그 수정 (`RestoreTravelDataIfNeeded`에서 값 실제 변경 시에만 `OnRep` 호출).
   - (날짜 미상) — 마을 파티 시스템 구현. `AD1GameStateTown` (파티 목록 Replicated 관리, Create/Join/Leave/Ready/SelectDungeon 서버 전용 함수). `AD1GameModeTown` (GameStateTown 연동, `StartDungeonForParty`로 파티원 일괄 TravelToMap, 마을 Ability 차단 `AreAbilitiesAllowed=false`).
+  - `History/2026-06-09~10_WorkLog.md` — 파티 시스템 C++ 확장 및 UI 아키텍처 설계. `FD1PartyInfo`에 `PartyName`/`MaxMembers` 추가, `FD1PartyMemberInfo`에 `PlayerLevel` 추가 (CombatInterface 스냅샷). `Server_CreateParty(DungeonMap, PartyName)` / `Server_JoinParty` 시그니처 확장. `UD1DungeonPartyWidgetController` 신규 구현 (OnPartiesUpdated 델리게이트, BroadcastInitialValues, 파티 액션 6종). UI 설계: WBP_DungeonEntry (Widget Switcher 3-state), WBP_PartyList (ScrollBox+동적 PartyListItem), WBP_CreatePartyPopup (정적 Visibility 토글 모달). RefreshPartyPanel() 중앙집중 분기 패턴, CachedParties/SelectedDungeonMapName 멤버 변수. 포탈 Overlap 버그 수정 (OtherActor == GetPlayerPawn(0) 체크). WidgetController 불필요한 리프 위젯(PartyListItem)은 SetPartyInfo() 직접 주입 패턴 사용. 이벤트 디스패처 버블업: PartyListItem→PartyList(JoinParty), Popup→Entry(CreateParty).
