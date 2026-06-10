@@ -1,8 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Game/D1GameModeTown.h"
+#include "D1/D1.h"
 #include "Game/D1GameStateTown.h"
 #include "Player/D1PlayerController.h"
+#include "Player/D1PlayerState.h"
 #include "GameFramework/PlayerState.h"
 
 AD1GameModeTown::AD1GameModeTown()
@@ -22,31 +24,32 @@ void AD1GameModeTown::StartDungeonForParty(AD1PlayerController* LeaderPC)
 		return;
 	}
 
-	APlayerState* LeaderPS = LeaderPC->GetPlayerState<APlayerState>();
+	AD1PlayerState* LeaderPS = LeaderPC->GetPlayerState<AD1PlayerState>();
 	if (!LeaderPS)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StartDungeon] Leader has no PlayerState"));
+		UE_LOG(LogD1Party, Warning, TEXT("StartDungeon: Leader has no PlayerState"));
 		return;
 	}
 
 	AD1GameStateTown* GSTown = GetGameStateTown();
 	if (!GSTown)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[StartDungeon] GameStateTown is NULL!"));
+		UE_LOG(LogD1Party, Error, TEXT("StartDungeon: GameStateTown is NULL!"));
 		return;
 	}
 
+	const FString LeaderId = LeaderPS->GetPartyPlayerId();
 	const FString LeaderName = LeaderPS->GetPlayerName();
-	FD1PartyInfo* Party = GSTown->FindPartyByPlayer(LeaderName);
+	FD1PartyInfo* Party = GSTown->FindPartyByPlayerId(LeaderId);
 	if (!Party)
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StartDungeon] %s is not in a party."), *LeaderName);
+		UE_LOG(LogD1Party, Warning, TEXT("StartDungeon: %s is not in a party."), *LeaderName);
 		return;
 	}
 
-	if (!Party->IsLeader(LeaderName))
+	if (!Party->IsLeader(LeaderId))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StartDungeon] %s is not the party leader."), *LeaderName);
+		UE_LOG(LogD1Party, Warning, TEXT("StartDungeon: %s is not the party leader."), *LeaderName);
 		return;
 	}
 
@@ -54,38 +57,24 @@ void AD1GameModeTown::StartDungeonForParty(AD1PlayerController* LeaderPC)
 	/*
 	if (!Party->IsAllReady())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[StartDungeon] Not all members are ready."));
+		UE_LOG(LogD1Party, Warning, TEXT("StartDungeon: Not all members are ready."));
 		return;
 	}
 	*/
 
 	const FString TargetDungeon = Party->SelectedDungeon;
-	UE_LOG(LogTemp, Log, TEXT("[StartDungeon] PartyId=%d, Leader=%s, Members=%d, Dungeon=%s"),
+	UE_LOG(LogD1Party, Log, TEXT("StartDungeon: PartyId=%d, Leader=%s, Members=%d, Dungeon=%s"),
 		Party->PartyId, *LeaderName, Party->Members.Num(), *TargetDungeon);
 
-	// 모든 파티원에게 TravelToMap 호출
-	for (const auto& Member : Party->Members)
-	{
-		// PlayerName으로 현재 접속 중인 PlayerController 찾기
-		for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
-		{
-			if (APlayerController* PC = It->Get())
-			{
-				if (APlayerState* PS = PC->GetPlayerState<APlayerState>())
-				{
-					if (PS->GetPlayerName() == Member.PlayerName)
-					{
-						if (AD1PlayerController* D1PC = Cast<AD1PlayerController>(PC))
-						{
-							UE_LOG(LogTemp, Log, TEXT("[StartDungeon] Traveling member: %s"), *Member.PlayerName);
-							D1PC->TravelToMap(TargetDungeon);
-						}
-						break;
-					}
-				}
-			}
-		}
-	}
+	// MVP: 단일 서버이므로 ServerTravel로 접속자 전원을 함께 이동시킨다.
+	// (주의) 파티원만 골라서 이동시키는 것은 단일 서버에서 불가능 — 마을에 남은 다른 파티도 함께 끌려감.
+	//
+	// Phase 3 (웹서버 연동 시) 교체 예정:
+	//   1. 웹서버에 던전 인스턴스 생성 요청 → 별도 데디서버 프로세스 기동 (IP:Port 발급)
+	//   2. 파티원 각각의 캐릭터 데이터를 웹서버/DB에 저장 (크로스 프로세스라 GameInstance 사용 불가)
+	//   3. 파티원에게만 ClientTravel("IP:Port")로 새 던전 서버에 직접 접속시킴
+	//      (ClientTravel에 맵 이름을 주면 로컬 오프라인 월드가 열리지만, 주소를 주면 해당 서버 접속이므로 정상)
+	GetWorld()->ServerTravel(TargetDungeon);
 }
 
 void AD1GameModeTown::ShowLoadingForPartyMembers(const TArray<FString>& MemberNames)

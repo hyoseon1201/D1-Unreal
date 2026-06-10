@@ -2,6 +2,7 @@
 
 #include "Player/D1PlayerController.h"
 
+#include "D1/D1.h"
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"
 #include "Input/D1InputComponent.h"
@@ -113,14 +114,8 @@ void AD1PlayerController::AbilityInputTagPressed(FGameplayTag InputTag)
 	// RMB(우클릭 이동)은 Ability가 아니므로 제외
 	if (!InputTag.MatchesTagExact(FD1GameplayTags::Get().InputTag_RMB) && !CanUseAbilities())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[AbilityBlock] InputTag=%s BLOCKED (bAbilitiesAllowed=false)"), *InputTag.ToString());
 		return;
 	}
-
-	UE_LOG(LogTemp, Warning, TEXT("[AbilityInput] Pressed Tag=%s, CanUse=%s, HasASC=%s"),
-		*InputTag.ToString(),
-		CanUseAbilities() ? TEXT("TRUE") : TEXT("FALSE"),
-		GetASC() ? TEXT("TRUE") : TEXT("FALSE"));
 
 	if (GetASC())
 	{
@@ -140,15 +135,7 @@ void AD1PlayerController::AbilityInputTagReleased(FGameplayTag InputTag)
 		// ★ 마을(Town)에서는 Ability 사용 불가
 		if (CanUseAbilities() && GetASC())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[AbilityInput] Released Tag=%s, CanUse=TRUE"), *InputTag.ToString());
 			GetASC()->AbilityInputTagReleased(InputTag);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[AbilityInput] Released Tag=%s BLOCKED (CanUse=%s, HasASC=%s)"),
-				*InputTag.ToString(),
-				CanUseAbilities() ? TEXT("TRUE") : TEXT("FALSE"),
-				GetASC() ? TEXT("TRUE") : TEXT("FALSE"));
 		}
 		return;
 	}
@@ -286,7 +273,7 @@ void AD1PlayerController::PreClientTravel(const FString& PendingURL, ETravelType
 {
 	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 
-	UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] PreClientTravel called. URL=%s, Type=%d, Seamless=%s"),
+	UE_LOG(LogD1Travel, Verbose, TEXT("PreClientTravel. URL=%s, Type=%d, Seamless=%s"),
 		*PendingURL, (int32)TravelType, bIsSeamlessTravel ? TEXT("TRUE") : TEXT("FALSE"));
 
 	// ClientTravel 직전 PlayerState + Primary Attribute 데이터를 GameInstance에 저장
@@ -303,17 +290,17 @@ void AD1PlayerController::PreClientTravel(const FString& PendingURL, ETravelType
 			}
 			else
 			{
-				UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PreClientTravel: AttributeSet is NULL!"));
+				UE_LOG(LogD1Travel, Error, TEXT("PreClientTravel: AttributeSet is NULL!"));
 			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PreClientTravel: PlayerState is NULL!"));
+			UE_LOG(LogD1Travel, Error, TEXT("PreClientTravel: PlayerState is NULL!"));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PreClientTravel: GameInstance is NOT UD1GameInstance! GetGameInstance()=%s"),
+		UE_LOG(LogD1Travel, Error, TEXT("PreClientTravel: GameInstance is NOT UD1GameInstance! GetGameInstance()=%s"),
 			*GetNameSafe(GetGameInstance()));
 	}
 }
@@ -328,30 +315,21 @@ bool AD1PlayerController::CanUseAbilities() const
 {
 	if (const AD1PlayerState* PS = GetPlayerState<AD1PlayerState>())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[CanUseAbilities] PS found. bAbilitiesAllowed=%s"),
-			PS->bAbilitiesAllowed ? TEXT("TRUE") : TEXT("FALSE"));
 		return PS->bAbilitiesAllowed;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("[CanUseAbilities] PS NOT found. Defaulting to TRUE"));
 	return true; // PlayerState가 없으면 기본 허용
 }
 
 void AD1PlayerController::ClientShowDungeonResult_Implementation(const TArray<FText>& AcquiredItems)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] ClientShowDungeonResult START. IsLocal=%s, HasWidgetClass=%s, Items=%d"),
-		IsLocalController() ? TEXT("TRUE") : TEXT("FALSE"),
-		DungeonResultWidgetClass ? TEXT("TRUE") : TEXT("FALSE"),
-		AcquiredItems.Num());
-
 	if (!IsLocalController())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] SKIP: Not local controller"));
 		return;
 	}
 
 	if (!DungeonResultWidgetClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[DungeonUI] FAIL: DungeonResultWidgetClass is NULL! Assign WBP_DungeonResult in BP_D1PlayerController"));
+		UE_LOG(LogD1UI, Error, TEXT("ClientShowDungeonResult: DungeonResultWidgetClass is NULL! Assign WBP_DungeonResult in BP_D1PlayerController"));
 		return;
 	}
 
@@ -359,37 +337,27 @@ void AD1PlayerController::ClientShowDungeonResult_Implementation(const TArray<FT
 	UD1DungeonResultWidgetController* WC = UD1AbilitySystemLibrary::GetDungeonResultWidgetController(this);
 	if (!WC)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[DungeonUI] FAIL: GetDungeonResultWidgetController returned NULL!"));
+		UE_LOG(LogD1UI, Error, TEXT("ClientShowDungeonResult: GetDungeonResultWidgetController returned NULL!"));
 		return;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] WC created OK. WC=%p"), WC);
 
 	UUserWidget* ResultWidget = CreateWidget<UUserWidget>(this, DungeonResultWidgetClass);
 	if (!ResultWidget)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[DungeonUI] FAIL: CreateWidget returned NULL! WidgetClass=%s"), *GetNameSafe(DungeonResultWidgetClass));
+		UE_LOG(LogD1UI, Error, TEXT("ClientShowDungeonResult: CreateWidget returned NULL! WidgetClass=%s"), *GetNameSafe(DungeonResultWidgetClass));
 		return;
 	}
-	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] CreateWidget OK. Widget=%p"), ResultWidget);
 
 	// 위젯에 WC 연결 (UD1UserWidget 기반이면 SetWidgetController 호출)
 	if (UD1UserWidget* D1Widget = Cast<UD1UserWidget>(ResultWidget))
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] Cast to UD1UserWidget OK. Calling SetWidgetController..."));
 		D1Widget->SetWidgetController(WC);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] Cast to UD1UserWidget FAILED. Widget is not UD1UserWidget subclass."));
 	}
 
 	ResultWidget->AddToViewport();
-	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] AddToViewport OK"));
 
 	// 바인딩 완료 후 획득 아이템 데이터 세팅 → Delegate 발송
-	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] Calling WC->SetAcquiredItems with %d items..."), AcquiredItems.Num());
 	WC->SetAcquiredItems(AcquiredItems);
-	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] SetAcquiredItems DONE. Delegate should have fired."));
 
 	// 입력 모드를 UI 전용으로 변경
 	FInputModeUIOnly InputMode;
@@ -397,7 +365,7 @@ void AD1PlayerController::ClientShowDungeonResult_Implementation(const TArray<FT
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
 
-	UE_LOG(LogTemp, Warning, TEXT("[DungeonUI] ClientShowDungeonResult COMPLETE"));
+	UE_LOG(LogD1UI, Verbose, TEXT("ClientShowDungeonResult: shown with %d items"), AcquiredItems.Num());
 }
 
 void AD1PlayerController::AutoRun()
@@ -441,14 +409,14 @@ void AD1PlayerController::ShowDungeonEntryUI()
 
 	if (!DungeonEntryWidgetClass)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[DungeonEntry] DungeonEntryWidgetClass is NULL! Assign WBP_DungeonEntry in BP_D1PlayerController"));
+		UE_LOG(LogD1UI, Error, TEXT("ShowDungeonEntryUI: DungeonEntryWidgetClass is NULL! Assign WBP_DungeonEntry in BP_D1PlayerController"));
 		return;
 	}
 
 	DungeonEntryWidgetInstance = CreateWidget<UUserWidget>(this, DungeonEntryWidgetClass);
 	if (!DungeonEntryWidgetInstance)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[DungeonEntry] CreateWidget failed!"));
+		UE_LOG(LogD1UI, Error, TEXT("ShowDungeonEntryUI: CreateWidget failed!"));
 		return;
 	}
 
@@ -460,12 +428,12 @@ void AD1PlayerController::ShowDungeonEntryUI()
 	SetInputMode(InputMode);
 	bShowMouseCursor = true;
 
-	UE_LOG(LogTemp, Log, TEXT("[DungeonEntry] ShowDungeonEntryUI completed."));
+	UE_LOG(LogD1UI, Verbose, TEXT("ShowDungeonEntryUI completed."));
 }
 
 void AD1PlayerController::Server_CreateParty_Implementation(const FString& DungeonMap, const FString& PartyName)
 {
-	APlayerState* PS = GetPlayerState<APlayerState>();
+	AD1PlayerState* PS = GetPlayerState<AD1PlayerState>();
 	AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState());
 	if (!PS || !GSTown) return;
 
@@ -479,12 +447,12 @@ void AD1PlayerController::Server_CreateParty_Implementation(const FString& Dunge
 		}
 	}
 
-	GSTown->ServerCreateParty(PS->GetPlayerName(), PlayerLevel, DungeonMap, PartyName);
+	GSTown->ServerCreateParty(PS->GetPartyPlayerId(), PS->GetPlayerName(), PlayerLevel, DungeonMap, PartyName);
 }
 
 void AD1PlayerController::Server_JoinParty_Implementation(int32 PartyId)
 {
-	APlayerState* PS = GetPlayerState<APlayerState>();
+	AD1PlayerState* PS = GetPlayerState<AD1PlayerState>();
 	AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState());
 	if (!PS || !GSTown) return;
 
@@ -498,18 +466,19 @@ void AD1PlayerController::Server_JoinParty_Implementation(int32 PartyId)
 		}
 	}
 
-	GSTown->ServerJoinParty(PartyId, PS->GetPlayerName(), PlayerLevel);
+	GSTown->ServerJoinParty(PartyId, PS->GetPartyPlayerId(), PS->GetPlayerName(), PlayerLevel);
 }
 
 void AD1PlayerController::Server_LeaveParty_Implementation()
 {
-	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	if (AD1PlayerState* PS = GetPlayerState<AD1PlayerState>())
 	{
 		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
 		{
-			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayer(PS->GetPlayerName()))
+			const FString PlayerId = PS->GetPartyPlayerId();
+			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayerId(PlayerId))
 			{
-				GSTown->ServerLeaveParty(Party->PartyId, PS->GetPlayerName());
+				GSTown->ServerLeaveParty(Party->PartyId, PlayerId);
 			}
 		}
 	}
@@ -517,13 +486,14 @@ void AD1PlayerController::Server_LeaveParty_Implementation()
 
 void AD1PlayerController::Server_SetReady_Implementation(bool bReady)
 {
-	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	if (AD1PlayerState* PS = GetPlayerState<AD1PlayerState>())
 	{
 		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
 		{
-			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayer(PS->GetPlayerName()))
+			const FString PlayerId = PS->GetPartyPlayerId();
+			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayerId(PlayerId))
 			{
-				GSTown->ServerSetReady(Party->PartyId, PS->GetPlayerName(), bReady);
+				GSTown->ServerSetReady(Party->PartyId, PlayerId, bReady);
 			}
 		}
 	}
@@ -531,13 +501,14 @@ void AD1PlayerController::Server_SetReady_Implementation(bool bReady)
 
 void AD1PlayerController::Server_SetSelectedDungeon_Implementation(const FString& DungeonMap)
 {
-	if (APlayerState* PS = GetPlayerState<APlayerState>())
+	if (AD1PlayerState* PS = GetPlayerState<AD1PlayerState>())
 	{
 		if (AD1GameStateTown* GSTown = Cast<AD1GameStateTown>(GetWorld()->GetGameState()))
 		{
-			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayer(PS->GetPlayerName()))
+			const FString PlayerId = PS->GetPartyPlayerId();
+			if (FD1PartyInfo* Party = GSTown->FindPartyByPlayerId(PlayerId))
 			{
-				if (Party->IsLeader(PS->GetPlayerName()))
+				if (Party->IsLeader(PlayerId))
 				{
 					GSTown->ServerSelectDungeon(Party->PartyId, DungeonMap);
 				}
@@ -557,5 +528,5 @@ void AD1PlayerController::Server_StartDungeon_Implementation()
 void AD1PlayerController::ClientShowLoadingScreen_Implementation(const FText& LoadingText)
 {
 	// TODO: 로딩 위젯 표시 (Phase 2에서 WBP_Loading 구현)
-	UE_LOG(LogTemp, Log, TEXT("[Loading] ShowLoadingScreen: %s"), *LoadingText.ToString());
+	UE_LOG(LogD1UI, Log, TEXT("ShowLoadingScreen: %s"), *LoadingText.ToString());
 }

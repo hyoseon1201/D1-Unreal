@@ -1,8 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Characters/D1Hero.h"
 
+#include "D1/D1.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/D1PlayerState.h"
 #include "AbilitySystemComponent.h"
@@ -43,20 +44,12 @@ void AD1Hero::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] D1Hero::PossessedBy called. Pawn=%s, Controller=%s"),
-		*GetName(), *GetNameSafe(NewController));
-
 	// Init ability actor info for the Server
 	// 맵 이동(ClientTravel) 후에도 새 Pawn의 ASC 참조를 갱신해야 하므로 항상 호출
 	InitAbilityActorInfo();
 
 	if (AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>())
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] PlayerState found. bAbilitySystemInitialized=%s, AttributePoints=%d, Level=%d"),
-			D1PS->bAbilitySystemInitialized ? TEXT("TRUE") : TEXT("FALSE"),
-			D1PS->GetAttributePoints(),
-			D1PS->GetPlayerLevel());
-
 		// 1. Attribute 초기화 (처음 한 번만)
 		// Primary Attribute 기본값 설정
 		if (!D1PS->bAbilitySystemInitialized)
@@ -64,7 +57,7 @@ void AD1Hero::PossessedBy(AController* NewController)
 			InitializeDefaultAttributes();
 			D1PS->bAbilitySystemInitialized = true;
 
-			UE_LOG(LogTemp, Log, TEXT("[TravelDebug] PossessedBy: InitializeDefaultAttributes executed. Level [%d]"), D1PS->GetPlayerLevel());
+			UE_LOG(LogD1Travel, Verbose, TEXT("PossessedBy: InitializeDefaultAttributes executed. Level [%d]"), D1PS->GetPlayerLevel());
 		}
 		else
 		{
@@ -72,7 +65,7 @@ void AD1Hero::PossessedBy(AController* NewController)
 			ApplyEffectToSelf(DefaultSecondaryAttributes, (float)D1PS->GetPlayerLevel());
 			ApplyEffectToSelf(DefaultVitalAttributes, (float)D1PS->GetPlayerLevel());
 
-			UE_LOG(LogTemp, Log, TEXT("[TravelDebug] PossessedBy: Secondary+Vital re-applied. Level [%d]"), D1PS->GetPlayerLevel());
+			UE_LOG(LogD1Travel, Verbose, TEXT("PossessedBy: Secondary+Vital re-applied. Level [%d]"), D1PS->GetPlayerLevel());
 		}
 
 		// 2. GameInstance에서 저장된 데이터 복원 (Primary Attribute Override)
@@ -91,7 +84,7 @@ void AD1Hero::PossessedBy(AController* NewController)
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("[TravelDebug] PlayerState NOT found in PossessedBy!"));
+		UE_LOG(LogD1Travel, Error, TEXT("PossessedBy: PlayerState NOT found!"));
 	}
 }
 
@@ -133,6 +126,12 @@ int32 AD1Hero::FindLevelForXP_Implementation(int32 InXP) const
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
+	// LevelUpInfo 데이터 에셋 미할당 시 현재 레벨 유지 (레벨업 없음)
+	if (!D1PS->LevelUpInfo)
+	{
+		UE_LOG(LogD1Ability, Error, TEXT("FindLevelForXP: LevelUpInfo is NULL! Assign the DataAsset in BP_D1PlayerState."));
+		return D1PS->GetPlayerLevel();
+	}
 	return D1PS->LevelUpInfo->FindLevelForXP(InXP);
 }
 
@@ -140,6 +139,12 @@ int32 AD1Hero::GetAttributePointsReward_Implementation(int32 Level) const
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
+	// 레벨이 테이블 범위를 벗어나면(최대 레벨 초과, 외부 복원 값 등) 보상 0 처리
+	if (!D1PS->LevelUpInfo || !D1PS->LevelUpInfo->LevelupInformation.IsValidIndex(Level))
+	{
+		UE_LOG(LogD1Ability, Warning, TEXT("AttributePointsReward: Level %d is out of LevelupInformation range. Returning 0."), Level);
+		return 0;
+	}
 	return D1PS->LevelUpInfo->LevelupInformation[Level].AttributePointAward;
 }
 
@@ -147,6 +152,12 @@ int32 AD1Hero::GetSkillPointsReward_Implementation(int32 Level) const
 {
 	AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>();
 	check(D1PS);
+	// 레벨이 테이블 범위를 벗어나면(최대 레벨 초과, 외부 복원 값 등) 보상 0 처리
+	if (!D1PS->LevelUpInfo || !D1PS->LevelUpInfo->LevelupInformation.IsValidIndex(Level))
+	{
+		UE_LOG(LogD1Ability, Warning, TEXT("SkillPointsReward: Level %d is out of LevelupInformation range. Returning 0."), Level);
+		return 0;
+	}
 	return D1PS->LevelUpInfo->LevelupInformation[Level].SpellPointAward;
 }
 
@@ -158,11 +169,7 @@ void AD1Hero::AddToPlayerLevel_Implementation(int32 InPlayerLevel)
 
 	if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(GetAbilitySystemComponent()))
 	{
-		const int32 CurrentLevel = D1PS->GetPlayerLevel();
-
-		UE_LOG(LogTemp, Log, TEXT("AddToPlayerLevel: Level updated to [%d]. Updating abilities..."), CurrentLevel);
-
-		D1ASC->UpdateAbilityStatuses(CurrentLevel);
+		D1ASC->UpdateAbilityStatuses(D1PS->GetPlayerLevel());
 	}
 }
 

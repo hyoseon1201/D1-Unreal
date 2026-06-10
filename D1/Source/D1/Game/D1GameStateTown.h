@@ -17,7 +17,11 @@ struct FD1PartyMemberInfo
 {
 	GENERATED_BODY()
 
-	/** 플레이어 이름 (PlayerState->GetPlayerName) */
+	/** 플레이어 고유 식별자 (PlayerState->GetPartyPlayerId, 식별/비교용) */
+	UPROPERTY(BlueprintReadOnly)
+	FString PlayerId;
+
+	/** 플레이어 이름 (표시 전용 — 식별에 사용 금지) */
 	UPROPERTY(BlueprintReadOnly)
 	FString PlayerName;
 
@@ -40,7 +44,11 @@ struct FD1PartyInfo
 	UPROPERTY(BlueprintReadOnly)
 	int32 PartyId = INDEX_NONE;
 
-	/** 파티장 플레이어 이름 */
+	/** 파티장 고유 식별자 (식별/비교용) */
+	UPROPERTY(BlueprintReadOnly)
+	FString LeaderId;
+
+	/** 파티장 플레이어 이름 (표시 전용 — 식별에 사용 금지) */
 	UPROPERTY(BlueprintReadOnly)
 	FString LeaderName;
 
@@ -60,12 +68,12 @@ struct FD1PartyInfo
 	UPROPERTY(BlueprintReadOnly)
 	FString SelectedDungeon = TEXT("Dungeon");
 
-	/** 특정 플레이어가 이 파티에 속해있는가? */
-	bool HasMember(const FString& InPlayerName) const
+	/** 특정 플레이어(PlayerId)가 이 파티에 속해있는가? */
+	bool HasMember(const FString& InPlayerId) const
 	{
 		for (const auto& Member : Members)
 		{
-			if (Member.PlayerName == InPlayerName)
+			if (Member.PlayerId == InPlayerId)
 			{
 				return true;
 			}
@@ -73,10 +81,10 @@ struct FD1PartyInfo
 		return false;
 	}
 
-	/** 파티장인가? */
-	bool IsLeader(const FString& InPlayerName) const
+	/** 파티장인가? (PlayerId 비교) */
+	bool IsLeader(const FString& InPlayerId) const
 	{
-		return LeaderName == InPlayerName;
+		return LeaderId == InPlayerId;
 	}
 
 	/** 모든 멤버가 준비되었는가? (파티장 제외하고 체크하거나, 파티장도 포함 - 여기서는 전원 체크) */
@@ -115,7 +123,7 @@ public:
 
 	/** 새로운 파티 생성 (서버 전용). 생성 시점에 선택된 던전과 방 제목을 함께 지정. 성공 여부 반환. */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
-	bool ServerCreateParty(const FString& LeaderName, int32 LeaderLevel, const FString& DungeonMap, const FString& PartyName);
+	bool ServerCreateParty(const FString& LeaderId, const FString& LeaderName, int32 LeaderLevel, const FString& DungeonMap, const FString& PartyName);
 
 	/** 파티 해산 (서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
@@ -123,28 +131,40 @@ public:
 
 	/** 파티에 멤버 추가 (서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
-	bool ServerJoinParty(int32 PartyId, const FString& PlayerName, int32 PlayerLevel);
+	bool ServerJoinParty(int32 PartyId, const FString& PlayerId, const FString& PlayerName, int32 PlayerLevel);
 
 	/** 파티에서 멤버 제거 (서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
-	bool ServerLeaveParty(int32 PartyId, const FString& PlayerName);
+	bool ServerLeaveParty(int32 PartyId, const FString& PlayerId);
 
 	/** 준비 상태 토글 (서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
-	bool ServerSetReady(int32 PartyId, const FString& PlayerName, bool bReady);
+	bool ServerSetReady(int32 PartyId, const FString& PlayerId, bool bReady);
 
 	/** 던전 선택 (파티장 전용, 서버 전용) */
 	UFUNCTION(BlueprintCallable, Category = "Party", meta = (CallInEditor = "false"))
 	bool ServerSelectDungeon(int32 PartyId, const FString& DungeonMap);
 
-	/** 플레이어가 속한 파티 찾기 (C++ 전용) */
-	FD1PartyInfo* FindPartyByPlayer(const FString& PlayerName);
+	/** 플레이어(PlayerId)가 속한 파티 찾기 (C++ 전용) */
+	FD1PartyInfo* FindPartyByPlayerId(const FString& PlayerId);
 
-	/** 플레이어가 속한 파티 찾기 (const 버전, C++ 전용) */
-	const FD1PartyInfo* FindPartyByPlayer(const FString& PlayerName) const;
+	/** 플레이어(PlayerId)가 속한 파티 찾기 (const 버전, C++ 전용) */
+	const FD1PartyInfo* FindPartyByPlayerId(const FString& PlayerId) const;
 
 	/** 다음 사용할 파티 ID 생성 (서버 전용) */
 	int32 GeneratePartyId();
+
+	/** 서버가 허용하는 던전 맵인지 검증 (클라이언트가 보낸 맵 이름을 신뢰하지 않음) */
+	UFUNCTION(BlueprintPure, Category = "Party")
+	bool IsAllowedDungeonMap(const FString& DungeonMap) const;
+
+	/** 입장 가능한 던전 맵 화이트리스트 (BP 서브클래스에서 편집 가능) */
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Party")
+	TArray<FString> AllowedDungeonMaps;
+
+	/** 방 제목 최대 길이 (서버에서 초과분 잘라냄) */
+	UPROPERTY(EditDefaultsOnly, Category = "Party")
+	int32 MaxPartyNameLength = 30;
 
 	/** 파티 목록이 변경되었을 때 브로드캐스트할 델리게이트 (WidgetController / Blueprint 바인딩용) */
 	UPROPERTY(BlueprintAssignable, Category = "Party")

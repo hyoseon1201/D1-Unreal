@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 
+#include "D1/D1.h"
 #include "D1GameplayTags.h"
 #include "AbilitySystem/Ability/D1GameplayAbility.h"
 #include "Interaction/PlayerInterface.h"
@@ -35,9 +36,6 @@ void UD1AbilitySystemComponent::AddCharacterAbilities(const TArray<TSubclassOf<U
 	}
 
 	bStartupAbilitiesGiven = true;
-
-	ENetRole Role = GetOwnerRole();
-	UE_LOG(LogTemp, Warning, TEXT("[AddCharacterAbilities] Role: %d, bStartupAbilitiesGiven set to TRUE"), Role);
 
 	AbilitiesGivenDelegate.Broadcast();
 }
@@ -112,7 +110,7 @@ void UD1AbilitySystemComponent::ForEachAbility(const FForEachAbility& Delegate)
 	{
 		if (!Delegate.ExecuteIfBound(AbilitySpec))
 		{
-			UE_LOG(LogTemp, Error, TEXT("Failed to execute delegate in %hs"), __FUNCTION__);
+			UE_LOG(LogD1Ability, Error, TEXT("Failed to execute delegate in %hs"), __FUNCTION__);
 		}
 	}
 }
@@ -121,14 +119,8 @@ FGameplayTag UD1AbilitySystemComponent::GetAbilityTagFromSpec(const FGameplayAbi
 {
 	if (AbilitySpec.Ability)
 	{
-		// 1. 어떤 어빌리티를 검사하고 있는지 출력
-		UE_LOG(LogTemp, Warning, TEXT("[GetAbilityTag] Checking Ability: %s"), *AbilitySpec.Ability->GetName());
-
 		for (FGameplayTag Tag : AbilitySpec.Ability.Get()->GetAssetTags())
 		{
-			// 2. 이 어빌리티가 무슨 태그들을 가지고 있는지 전부 출력
-			UE_LOG(LogTemp, Warning, TEXT("   - Found Tag in Ability: [%s]"), *Tag.ToString());
-
 			if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Abilities"))))
 			{
 				return Tag;
@@ -136,7 +128,7 @@ FGameplayTag UD1AbilitySystemComponent::GetAbilityTagFromSpec(const FGameplayAbi
 		}
 	}
 
-	UE_LOG(LogTemp, Error, TEXT("[GetAbilityTag] Failed to find matching tag for %s!"), *GetNameSafe(AbilitySpec.Ability.Get()));
+	UE_LOG(LogD1Ability, Error, TEXT("GetAbilityTagFromSpec: Failed to find matching tag for %s!"), *GetNameSafe(AbilitySpec.Ability.Get()));
 	return FGameplayTag();
 }
 
@@ -201,27 +193,17 @@ FGameplayAbilitySpec* UD1AbilitySystemComponent::GetSpecFromAbilityTag(const FGa
 
 void UD1AbilitySystemComponent::UpgradeAttribute(const FGameplayTag& AttributeTag)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[Client] UpgradeAttribute called. Tag=%s, Avatar=%s"),
-		*AttributeTag.ToString(), *GetNameSafe(GetAvatarActor()));
-
 	if (GetAvatarActor()->Implements<UPlayerInterface>())
 	{
-		int32 Points = IPlayerInterface::Execute_GetAttributePoints(GetAvatarActor());
-		UE_LOG(LogTemp, Warning, TEXT("[Client] AttributePoints=%d"), Points);
-
+		const int32 Points = IPlayerInterface::Execute_GetAttributePoints(GetAvatarActor());
 		if (Points > 0)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[Client] Calling ServerUpgradeAttribute..."));
 			ServerUpgradeAttribute(AttributeTag);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("[Client] No points left!"));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Client] AvatarActor does not implement UPlayerInterface!"));
+		UE_LOG(LogD1Ability, Error, TEXT("UpgradeAttribute: AvatarActor does not implement UPlayerInterface!"));
 	}
 }
 
@@ -254,7 +236,7 @@ void UD1AbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 	UD1AbilityInfo* AbilityInfo = UD1AbilitySystemLibrary::GetAbilityInfo(GetAvatarActor());
 	if (!AbilityInfo)
 	{
-		UE_LOG(LogTemp, Error, TEXT("UpdateAbilityStatuses: AbilityInfo is NULL!"));
+		UE_LOG(LogD1Ability, Error, TEXT("UpdateAbilityStatuses: AbilityInfo is NULL!"));
 		return;
 	}
 
@@ -262,14 +244,13 @@ void UD1AbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 	if (IPlayerInterface* PlayerInt = Cast<IPlayerInterface>(GetAvatarActor()))
 	{
 		MyClassTag = PlayerInt->Execute_GetCharacterClassTag(GetAvatarActor());
-		UE_LOG(LogTemp, Log, TEXT("UpdateAbilityStatuses: MyClassTag is [%s]"), *MyClassTag.ToString());
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("UpdateAbilityStatuses: PlayerInterface NOT FOUND on Avatar!"));
+		UE_LOG(LogD1Ability, Warning, TEXT("UpdateAbilityStatuses: PlayerInterface NOT FOUND on Avatar!"));
 	}
 
-	UE_LOG(LogTemp, Log, TEXT("UpdateAbilityStatuses: Checking abilities for Level [%d]"), Level);
+	UE_LOG(LogD1Ability, Verbose, TEXT("UpdateAbilityStatuses: Checking abilities for Level [%d], ClassTag [%s]"), Level, *MyClassTag.ToString());
 
 	for (const FD1AbilityTagInfo& Info : AbilityInfo->AbilityInformation)
 	{
@@ -294,7 +275,7 @@ void UD1AbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 			// 4. 클라이언트 UI에 즉시 방송
 			ClientUpdateAbilityStatus(Info.AbilityTag, FD1GameplayTags::Get().Abilities_Status_Eligible, FGameplayTag(), NewSpec.Level);
 
-			UE_LOG(LogTemp, Log, TEXT(">>> GIVING NEW ABILITY: [%s]"), *Info.AbilityTag.ToString());
+			UE_LOG(LogD1Ability, Verbose, TEXT("UpdateAbilityStatuses: giving new ability [%s]"), *Info.AbilityTag.ToString());
 		}
 		else
 		{
@@ -310,7 +291,7 @@ void UD1AbilitySystemComponent::UpdateAbilityStatuses(int32 Level)
 				// 변경 사항을 클라이언트와 UI에 알림
 				MarkAbilitySpecDirty(*AbilitySpec);
 
-				UE_LOG(LogTemp, Log, TEXT(">>> UPDATING EXISTING ABILITY: [%s] to Eligible"), *Info.AbilityTag.ToString());
+				UE_LOG(LogD1Ability, Verbose, TEXT("UpdateAbilityStatuses: [%s] Locked -> Eligible"), *Info.AbilityTag.ToString());
 
 				ClientUpdateAbilityStatus(Info.AbilityTag, EligibleTag, FGameplayTag(), AbilitySpec->Level);
 			}
@@ -323,7 +304,7 @@ void UD1AbilitySystemComponent::ServerUpgradeAbility_Implementation(const FGamep
 	FGameplayAbilitySpec* AbilitySpec = GetSpecFromAbilityTag(AbilityTag);
 	if (!AbilitySpec)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Upgrade] Spec not found for Tag: %s"), *AbilityTag.ToString());
+		UE_LOG(LogD1Ability, Error, TEXT("ServerUpgradeAbility: Spec not found for Tag: %s"), *AbilityTag.ToString());
 		return;
 	}
 
@@ -332,11 +313,9 @@ void UD1AbilitySystemComponent::ServerUpgradeAbility_Implementation(const FGamep
 	{
 		// 1. 포인트 체크
 		const int32 CurrentPoints = IPlayerInterface::Execute_GetSkillPoints(Avatar);
-		UE_LOG(LogTemp, Log, TEXT("[Upgrade] Start - Ability: %s, Current Points: %d"), *AbilityTag.ToString(), CurrentPoints);
-
 		if (CurrentPoints <= 0)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[Upgrade] Failed - Not enough skill points."));
+			UE_LOG(LogD1Ability, Warning, TEXT("ServerUpgradeAbility: Not enough skill points for %s"), *AbilityTag.ToString());
 			return;
 		}
 
@@ -344,12 +323,9 @@ void UD1AbilitySystemComponent::ServerUpgradeAbility_Implementation(const FGamep
 		FGameplayTag StatusTag = GetStatusFromSpec(*AbilitySpec);
 		bool bAbilityUpgraded = false;
 
-		UE_LOG(LogTemp, Log, TEXT("[Upgrade] Current Status: %s, Current Level: %d"), *StatusTag.ToString(), AbilitySpec->Level);
-
 		// 2. [배우기] Eligible -> Unlocked
 		if (StatusTag.MatchesTagExact(Tags.Abilities_Status_Eligible))
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[Upgrade] Action: Unlocking Ability (Eligible -> Unlocked)"));
 			AbilitySpec->GetDynamicSpecSourceTags().RemoveTag(Tags.Abilities_Status_Eligible);
 			AbilitySpec->GetDynamicSpecSourceTags().AddTag(Tags.Abilities_Status_Unlocked);
 			bAbilityUpgraded = true;
@@ -361,17 +337,16 @@ void UD1AbilitySystemComponent::ServerUpgradeAbility_Implementation(const FGamep
 			{
 				AbilitySpec->Level += 1;
 				bAbilityUpgraded = true;
-				UE_LOG(LogTemp, Warning, TEXT("[Upgrade] Action: Level Up! New Level: %d"), AbilitySpec->Level);
 			}
 			else
 			{
-				UE_LOG(LogTemp, Error, TEXT("[Upgrade] Failed - Ability is already at Max Level (10)."));
+				UE_LOG(LogD1Ability, Warning, TEXT("ServerUpgradeAbility: %s is already at Max Level (10)."), *AbilityTag.ToString());
 			}
 		}
 		else
 		{
-			// 만약 이 로그가 찍힌다면 상태 태그 자체가 로직 외의 것(예: Locked)으로 잡혀있는 겁니다.
-			UE_LOG(LogTemp, Error, TEXT("[Upgrade] Failed - StatusTag '%s' is not valid for upgrade."), *StatusTag.ToString());
+			// 이 로그가 찍힌다면 상태 태그 자체가 로직 외의 것(예: Locked)으로 잡혀있는 것
+			UE_LOG(LogD1Ability, Error, TEXT("ServerUpgradeAbility: StatusTag '%s' is not valid for upgrade."), *StatusTag.ToString());
 		}
 
 		// 4. 성공 시 처리
@@ -381,8 +356,8 @@ void UD1AbilitySystemComponent::ServerUpgradeAbility_Implementation(const FGamep
 			MarkAbilitySpecDirty(*AbilitySpec);
 
 			FGameplayTag NewStatusTag = GetStatusFromSpec(*AbilitySpec);
-			UE_LOG(LogTemp, Log, TEXT("[Upgrade] Success - Remaining Points: %d, Final Status: %s"),
-				IPlayerInterface::Execute_GetSkillPoints(Avatar), *NewStatusTag.ToString());
+			UE_LOG(LogD1Ability, Verbose, TEXT("ServerUpgradeAbility: %s upgraded. Level=%d, Status=%s"),
+				*AbilityTag.ToString(), AbilitySpec->Level, *NewStatusTag.ToString());
 
 			FGameplayTag CurrentInputTag = GetInputTagFromSpec(*AbilitySpec);
 			ClientUpdateAbilityStatus(AbilityTag, NewStatusTag, CurrentInputTag, AbilitySpec->Level);
@@ -390,7 +365,7 @@ void UD1AbilitySystemComponent::ServerUpgradeAbility_Implementation(const FGamep
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("[Upgrade] Avatar is null or doesn't implement UPlayerInterface."));
+		UE_LOG(LogD1Ability, Error, TEXT("ServerUpgradeAbility: Avatar is null or doesn't implement UPlayerInterface."));
 	}
 }
 
@@ -423,25 +398,21 @@ void UD1AbilitySystemComponent::ServerEquipAbility_Implementation(const FGamepla
 
 void UD1AbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FGameplayTag& AttributeTag)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[SERVER] ServerUpgradeAttribute_Implementation called! Tag=%s"), *AttributeTag.ToString());
-
 	FGameplayEventData Payload;
 	Payload.EventTag = AttributeTag;
 	Payload.EventMagnitude = 1.f;
 
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetAvatarActor(), AttributeTag, Payload);
-	UE_LOG(LogTemp, Warning, TEXT("[SERVER] SendGameplayEventToActor done."));
 
 	if (GetAvatarActor()->Implements<UPlayerInterface>())
 	{
 		IPlayerInterface::Execute_AddToAttributePoints(GetAvatarActor(), -1);
-		UE_LOG(LogTemp, Warning, TEXT("[SERVER] AttributePoints decremented."));
 	}
 
 	// Primary Attribute 변경 후 Secondary Attribute Base Value 재계산
-	UE_LOG(LogTemp, Warning, TEXT("[SERVER] Calling RecalculateSecondaryAttributes..."));
 	UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(GetAvatarActor(), this);
-	UE_LOG(LogTemp, Warning, TEXT("[SERVER] RecalculateSecondaryAttributes done."));
+
+	UE_LOG(LogD1Ability, Verbose, TEXT("ServerUpgradeAttribute: %s upgraded."), *AttributeTag.ToString());
 }
 
 void UD1AbilitySystemComponent::OnRep_ActivateAbilities()
@@ -457,9 +428,6 @@ void UD1AbilitySystemComponent::OnRep_ActivateAbilities()
 
 void UD1AbilitySystemComponent::ClientUpdateAbilityStatus_Implementation(const FGameplayTag& AbilityTag, const FGameplayTag& StatusTag, const FGameplayTag& InputTag, int32 NewLevel)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[ClientRPC] Received - Tag: %s, Status: %s, NewLevel: %d"),
-		*AbilityTag.ToString(), *StatusTag.ToString(), NewLevel);
-
 	// 자기 Spec 확인 없이 서버가 준 값을 신뢰하고 브로드캐스트
 	AbilityStatusChanged.Broadcast(AbilityTag, StatusTag, InputTag, NewLevel);
 }

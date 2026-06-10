@@ -1,6 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Game/D1GameInstance.h"
+#include "D1/D1.h"
 
 void UD1GameInstance::SavePlayerStateData(
 	int32 InAttributePoints, int32 InLevel, int32 InXP,
@@ -16,7 +17,7 @@ void UD1GameInstance::SavePlayerStateData(
 	SavedLuck = InLuck;
 	bHasSavedData = true;
 
-	UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] GameInstance Save. AttrPts=%d, Level=%d, XP=%d, Str=%.1f, Int=%.1f, Dex=%.1f, Luc=%.1f"),
+	UE_LOG(LogD1Travel, Verbose, TEXT("GameInstance Save. AttrPts=%d, Level=%d, XP=%d, Str=%.1f, Int=%.1f, Dex=%.1f, Luc=%.1f"),
 		SavedAttributePoints, SavedLevel, SavedXP,
 		SavedStrength, SavedIntelligence, SavedDexterity, SavedLuck);
 }
@@ -36,7 +37,7 @@ void UD1GameInstance::RestorePlayerStateData(
 		OutDexterity = SavedDexterity;
 		OutLuck = SavedLuck;
 
-		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] GameInstance Restore. AttrPts=%d, Level=%d, XP=%d, Str=%.1f, Int=%.1f, Dex=%.1f, Luc=%.1f"),
+		UE_LOG(LogD1Travel, Verbose, TEXT("GameInstance Restore. AttrPts=%d, Level=%d, XP=%d, Str=%.1f, Int=%.1f, Dex=%.1f, Luc=%.1f"),
 			OutAttributePoints, OutLevel, OutXP,
 			OutStrength, OutIntelligence, OutDexterity, OutLuck);
 	}
@@ -50,7 +51,7 @@ void UD1GameInstance::RestorePlayerStateData(
 		OutDexterity = -1.f;
 		OutLuck = -1.f;
 
-		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] GameInstance Restore skipped. No saved data."));
+		UE_LOG(LogD1Travel, Verbose, TEXT("GameInstance Restore skipped. No saved data."));
 	}
 }
 

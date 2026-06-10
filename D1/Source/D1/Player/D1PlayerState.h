@@ -56,6 +56,14 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Inventory")
 	UD1InventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
 
+	/**
+	 * 파티 시스템에서 사용하는 플레이어 고유 식별자.
+	 * 지금: UniqueNetId 문자열 (세션 내 고유). OSS 없는 환경에서는 PlayerName 폴백.
+	 * Phase 3: 웹서버가 발급한 캐릭터 ID로 교체 예정 — 이 함수만 수정하면 됨.
+	 */
+	UFUNCTION(BlueprintPure, Category = "D1|Party")
+	FString GetPartyPlayerId() const;
+
 	void AddToXP(int32 InXP);
 	void AddToLevel(int32 InLevel);
 	void AddToAttributePoints(int32 InPoints);

@@ -53,7 +53,7 @@ FVector AD1CharacterBase::GetCombatSocketLocation_Implementation(const FGameplay
 	}
 
 	// 기본값으로 메쉬의 위치를 반환하거나 로그를 찍어 문제를 파악합니다.
-	UE_LOG(LogTemp, Error, TEXT("Unknown Socket Tag: %s"), *SocketTag.ToString());
+	UE_LOG(LogD1, Error, TEXT("Unknown Socket Tag: %s"), *SocketTag.ToString());
 	return GetMesh()->GetComponentLocation();
 }
 

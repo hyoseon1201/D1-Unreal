@@ -1,4 +1,5 @@
 ﻿#include "AbilitySystem/ExecCalc/ExecCalc_Damage.h"
+#include "D1/D1.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystem/Data/D1CharacterClassInfo.h"
@@ -86,8 +87,6 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 
 	if (Config)
 	{
-		UE_LOG(LogTemp, Log, TEXT("[ExecCalc] Success: Found AbilitySystemConfig."));
-
 		if (Config->DamageCalculationCoefficients)
 		{
 			const FRealCurve* ArmorKCurve = Config->DamageCalculationCoefficients->FindCurve(FName("Armor.K_Value"), FString());
@@ -97,21 +96,20 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 			{
 				Armor_K = ArmorKCurve->Eval(TargetLevel);
 				Pen_Coeff = PenCoeffCurve->Eval(SourceLevel);
-				UE_LOG(LogTemp, Log, TEXT("[ExecCalc] Success: Extracted Curve Values. Armor_K: %.2f, Pen_Coeff: %.4f (at Levels S:%f, T:%f)"), Armor_K, Pen_Coeff, SourceLevel, TargetLevel);
 			}
 			else
 			{
-				UE_LOG(LogTemp, Error, TEXT("[ExecCalc] Fail: Could not find specific Rows (Armor.K_Value or ArmorPen.Coeff) in CurveTable!"));
+				UE_LOG(LogD1Ability, Error, TEXT("ExecCalc_Damage: Could not find Rows (Armor.K_Value or ArmorPen.Coeff) in CurveTable!"));
 			}
 		}
 		else
 		{
-			UE_LOG(LogTemp, Error, TEXT("[ExecCalc] Fail: DamageCalculationCoefficients CurveTable is NULL in Config."));
+			UE_LOG(LogD1Ability, Error, TEXT("ExecCalc_Damage: DamageCalculationCoefficients CurveTable is NULL in Config."));
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("[ExecCalc] Fail: Unable to find AbilitySystemConfig! Check if assigned in GameMode."));
+		UE_LOG(LogD1Ability, Error, TEXT("ExecCalc_Damage: Unable to find AbilitySystemConfig! Check if assigned in GameMode."));
 	}
 
 	// --- 4. 데미지 및 상세 계산 ---
@@ -123,9 +121,6 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 		Damage += DamageTypeValue;
 	}
 
-	UE_LOG(LogTemp, Warning, TEXT("--- Damage Calculation Details ---"));
-	UE_LOG(LogTemp, Log, TEXT("Raw Accumulated Damage: %.2f"), Damage);
-
 	// [방어력 계산 공식 적용]
 	const float EffectiveArmorPen = ArmorPenetration / (1.f + (SourceLevel * Pen_Coeff));
 	const float FinalArmor = FMath::Max<float>(0.f, Armor - EffectiveArmorPen);
@@ -133,23 +128,19 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 
 	float FinalDamage = Damage * DamageMultiplier;
 
-	UE_LOG(LogTemp, Log, TEXT("Captured Armor: %.2f | Captured Pen: %.2f"), Armor, ArmorPenetration);
-	UE_LOG(LogTemp, Log, TEXT("Effective Pen: %.2f | Final Armor: %.2f | Multiplier: %.4f"), EffectiveArmorPen, FinalArmor, DamageMultiplier);
-
 	// [치명타 판정]
 	const bool bIsCritical = FMath::FRand() * 100.f < CritChance;
 	if (bIsCritical)
 	{
 		FinalDamage *= (CritDamage / 100.f);
-		UE_LOG(LogTemp, Warning, TEXT("!!! CRITICAL HIT !!! Multiplier applied: %.2f"), CritDamage / 100.f);
 	}
 
 	// Context에 치명타 여부 저장 (UI 표시용)
 	FGameplayEffectContextHandle EffectContextHandle = Spec.GetContext();
 	UD1AbilitySystemLibrary::SetIsCriticalHit(EffectContextHandle, bIsCritical);
 
-	UE_LOG(LogTemp, Warning, TEXT(">> FINAL DAMAGE TO APPLY: %.2f <<"), FinalDamage);
-	UE_LOG(LogTemp, Warning, TEXT("----------------------------------"));
+	UE_LOG(LogD1Ability, Verbose, TEXT("ExecCalc_Damage: Raw=%.1f, Armor=%.1f, Pen=%.1f, Mult=%.3f, Crit=%s, Final=%.1f"),
+		Damage, Armor, ArmorPenetration, DamageMultiplier, bIsCritical ? TEXT("Y") : TEXT("N"), FinalDamage);
 
 	// --- 5. 결과 출력 ---
 	const FGameplayModifierEvaluatedData EvaluatedData(UD1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, FinalDamage);

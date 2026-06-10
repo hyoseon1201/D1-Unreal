@@ -86,6 +86,6 @@ private:
 	/** 현재 World의 GameStateTown 캐스팅 헬퍼 */
 	AD1GameStateTown* GetGameStateTown() const;
 
-	/** 로컬 플레이어 이름 캐시 헬퍼 */
-	FString GetLocalPlayerName() const;
+	/** 로컬 플레이어 고유 식별자 헬퍼 (PlayerState->GetPartyPlayerId) */
+	FString GetLocalPlayerId() const;
 };

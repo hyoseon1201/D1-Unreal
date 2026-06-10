@@ -66,23 +66,12 @@ void UD1SkillMenuWidgetController::AbilitySelected(const FGameplayTag& AbilityTa
         // Spec을 찾은 경우
         StatusTag = GetD1ASC()->GetStatusFromSpec(*Spec);
         AbilityLevel = Spec->Level;
-
-        UE_LOG(LogTemp, Warning, TEXT("AbilitySelected: [FOUND SPEC] Tag: %s, Status: %s, Level: %d"),
-            *AbilityTag.ToString(),
-            *StatusTag.ToString(),
-            AbilityLevel);
     }
     else
     {
         // Spec을 못 찾은 경우 (Locked 처리)
         StatusTag = FD1GameplayTags::Get().Abilities_Status_Locked;
-
-        UE_LOG(LogTemp, Error, TEXT("AbilitySelected: [SPEC NOT FOUND] Tag: %s, Setting Status to Locked"),
-            *AbilityTag.ToString());
     }
-
-    // 최종 브로드캐스트 직전 확인
-    UE_LOG(LogTemp, Display, TEXT("AbilitySelected: [BROADCAST] Final StatusTag: %s"), *StatusTag.ToString());
 
     SelectedAbilityTag = AbilityTag;
     SelectedAbilityChangedDelegate.Broadcast(AbilityTag, StatusTag, AbilityLevel);
@@ -115,8 +104,6 @@ void UD1SkillMenuWidgetController::EquipSkill(const FGameplayTag& SkillTag, cons
 
 void UD1SkillMenuWidgetController::LevelUpSkill(const FGameplayTag& SkillTag)
 {
-    UE_LOG(LogTemp, Warning, TEXT("Skill LevelUp Requested: %s"), *SkillTag.ToString());
-
     if (GetD1ASC())
     {
         GetD1ASC()->ServerUpgradeAbility(SkillTag);

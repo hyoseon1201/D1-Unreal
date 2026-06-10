@@ -3,6 +3,7 @@
 
 #include "Player/D1PlayerState.h"
 
+#include "D1/D1.h"
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "Inventory/D1InventoryComponent.h"
@@ -11,8 +12,6 @@
 
 AD1PlayerState::AD1PlayerState()
 {
-	UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] PlayerState CONSTRUCTOR called. This=%p"), this);
-
 	AbilitySystemComponent = CreateDefaultSubobject<UD1AbilitySystemComponent>("AbilitySystemComponent");
 	AbilitySystemComponent->SetIsReplicated(true);
 	AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Mixed);
@@ -40,6 +39,18 @@ void AD1PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLi
 UAbilitySystemComponent* AD1PlayerState::GetAbilitySystemComponent() const
 {
 	return AbilitySystemComponent;
+}
+
+FString AD1PlayerState::GetPartyPlayerId() const
+{
+	// UniqueNetId가 유효하면 그것을 사용 (세션 내 고유 보장)
+	const FUniqueNetIdRepl& NetId = GetUniqueId();
+	if (NetId.IsValid())
+	{
+		return NetId->ToString();
+	}
+	// OSS 없는 환경(Standalone PIE 등) 폴백
+	return GetPlayerName();
 }
 
 void AD1PlayerState::AddToXP(int32 InXP)
@@ -104,7 +115,6 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 	{
 		if (!GI->HasSavedData())
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] RestoreTravelDataIfNeeded: No saved data (first login)"));
 			return false;
 		}
 
@@ -117,13 +127,9 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 
 		if (SavedAttrPts < 0)
 		{
-			UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] RestoreTravelDataIfNeeded: Invalid saved data"));
+			UE_LOG(LogD1Travel, Warning, TEXT("RestoreTravelDataIfNeeded: Invalid saved data"));
 			return false;
 		}
-
-		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] RestoreTravelDataIfNeeded. BEFORE: bInit=%s, AttrPts=%d, Level=%d, XP=%d"),
-			bAbilitySystemInitialized ? TEXT("TRUE") : TEXT("FALSE"),
-			AttributePoints, Level, XP);
 
 		// ★ bAbilitySystemInitialized는 복원하지 않음
 		// 맵 이동 시 Ability 재등록을 위해 false로 유지
@@ -145,9 +151,6 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 			AS->SetIntelligence(SavedInt);
 			AS->SetDexterity(SavedDex);
 			AS->SetLuck(SavedLuc);
-
-			UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] Primary Attributes restored. Str=%.1f, Int=%.1f, Dex=%.1f, Luc=%.1f"),
-				SavedStr, SavedInt, SavedDex, SavedLuc);
 		}
 
 		// 3. 값이 실제로 변경되었을 때만 OnRep 호출 (맵 이동 시 레벨업 이펙트 중복 방지)
@@ -164,8 +167,7 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 			OnRep_XP(XP);
 		}
 
-		UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] RestoreTravelDataIfNeeded. AFTER: bInit=%s, AttrPts=%d, Level=%d, XP=%d"),
-			bAbilitySystemInitialized ? TEXT("TRUE") : TEXT("FALSE"),
+		UE_LOG(LogD1Travel, Verbose, TEXT("RestoreTravelDataIfNeeded: restored. AttrPts=%d, Level=%d, XP=%d"),
 			AttributePoints, Level, XP);
 
 		// 한 번 복원 후 저장 데이터 초기화
@@ -174,7 +176,7 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("[TravelDebug] RestoreTravelDataIfNeeded: GameInstance is NOT UD1GameInstance! Class=%s"),
+		UE_LOG(LogD1Travel, Error, TEXT("RestoreTravelDataIfNeeded: GameInstance is NOT UD1GameInstance! Class=%s"),
 			*GetNameSafe(GetGameInstance()));
 		return false;
 	}
@@ -183,13 +185,6 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 void AD1PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
-
-	UE_LOG(LogTemp, Warning, TEXT("[TravelDebug] PlayerState::BeginPlay. This=%p, Authority=%s, bInit=%s, AttrPoints=%d, Level=%d"),
-		this,
-		HasAuthority() ? TEXT("TRUE") : TEXT("FALSE"),
-		bAbilitySystemInitialized ? TEXT("TRUE") : TEXT("FALSE"),
-		AttributePoints,
-		Level);
 
 	// 맵 이동(ClientTravel) 후 데이터 복원 (PossessedBy보다 늦을 수 있으므로 안전망)
 	RestoreTravelDataIfNeeded();

@@ -3,7 +3,7 @@
 #include "UI/WidgetController/D1DungeonPartyWidgetController.h"
 #include "Game/D1GameStateTown.h"
 #include "Player/D1PlayerController.h"
-#include "GameFramework/PlayerState.h"
+#include "Player/D1PlayerState.h"
 
 // ─── 초기화 ──────────────────────────────────────────────────────────────────
 
@@ -81,7 +81,7 @@ bool UD1DungeonPartyWidgetController::IsInParty() const
 {
 	if (const AD1GameStateTown* GSTown = GetGameStateTown())
 	{
-		return GSTown->FindPartyByPlayer(GetLocalPlayerName()) != nullptr;
+		return GSTown->FindPartyByPlayerId(GetLocalPlayerId()) != nullptr;
 	}
 	return false;
 }
@@ -90,10 +90,10 @@ bool UD1DungeonPartyWidgetController::IsPartyLeader() const
 {
 	if (const AD1GameStateTown* GSTown = GetGameStateTown())
 	{
-		const FString MyName = GetLocalPlayerName();
-		if (const FD1PartyInfo* Party = GSTown->FindPartyByPlayer(MyName))
+		const FString MyId = GetLocalPlayerId();
+		if (const FD1PartyInfo* Party = GSTown->FindPartyByPlayerId(MyId))
 		{
-			return Party->IsLeader(MyName);
+			return Party->IsLeader(MyId);
 		}
 	}
 	return false;
@@ -103,7 +103,7 @@ FD1PartyInfo UD1DungeonPartyWidgetController::GetMyParty() const
 {
 	if (const AD1GameStateTown* GSTown = GetGameStateTown())
 	{
-		if (const FD1PartyInfo* Party = GSTown->FindPartyByPlayer(GetLocalPlayerName()))
+		if (const FD1PartyInfo* Party = GSTown->FindPartyByPlayerId(GetLocalPlayerId()))
 		{
 			return *Party;
 		}
@@ -131,13 +131,13 @@ AD1GameStateTown* UD1DungeonPartyWidgetController::GetGameStateTown() const
 	return nullptr;
 }
 
-FString UD1DungeonPartyWidgetController::GetLocalPlayerName() const
+FString UD1DungeonPartyWidgetController::GetLocalPlayerId() const
 {
 	if (PlayerController)
 	{
-		if (const APlayerState* PS = PlayerController->GetPlayerState<APlayerState>())
+		if (const AD1PlayerState* PS = PlayerController->GetPlayerState<AD1PlayerState>())
 		{
-			return PS->GetPlayerName();
+			return PS->GetPartyPlayerId();
 		}
 	}
 	return FString();

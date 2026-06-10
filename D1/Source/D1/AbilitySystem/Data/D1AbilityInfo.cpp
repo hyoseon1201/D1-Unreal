@@ -1,7 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AbilitySystem/Data/D1AbilityInfo.h"
+#include "D1/D1.h"
 
 FD1AbilityTagInfo UD1AbilityInfo::FindAbilityTagInforTag(const FGameplayTag& AbilityTag, bool bLogNotFound) const
 {
@@ -15,7 +16,7 @@ FD1AbilityTagInfo UD1AbilityInfo::FindAbilityTagInforTag(const FGameplayTag& Abi
 
 	if (bLogNotFound)
 	{
-		UE_LOG(LogTemp, Error, TEXT("Can't find info for AbilityTag [%s] on AbilityInfo [%s]"), *AbilityTag.ToString(), *GetNameSafe(this));
+		UE_LOG(LogD1, Error, TEXT("Can't find info for AbilityTag [%s] on AbilityInfo [%s]"), *AbilityTag.ToString(), *GetNameSafe(this));
 	}
 
 	return FD1AbilityTagInfo();

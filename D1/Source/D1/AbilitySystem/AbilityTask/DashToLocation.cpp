@@ -1,6 +1,7 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #include "AbilitySystem/AbilityTask/DashToLocation.h"
+#include "D1/D1.h"
 
 #include "GameFramework/Character.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -30,7 +31,7 @@ UDashToLocation* UDashToLocation::CreateDashToLocation(UGameplayAbility* OwningA
 
 	MyObj->bIsDashing = false;
 
-	UE_LOG(LogTemp, Warning, TEXT("[DashToLocation] Created. Char=%s, Dist=%.1f, Dur=%.3f, Speed=%.1f, Dir=%s"),
+	UE_LOG(LogD1Ability, Verbose, TEXT("DashToLocation: Created. Char=%s, Dist=%.1f, Dur=%.3f, Speed=%.1f, Dir=%s"),
 		MyObj->CachedCharacter.IsValid() ? *MyObj->CachedCharacter->GetName() : TEXT("NULL"),
 		MyObj->DashDistance, MyObj->Duration, MyObj->DashSpeed, *MyObj->DashDirection.ToCompactString());
 
@@ -74,13 +75,13 @@ void UDashToLocation::Activate()
 
 			StartLocation = CachedCharacter->GetActorLocation();
 
-			UE_LOG(LogTemp, Warning, TEXT("[DashToLocation] Server Activate. Vel=%s, Start=%s"),
+			UE_LOG(LogD1Ability, Verbose, TEXT("DashToLocation: Server Activate. Vel=%s, Start=%s"),
 				*LaunchVelocity.ToCompactString(), *StartLocation.ToCompactString());
 		}
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[DashToLocation] Client Activate. Waiting for server replicated position."));
+		UE_LOG(LogD1Ability, Verbose, TEXT("DashToLocation: Client Activate. Waiting for server replicated position."));
 	}
 
 	// 서버/클라이언트 모두 Duration 후에 FinishDash 호출 (Montage Jump 동기화를 위해)
@@ -106,12 +107,12 @@ void UDashToLocation::OnDashTimerExpired()
 		const float ActualDist = FVector::Dist(StartLocation, CurrentLocation);
 		bHitWall = (ActualDist < DashDistance * 0.7f);
 
-		UE_LOG(LogTemp, Warning, TEXT("[DashToLocation] Server TimerExpired. ActualDist=%.1f, Expected=%.1f, bHitWall=%s"),
+		UE_LOG(LogD1Ability, Verbose, TEXT("DashToLocation: Server TimerExpired. ActualDist=%.1f, Expected=%.1f, bHitWall=%s"),
 			ActualDist, DashDistance, bHitWall ? TEXT("TRUE") : TEXT("FALSE"));
 	}
 	else
 	{
-		UE_LOG(LogTemp, Warning, TEXT("[DashToLocation] Client TimerExpired. Skipping distance check."));
+		UE_LOG(LogD1Ability, Verbose, TEXT("DashToLocation: Client TimerExpired. Skipping distance check."));
 	}
 
 	FinishDash(bHitWall);
@@ -143,7 +144,7 @@ void UDashToLocation::FinishDash(bool bHitWall)
 			MoveComp->BrakingDecelerationWalking = OriginalBrakingDeceleration;
 			MoveComp->SetMovementMode(OriginalMovementMode);
 
-			UE_LOG(LogTemp, Warning, TEXT("[DashToLocation] Server Cleanup. Mode restored to %d"), (int32)OriginalMovementMode);
+			UE_LOG(LogD1Ability, Verbose, TEXT("DashToLocation: Server Cleanup. Mode restored to %d"), (int32)OriginalMovementMode);
 		}
 	}
 

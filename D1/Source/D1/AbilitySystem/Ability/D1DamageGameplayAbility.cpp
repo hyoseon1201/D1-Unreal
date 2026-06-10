@@ -1,7 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "AbilitySystem/Ability/D1DamageGameplayAbility.h"
+#include "D1/D1.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystemComponent.h"
@@ -12,7 +13,7 @@ void UD1DamageGameplayAbility::CauseDamage(AActor* TargetActor)
 	const ENetRole Role = OwningActor ? OwningActor->GetLocalRole() : ROLE_None;
 	const FString RoleStr = UEnum::GetValueAsString(Role);
 	
-	UE_LOG(LogTemp, Warning, TEXT("[CauseDamage] Role=%s, Ability=%s, Target=%s"),
+	UE_LOG(LogD1Ability, Verbose, TEXT("CauseDamage: Role=%s, Ability=%s, Target=%s"),
 		*RoleStr, *GetName(), *GetNameSafe(TargetActor));
 	
 	FGameplayEffectSpecHandle DamageSpecHandle = MakeOutgoingGameplayEffectSpec(DamageEffectClass, 1.f);

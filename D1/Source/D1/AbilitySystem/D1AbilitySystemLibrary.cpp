@@ -3,6 +3,7 @@
 
 #include "AbilitySystem/D1AbilitySystemLibrary.h"
 
+#include "D1/D1.h"
 #include "Kismet/GameplayStatics.h"
 #include "UI/HUD/D1HUD.h"
 #include "Player/D1PlayerState.h"
@@ -106,18 +107,16 @@ void UD1AbilitySystemLibrary::InitializeDefaultAttributes(const UObject* WorldCo
 
 void UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(const UObject* WorldContextObject, UAbilitySystemComponent* ASC)
 {
-	UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Function entered."));
-
 	if (!IsValid(ASC))
 	{
-		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] ASC is invalid!"));
+		UE_LOG(LogD1Ability, Error, TEXT("RecalculateSecondaryAttributes: ASC is invalid!"));
 		return;
 	}
 
 	UD1CharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
 	if (!CharacterClassInfo)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] CharacterClassInfo is null!"));
+		UE_LOG(LogD1Ability, Error, TEXT("RecalculateSecondaryAttributes: CharacterClassInfo is null!"));
 		return;
 	}
 
@@ -131,35 +130,20 @@ void UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(const UObject* Worl
 	// 기존 SecondaryAttributes GE를 모두 제거 (중복 적용 방지 + Base Value 강제 갱신)
 	FGameplayEffectQuery Query;
 	Query.EffectDefinition = CharacterClassInfo->SecondaryAttributes;
-	int32 RemovedCount = ASC->RemoveActiveEffects(Query);
-	UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Removed %d existing SecondaryAttributes effects."), RemovedCount);
+	const int32 RemovedCount = ASC->RemoveActiveEffects(Query);
 
 	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
 	SecondaryAttributesContextHandle.AddSourceObject(AvatarActor);
 	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, (float)CurrentLevel, SecondaryAttributesContextHandle);
-	
+
 	if (SecondaryAttributesSpecHandle.IsValid())
 	{
-		FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
-		UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Applied. Handle=%s, Valid=%s"),
-			*ActiveHandle.ToString(), ActiveHandle.IsValid() ? TEXT("TRUE") : TEXT("FALSE"));
+		ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
+		UE_LOG(LogD1Ability, Verbose, TEXT("RecalculateSecondaryAttributes: re-applied at Level %d (removed %d old effects)"), CurrentLevel, RemovedCount);
 	}
 	else
 	{
-		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] Failed to create spec!"));
-	}
-
-	// 결과 확인
-	const TArray<UAttributeSet*>& SpawnedAttributes = ASC->GetSpawnedAttributes();
-	if (const UD1AttributeSet* D1AS = Cast<UD1AttributeSet>(SpawnedAttributes.Num() > 0 ? SpawnedAttributes[0] : nullptr))
-	{
-		FGameplayAttribute ArmorAttr = UD1AttributeSet::GetArmorAttribute();
-		float ArmorAfter = ArmorAttr.GetNumericValue(D1AS);
-		UE_LOG(LogTemp, Warning, TEXT("[RecalculateSecondaryAttributes] Level=%d, ArmorAfter=%.1f"), CurrentLevel, ArmorAfter);
-	}
-	else
-	{
-		UE_LOG(LogTemp, Error, TEXT("[RecalculateSecondaryAttributes] Failed to find UD1AttributeSet for result check!"));
+		UE_LOG(LogD1Ability, Error, TEXT("RecalculateSecondaryAttributes: Failed to create spec!"));
 	}
 }
 
@@ -205,7 +189,7 @@ UD1CharacterClassInfo* UD1AbilitySystemLibrary::GetCharacterClassInfo(const UObj
 		}
 	}
 	
-	UE_LOG(LogTemp, Error, TEXT("[GetCharacterClassInfo] Failed to find CharacterClassInfo. Check BP_GameMode settings."));
+	UE_LOG(LogD1Ability, Error, TEXT("GetCharacterClassInfo: Failed to find CharacterClassInfo. Check BP_GameMode settings."));
 	return nullptr;
 }
 
@@ -221,38 +205,20 @@ UD1ItemData* UD1AbilitySystemLibrary::GetItemData(const UObject* WorldContextObj
 	const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
 	if (!World)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[GetItemData] World is NULL!"));
 		return nullptr;
 	}
 
-	const AGameStateBase* GameState = World->GetGameState();
-	if (!GameState)
+	const AD1GameStateBase* D1GS = Cast<AD1GameStateBase>(World->GetGameState());
+	if (!D1GS || !D1GS->ItemRegistry)
 	{
-		UE_LOG(LogTemp, Error, TEXT("[GetItemData] GameState is NULL!"));
-		return nullptr;
-	}
-
-	const AD1GameStateBase* D1GS = Cast<AD1GameStateBase>(GameState);
-	if (!D1GS)
-	{
-		UE_LOG(LogTemp, Error, TEXT("[GetItemData] D1GameStateBase cast failed!"));
-		return nullptr;
-	}
-
-	if (!D1GS->ItemRegistry)
-	{
-		UE_LOG(LogTemp, Error, TEXT("[GetItemData] ItemRegistry is NULL in GameState!"));
+		UE_LOG(LogD1Inventory, Error, TEXT("GetItemData: GameState or ItemRegistry is NULL!"));
 		return nullptr;
 	}
 
 	UD1ItemData* ItemData = D1GS->ItemRegistry->FindItemData(ItemID);
-	if (ItemData)
+	if (!ItemData)
 	{
-		UE_LOG(LogTemp, Log, TEXT("[GetItemData] Found: %s"), *ItemID.ToString());
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[GetItemData] NOT Found: %s"), *ItemID.ToString());
+		UE_LOG(LogD1Inventory, Warning, TEXT("GetItemData: NOT Found: %s"), *ItemID.ToString());
 	}
 	return ItemData;
 }

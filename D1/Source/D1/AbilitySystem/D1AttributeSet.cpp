@@ -130,7 +130,7 @@ void UD1AttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallback
 		const float LocalIncomingXP = GetIncomingXP();
 		SetIncomingXP(0.f);
 
-		if (Props.SourceCharacter->Implements<UPlayerInterface>() && Props.SourceCharacter->Implements<UCombatInterface>())
+		if (IsValid(Props.SourceCharacter) && Props.SourceCharacter->Implements<UPlayerInterface>() && Props.SourceCharacter->Implements<UCombatInterface>())
 		{
 			const int32 CurrentLevel = ICombatInterface::Execute_GetPlayerLevel(Props.SourceCharacter);
 			const int32 CurrentXP = IPlayerInterface::Execute_GetXP(Props.SourceCharacter);
@@ -224,16 +224,23 @@ void UD1AttributeSet::SetEffectProperties(const FGameplayEffectModCallbackData& 
 
 void UD1AttributeSet::ShowFloatingText(const FEffectProperties& Props, float Damage, bool bCriticalHit) const
 {
+	// SourceCharacter는 컨트롤러 없는 가해자(트랩, 독장판 등)일 때 null일 수 있음
 	if (Props.SourceCharacter != Props.TargetCharacter)
 	{
-		if (AD1PlayerController* PC = Cast<AD1PlayerController>(Props.SourceCharacter->Controller))
+		if (IsValid(Props.SourceCharacter))
 		{
-			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
-			return;
+			if (AD1PlayerController* PC = Cast<AD1PlayerController>(Props.SourceCharacter->Controller))
+			{
+				PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
+				return;
+			}
 		}
-		if (AD1PlayerController* PC = Cast<AD1PlayerController>(Props.TargetCharacter->Controller))
+		if (IsValid(Props.TargetCharacter))
 		{
-			PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
+			if (AD1PlayerController* PC = Cast<AD1PlayerController>(Props.TargetCharacter->Controller))
+			{
+				PC->ShowDamageNumber(Damage, Props.TargetCharacter, bCriticalHit);
+			}
 		}
 	}
 }
@@ -243,7 +250,8 @@ void UD1AttributeSet::SendXPEvent(const FEffectProperties& Props)
 	ICombatInterface* CombatInterface = Cast<ICombatInterface>(Props.TargetCharacter);
 	IEnemyInterface* EnemyInterface = Cast<IEnemyInterface>(Props.TargetCharacter);
 
-	if (CombatInterface && EnemyInterface)
+	// SourceCharacter가 null이면(컨트롤러 없는 가해자) XP를 줄 대상이 없으므로 스킵
+	if (CombatInterface && EnemyInterface && IsValid(Props.SourceCharacter))
 	{
 		int32 TargetLevel = ICombatInterface::Execute_GetPlayerLevel(Props.TargetCharacter);
 		ECharacterClass TargetClass = IEnemyInterface::Execute_GetCharacterClass(Props.TargetCharacter);
