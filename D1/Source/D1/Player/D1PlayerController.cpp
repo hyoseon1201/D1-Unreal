@@ -525,6 +525,19 @@ void AD1PlayerController::Server_StartDungeon_Implementation()
 	}
 }
 
+void AD1PlayerController::Server_ReturnToTown_Implementation()
+{
+	// MVP: 단일 서버이므로 ServerTravel로 접속자 전원을 마을로 함께 이동시킨다.
+	// (주의) ClientTravel(맵 이름)을 쓰면 서버 연결이 끊기고 각자 로컬 오프라인 월드가 열려 플레이어가 분리됨.
+	// 마을 복귀 시 GameStateTown이 새로 생성되므로 파티는 자동 해산됨 (Parties 빈 배열로 시작).
+	//
+	// Phase 3 (웹서버 연동 시) 교체 예정:
+	//   1. 던전 서버가 각 플레이어의 캐릭터 데이터를 웹서버/DB에 저장
+	//   2. 플레이어에게 마을 서버 주소를 내려주고 ClientTravel("IP:Port")로 마을 데디서버에 직접 접속시킴
+	//   3. 전원 퇴장 후 던전 서버 프로세스는 파괴 (Stateless 인스턴스)
+	GetWorld()->ServerTravel(TEXT("/Game/Maps/Town"));
+}
+
 void AD1PlayerController::ClientShowLoadingScreen_Implementation(const FText& LoadingText)
 {
 	// TODO: 로딩 위젯 표시 (Phase 2에서 WBP_Loading 구현)

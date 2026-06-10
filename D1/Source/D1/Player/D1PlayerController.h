@@ -69,6 +69,10 @@ public:
 	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
 	void Server_StartDungeon();
 
+	/** 던전 클리어 후 마을 복귀 (WBP_DungeonResult의 Return to Town 버튼에서 호출) */
+	UFUNCTION(Server, Reliable, BlueprintCallable, Category = "D1|Party")
+	void Server_ReturnToTown();
+
 protected:
 	virtual void BeginPlay() override;
 

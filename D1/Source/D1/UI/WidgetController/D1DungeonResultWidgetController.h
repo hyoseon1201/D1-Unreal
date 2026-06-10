@@ -25,6 +25,10 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Dungeon Result")
 	void SetAcquiredItems(const TArray<FText>& InItems);
 
+	/** 마을 복귀 (WBP_DungeonResult의 Return to Town 버튼에서 호출 → Server RPC 위임) */
+	UFUNCTION(BlueprintCallable, Category = "Dungeon Result")
+	void ReturnToTown();
+
 	/** 획득 아이템 목록이 변경될 때 Blueprint에 알림 */
 	UPROPERTY(BlueprintAssignable, Category = "Dungeon Result")
 	FOnAcquiredItemsChanged OnAcquiredItemsChanged;
