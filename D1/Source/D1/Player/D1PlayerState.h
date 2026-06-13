@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
+#include "AbilitySystem/Data/D1AbilityInfo.h"
 #include "D1PlayerState.generated.h"
 
 class UAbilitySystemComponent;
@@ -74,10 +75,14 @@ public:
 
 	/**
 	 * GameInstance에 저장된 Travel 데이터가 있으면 복원.
-	 * PossessedBy보다 먼저 호출되어야 bAbilitySystemInitialized 등이 올바르게 복원됨.
+	 * 어빌리티 상태는 PendingAbilityRestoreData에 저장되며,
+	 * PossessedBy에서 AddCharacterAbilities + UpdateAbilityStatuses 완료 후 RestoreAbilityStates로 적용됨.
 	 */
 	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
 	bool RestoreTravelDataIfNeeded();
+
+	/** PossessedBy에서 UpdateAbilityStatuses 완료 후 적용할 어빌리티 상태 (서버 전용 임시 필드) */
+	TArray<FD1SavedAbilityInfo> PendingAbilityRestoreData;
 
 protected:
 

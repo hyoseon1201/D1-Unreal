@@ -6,6 +6,7 @@
 #include "Player/D1PlayerController.h"
 #include "Player/D1PlayerState.h"
 #include "GameFramework/PlayerState.h"
+#include "Engine/World.h"
 
 AD1GameModeTown::AD1GameModeTown()
 {
@@ -66,15 +67,25 @@ void AD1GameModeTown::StartDungeonForParty(AD1PlayerController* LeaderPC)
 	UE_LOG(LogD1Party, Log, TEXT("StartDungeon: PartyId=%d, Leader=%s, Members=%d, Dungeon=%s"),
 		Party->PartyId, *LeaderName, Party->Members.Num(), *TargetDungeon);
 
-	// MVP: 단일 서버이므로 ServerTravel로 접속자 전원을 함께 이동시킨다.
-	// (주의) 파티원만 골라서 이동시키는 것은 단일 서버에서 불가능 — 마을에 남은 다른 파티도 함께 끌려감.
-	//
-	// Phase 3 (웹서버 연동 시) 교체 예정:
-	//   1. 웹서버에 던전 인스턴스 생성 요청 → 별도 데디서버 프로세스 기동 (IP:Port 발급)
-	//   2. 파티원 각각의 캐릭터 데이터를 웹서버/DB에 저장 (크로스 프로세스라 GameInstance 사용 불가)
-	//   3. 파티원에게만 ClientTravel("IP:Port")로 새 던전 서버에 직접 접속시킴
-	//      (ClientTravel에 맵 이름을 주면 로컬 오프라인 월드가 열리지만, 주소를 주면 해당 서버 접속이므로 정상)
-	GetWorld()->ServerTravel(TargetDungeon);
+	// ServerTravel 전에 모든 플레이어 데이터를 저장 (PlayerState가 아직 유효한 시점)
+	UWorld* World = GetWorld();
+	for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+	{
+		if (AD1PlayerController* PC = Cast<AD1PlayerController>(It->Get()))
+		{
+			PC->SaveTravelDataToGameInstance();
+		}
+	}
+
+	// 짧은 맵 이름이면 전체 경로로 변환 (패키징 빌드에서 짧은 이름은 찾지 못함)
+	FString TravelURL = TargetDungeon;
+	if (!TravelURL.StartsWith(TEXT("/")))
+	{
+		TravelURL = FString::Printf(TEXT("/Game/Maps/%s"), *TargetDungeon);
+	}
+
+	UE_LOG(LogD1Party, Log, TEXT("StartDungeon: ServerTravel → %s"), *TravelURL);
+	World->ServerTravel(TravelURL);
 }
 
 void AD1GameModeTown::ShowLoadingForPartyMembers(const TArray<FString>& MemberNames)

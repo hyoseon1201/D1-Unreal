@@ -9,6 +9,8 @@
 #include "AbilitySystemInterface.h"
 #include "AbilitySystemComponent.h"
 #include "GameplayEffect.h"
+#include "AbilitySystem/D1AbilitySystemLibrary.h"
+#include "AbilitySystem/D1AttributeSet.h"
 
 UD1InventoryComponent::UD1InventoryComponent()
 {
@@ -324,6 +326,15 @@ void UD1InventoryComponent::EquipItemInternal(int32 InventorySlotIndex)
 		{
 			FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
 			EquippedEffectHandles.Add(TargetSlot, ActiveHandle);
+
+			// 진단: GE 적용 직후 (RecalcSecondary 전) AttackPower
+			float DBG_AP_AfterGE = -1.f;
+			if (const UD1AttributeSet* AS = Cast<UD1AttributeSet>(ASC->GetAttributeSet(UD1AttributeSet::StaticClass())))
+				DBG_AP_AfterGE = AS->GetAttackPower();
+			UE_LOG(LogD1Inventory, Warning, TEXT("EquipItem: GE applied (Handle valid=%d, GE Instant=%d). AttackPower=%.0f"),
+				ActiveHandle.IsValid(),
+				!ActiveHandle.IsValid(),  // Instant GE는 소비되어 Handle이 Invalid
+				DBG_AP_AfterGE);
 		}
 		else
 		{
@@ -344,6 +355,13 @@ void UD1InventoryComponent::EquipItemInternal(int32 InventorySlotIndex)
 
 	/** 인벤토리에서 제거 */
 	RemoveItem(InventorySlotIndex, 1);
+
+	{
+		float DBG_AP = -1.f;
+		if (const UD1AttributeSet* AS = Cast<UD1AttributeSet>(ASC->GetAttributeSet(UD1AttributeSet::StaticClass())))
+			DBG_AP = AS->GetAttackPower();
+		UE_LOG(LogD1Inventory, Warning, TEXT("EquipItem: %s equipped. AttackPower=%.0f"), *EquippedItem.Item.ItemID.ToString(), DBG_AP);
+	}
 
 	UE_LOG(LogD1Inventory, Verbose, TEXT("EquipItem: %s equipped on slot %d. Total equipped=%d"),
 		*EquippedItem.Item.ItemID.ToString(), (int32)TargetSlot, EquippedItems.Num());
@@ -372,10 +390,11 @@ void UD1InventoryComponent::UnequipItemInternal(EEquipmentSlot Slot)
 	}
 
 	/** ASC 획득 및 GE 제거 */
+	UAbilitySystemComponent* ASC = nullptr;
 	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(Owner);
 	if (ASCInterface)
 	{
-		UAbilitySystemComponent* ASC = ASCInterface->GetAbilitySystemComponent();
+		ASC = ASCInterface->GetAbilitySystemComponent();
 		if (ASC && EquippedEffectHandles.Contains(Slot))
 		{
 			ASC->RemoveActiveGameplayEffect(EquippedEffectHandles[Slot]);
@@ -406,6 +425,66 @@ void UD1InventoryComponent::UnequipItemInternal(EEquipmentSlot Slot)
 
 	UE_LOG(LogD1Inventory, Verbose, TEXT("UnequipItem: slot %d unequipped. Total equipped=%d"), (int32)Slot, EquippedItems.Num());
 
+	OnEquippedItemsChanged.Broadcast();
+}
+
+
+void UD1InventoryComponent::RestoreFromSave(const TArray<FD1InventoryItem>& InInventorySlots, const TArray<FD1EquippedItem>& InEquippedItems)
+{
+	AActor* Owner = GetOwner();
+	if (!Owner || !Owner->HasAuthority())
+	{
+		return;
+	}
+
+	// 인벤토리 슬롯 복원 (슬롯 수 불일치 대비)
+	InventorySlots.SetNum(MaxSlots);
+	for (int32 i = 0; i < MaxSlots; ++i)
+	{
+		InventorySlots[i] = (i < InInventorySlots.Num()) ? InInventorySlots[i] : FD1InventoryItem{};
+		InventorySlots[i].SlotIndex = i;
+	}
+
+	// 장착 목록 복원
+	EquippedItems = InEquippedItems;
+	EquippedEffectHandles.Empty();
+
+	// 장착 GE 재적용
+	IAbilitySystemInterface* ASCInterface = Cast<IAbilitySystemInterface>(Owner);
+	if (!ASCInterface)
+	{
+		UE_LOG(LogD1Inventory, Warning, TEXT("RestoreFromSave: Owner has no ASC interface"));
+	}
+	else if (UAbilitySystemComponent* ASC = ASCInterface->GetAbilitySystemComponent())
+	{
+		AD1GameStateBase* D1GS = Cast<AD1GameStateBase>(GetWorld()->GetGameState());
+		if (D1GS && D1GS->ItemRegistry)
+		{
+			for (const FD1EquippedItem& EquippedItem : EquippedItems)
+			{
+				UD1ItemData* ItemData = D1GS->ItemRegistry->FindItemData(EquippedItem.Item.ItemID);
+				if (!ItemData || !ItemData->EquipEffect)
+				{
+					continue;
+				}
+
+				FGameplayEffectContextHandle EffectContext = ASC->MakeEffectContext();
+				EffectContext.AddSourceObject(Owner);
+				FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(ItemData->EquipEffect, 1.0f, EffectContext);
+				if (SpecHandle.IsValid())
+				{
+					FActiveGameplayEffectHandle ActiveHandle = ASC->ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+					EquippedEffectHandles.Add(EquippedItem.EquipmentSlot, ActiveHandle);
+					UE_LOG(LogD1Inventory, Log, TEXT("RestoreFromSave: Re-applied GE for %s (Handle valid=%d)"),
+						*EquippedItem.Item.ItemID.ToString(), ActiveHandle.IsValid());
+				}
+			}
+		}
+	}
+
+	UE_LOG(LogD1Inventory, Log, TEXT("RestoreFromSave: Inventory=%d, Equipped=%d"), InventorySlots.Num(), EquippedItems.Num());
+
+	OnInventoryChanged.Broadcast();
 	OnEquippedItemsChanged.Broadcast();
 }
 

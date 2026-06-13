@@ -64,13 +64,21 @@
 | 10 | 던전 전투 루프 (몬스터/보스/클리어) | 🔄 진행중 |
 | 11 | 마을 파티 시스템 (생성/참가/던전 입장) | 🔄 진행중 — **현재 작업** |
 
-### 다음 단계 (우선순위 순)
-1. `WBP_PartyListItem` 더블클릭 가입 → 디스패처 버블업 → `JoinParty` (진행중)
-2. 파티장 던전 입장 버튼 → `StartDungeon` → 파티원 전원 Travel 확인
-3. 멀티플레이어 파티 전체 흐름 테스트 (생성→가입→입장)
-4. Windows Dedicated Server 빌드 (조기 빌드로 문제 일찍 발견)
-5. DB 설계 + Spring Boot 웹서버 (로그인→캐릭터→접속 흐름, 만들면서 EC2 즉시 배포)
-6. 데디서버 2개(Town/Dungeon) 크로스 서버 이동 — **GameInstance 방식은 프로세스 간 데이터 공유 불가, 웹서버/DB 핸드오프 필수**
+### Phase 3 확정 일정 (2026-06-10 기준, 목표 6/30)
+
+| 기간 | 마일스톤 |
+|------|---------|
+| ~6/12 | **언리얼 마무리**: 맵 리네임(GoblinCave)+AllowedDungeonMaps 갱신, 파티 풀 루프 2인 테스트 (생성→가입→던전→보스→결과창→마을 복귀), Windows 데디서버 빌드 (Server Target 추가) |
+| ~6/16 | DB 스키마 (계정/캐릭터/스탯/인벤토리) + Spring Boot 셋업 + 로그인/JWT + **EC2 첫 배포** (기능 단위 즉시 배포 원칙) |
+| ~6/21 | 캐릭터/스탯/인벤토리 저장·로드 API + UE HTTP 연동 (로그인 UI, verify-session) — ⚠️ **최대 리스크 구간**, 밀리면 플랜 B |
+| ~6/26 | 크로스 서버 이동: EC2 한 대에 Town/Dungeon 프로세스 2개 **고정 기동**, GameInstance → DB 핸드오프 교체 |
+| ~6/30 | 통합 테스트 + 버그픽스 + 데모 영상 촬영 |
+
+**Scope 컷 (20일 일정 성립 조건):**
+- 🔪 **ECS/Docker 동적 오케스트레이션 → Phase 4 이월.** MVP는 고정 프로세스 2개(Town:7777, Dungeon:7778), 웹서버는 주소만 내려줌. 설계 문서는 보유 → 면접 어필용
+- 🔪 캐릭터 생성 화면 최소화 (커스터마이징 없이 계정당 1캐릭터 자동 생성)
+- **플랜 B** (6/21 마일스톤 지연 시): 크로스 서버 포기, 단일 서버 유지 + DB 영속화(재로그인 시 데이터 유지)까지만
+- **지켜야 할 척추**: 로그인(JWT) → DB 로드 → Town 접속 → 파티 → Dungeon 크로스 이동(DB 핸드오프) → 클리어 → 복귀 → 재로그인 시 데이터 유지
 
 ---
 
@@ -190,4 +198,5 @@ WBP_DungeonEntry (Full Screen, CreateWidget+AddToViewport, 닫기는 RemoveFromP
 | 06-09~10 | 파티 구조체 확장 (PartyName/MaxMembers/PlayerLevel), DungeonPartyWidgetController, UI 아키텍처 설계, 포탈 Overlap 버그 수정 |
 | 06-10 | 파티 UI BP 구현: PartyInfo 4슬롯 (Switch on Int), PartyList 필터링 (로컬 배열 — 순회 중 Add 무한루프 수정), GetMyParty/CachedParties 역할 분리, 더블클릭 가입 설계 |
 | 06-10 (코드 품질) | 코드베이스 리뷰 후 우선순위 3건 개선. ① null 크래시 수정: `D1AttributeSet.cpp`의 `ShowFloatingText`/`PostGameplayEffectExecute`(IncomingXP)/`SendXPEvent`에서 `Props.SourceCharacter` IsValid 가드 (컨트롤러 없는 가해자 시 크래시). `D1Hero.cpp`의 `GetAttributePointsReward`/`GetSkillPointsReward`에 `LevelupInformation.IsValidIndex` 가드 (범위 초과 시 보상 0), `FindLevelForXP`에 LevelUpInfo null 가드. ② 로그 정리: 전용 카테고리 6종 신설 (`D1.h`), UE_LOG 189→90개, LogTemp 0건. 입력/타격마다 찍히던 스팸 로그 삭제, 정상 흐름은 Verbose, 실패만 Warning/Error. ③ 서버 검증: `AllowedDungeonMaps` 화이트리스트 + `IsAllowedDungeonMap()`, `ServerCreateParty`/`ServerSelectDungeon` 검증, PartyName 30자 제한. 리뷰에서 발견된 미해결 항목: 인벤토리 스택 미구현 (MaxStack 무시), `DynamicAbilityTags` deprecation 6건 (차기 엔진에서 컴파일 에러 예정, `GetDynamicSpecSourceTags()`로 교체 필요), `Die()` 베이스 HasAuthority 가드 부재. |
+| 06-10 (전략) | Phase 3 일정 확정 (~6/30, ECS 컷). 포트폴리오 전략 문서 작성: `Docs/PortfolioStrategy_2026-06-10.md` — 어필 포인트 5종(상태 동기화 진화, 서버 권위, 식별자 추상화, GAS, 풀스택), 학습 우선순위(①부하테스트+수치화 ②FastArraySerializer ③ECS), README "문제→접근→결과" 구조 권장. 면접 대비 문서: `Docs/InterviewPrep_StateSync_2026-06-10.md` — 상태 동기화 스토리 타임라인 5단계 + 예상 질문 8개/모범 답변 + 심화 키워드 |
 | 06-10 (PlayerId 전환) | 파티 식별자를 PlayerName → PlayerId로 전환. `AD1PlayerState::GetPartyPlayerId()` 추상화 신설 (현재 UniqueNetId 문자열, OSS 없으면 PlayerName 폴백, Phase 3에서 웹서버 캐릭터 ID로 이 함수만 교체). `FD1PartyMemberInfo.PlayerId` / `FD1PartyInfo.LeaderId` 필드 추가 (Name 필드는 표시 전용 유지). `HasMember`/`IsLeader`/`FindPartyByPlayerId`/Server 함수 시그니처(`ServerCreateParty`에 LeaderId, `ServerJoinParty`에 PlayerId 등) ID 기준 전환. `StartDungeonForParty` 멤버 룩업, WidgetController `GetLocalPlayerId()` 전환. UI BP는 PlayerName 표시 그대로라 수정 불필요. |

@@ -3,66 +3,34 @@
 #include "Game/D1GameInstance.h"
 #include "D1/D1.h"
 
-void UD1GameInstance::SavePlayerStateData(
-	int32 InAttributePoints, int32 InLevel, int32 InXP,
-	float InStrength, float InIntelligence,
-	float InDexterity, float InLuck)
+void UD1GameInstance::SavePlayerData(const FString& PlayerId, const FD1SavedPlayerData& Data)
 {
-	SavedAttributePoints = InAttributePoints;
-	SavedLevel = InLevel;
-	SavedXP = InXP;
-	SavedStrength = InStrength;
-	SavedIntelligence = InIntelligence;
-	SavedDexterity = InDexterity;
-	SavedLuck = InLuck;
-	bHasSavedData = true;
+	SavedPlayers.Add(PlayerId, Data);
 
-	UE_LOG(LogD1Travel, Verbose, TEXT("GameInstance Save. AttrPts=%d, Level=%d, XP=%d, Str=%.1f, Int=%.1f, Dex=%.1f, Luc=%.1f"),
-		SavedAttributePoints, SavedLevel, SavedXP,
-		SavedStrength, SavedIntelligence, SavedDexterity, SavedLuck);
+	UE_LOG(LogD1Travel, Warning,
+		TEXT("GameInstance::SavePlayerData [%s]: Level=%d, AttrPts=%d, SkillPts=%d, Str=%.1f, Inventory=%d, Equipped=%d, Abilities=%d"),
+		*PlayerId, Data.Level, Data.AttributePoints, Data.SkillPoints, Data.Strength,
+		Data.InventorySlots.Num(), Data.EquippedItems.Num(), Data.AbilityStates.Num());
 }
 
-void UD1GameInstance::RestorePlayerStateData(
-	int32& OutAttributePoints, int32& OutLevel, int32& OutXP,
-	float& OutStrength, float& OutIntelligence,
-	float& OutDexterity, float& OutLuck) const
+bool UD1GameInstance::TryGetPlayerData(const FString& PlayerId, FD1SavedPlayerData& OutData) const
 {
-	if (bHasSavedData)
+	if (const FD1SavedPlayerData* Found = SavedPlayers.Find(PlayerId))
 	{
-		OutAttributePoints = SavedAttributePoints;
-		OutLevel = SavedLevel;
-		OutXP = SavedXP;
-		OutStrength = SavedStrength;
-		OutIntelligence = SavedIntelligence;
-		OutDexterity = SavedDexterity;
-		OutLuck = SavedLuck;
-
-		UE_LOG(LogD1Travel, Verbose, TEXT("GameInstance Restore. AttrPts=%d, Level=%d, XP=%d, Str=%.1f, Int=%.1f, Dex=%.1f, Luc=%.1f"),
-			OutAttributePoints, OutLevel, OutXP,
-			OutStrength, OutIntelligence, OutDexterity, OutLuck);
+		OutData = *Found;
+		return true;
 	}
-	else
-	{
-		OutAttributePoints = -1;
-		OutLevel = -1;
-		OutXP = -1;
-		OutStrength = -1.f;
-		OutIntelligence = -1.f;
-		OutDexterity = -1.f;
-		OutLuck = -1.f;
-
-		UE_LOG(LogD1Travel, Verbose, TEXT("GameInstance Restore skipped. No saved data."));
-	}
+	return false;
 }
 
-void UD1GameInstance::ClearSavedData()
+void UD1GameInstance::ClearPlayerData(const FString& PlayerId)
 {
-	bHasSavedData = false;
-	SavedAttributePoints = -1;
-	SavedLevel = -1;
-	SavedXP = -1;
-	SavedStrength = -1.f;
-	SavedIntelligence = -1.f;
-	SavedDexterity = -1.f;
-	SavedLuck = -1.f;
+	SavedPlayers.Remove(PlayerId);
+	UE_LOG(LogD1Travel, Warning, TEXT("GameInstance::ClearPlayerData [%s]"), *PlayerId);
+}
+
+void UD1GameInstance::ClearAllSavedData()
+{
+	SavedPlayers.Empty();
+	UE_LOG(LogD1Travel, Warning, TEXT("GameInstance::ClearAllSavedData"));
 }

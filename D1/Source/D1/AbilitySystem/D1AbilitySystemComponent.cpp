@@ -10,6 +10,8 @@
 #include "AbilitySystem/D1AbilitySystemLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Data/D1AbilityInfo.h"
+#include "Inventory/D1InventoryComponent.h"
+#include "AbilitySystem/D1AttributeSet.h"
 
 void UD1AbilitySystemComponent::AbilityActorInfoSet()
 {
@@ -408,11 +410,92 @@ void UD1AbilitySystemComponent::ServerUpgradeAttribute_Implementation(const FGam
 	{
 		IPlayerInterface::Execute_AddToAttributePoints(GetAvatarActor(), -1);
 	}
+}
 
-	// Primary Attribute 변경 후 Secondary Attribute Base Value 재계산
-	UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(GetAvatarActor(), this);
+TArray<FD1SavedAbilityInfo> UD1AbilitySystemComponent::SaveAbilityStates()
+{
+	TArray<FD1SavedAbilityInfo> Result;
 
-	UE_LOG(LogD1Ability, Verbose, TEXT("ServerUpgradeAttribute: %s upgraded."), *AttributeTag.ToString());
+	ABILITYLIST_SCOPE_LOCK();
+	for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		const FGameplayTag StatusTag = GetStatusFromSpec(Spec);
+
+		// Locked 상태는 저장 불필요 — AddCharacterAbilities + UpdateAbilityStatuses가 재생성
+		if (!StatusTag.IsValid() || StatusTag.MatchesTagExact(FD1GameplayTags::Get().Abilities_Status_Locked))
+		{
+			continue;
+		}
+
+		const FGameplayTag AbilityTag = GetAbilityTagFromSpec(Spec);
+		if (!AbilityTag.IsValid())
+		{
+			continue;
+		}
+
+		FD1SavedAbilityInfo Info;
+		Info.AbilityTag = AbilityTag;
+		Info.StatusTag  = StatusTag;
+		Info.SlotTag    = GetInputTagFromSpec(Spec);  // Equipped 아닐 경우 Invalid
+		Info.Level      = Spec.Level;
+		Result.Add(Info);
+	}
+
+	UE_LOG(LogD1Ability, Warning, TEXT("SaveAbilityStates: saved %d ability states"), Result.Num());
+	return Result;
+}
+
+void UD1AbilitySystemComponent::RestoreAbilityStates(const TArray<FD1SavedAbilityInfo>& SavedAbilities)
+{
+	if (!GetOwner()->HasAuthority() || SavedAbilities.IsEmpty())
+	{
+		return;
+	}
+
+	const FD1GameplayTags& Tags = FD1GameplayTags::Get();
+	ABILITYLIST_SCOPE_LOCK();
+
+	for (const FD1SavedAbilityInfo& Saved : SavedAbilities)
+	{
+		if (!Saved.AbilityTag.IsValid()) continue;
+
+		FGameplayAbilitySpec* Spec = GetSpecFromAbilityTag(Saved.AbilityTag);
+		if (!Spec)
+		{
+			UE_LOG(LogD1Ability, Warning, TEXT("RestoreAbilityStates: Spec not found for %s"), *Saved.AbilityTag.ToString());
+			continue;
+		}
+
+		// 1. 어빌리티 레벨 복원
+		Spec->Level = Saved.Level;
+
+		// 2. 상태 태그 교체 (현재 Eligible → 저장된 Unlocked/Equipped)
+		const FGameplayTag CurrentStatus = GetStatusFromSpec(*Spec);
+		if (CurrentStatus.IsValid())
+		{
+			Spec->GetDynamicSpecSourceTags().RemoveTag(CurrentStatus);
+		}
+		Spec->GetDynamicSpecSourceTags().AddTag(Saved.StatusTag);
+
+		// 3. 퀵슬롯 복원 (Equipped 상태일 때만)
+		if (Saved.StatusTag.MatchesTagExact(Tags.Abilities_Status_Equipped) && Saved.SlotTag.IsValid())
+		{
+			const FGameplayTag CurrentSlot = GetInputTagFromSpec(*Spec);
+			if (CurrentSlot.IsValid())
+			{
+				Spec->GetDynamicSpecSourceTags().RemoveTag(CurrentSlot);
+			}
+			Spec->GetDynamicSpecSourceTags().AddTag(Saved.SlotTag);
+		}
+
+		MarkAbilitySpecDirty(*Spec);
+
+		const FGameplayTag RestoredSlot = GetInputTagFromSpec(*Spec);
+		ClientUpdateAbilityStatus(Saved.AbilityTag, Saved.StatusTag, RestoredSlot, Spec->Level);
+
+		UE_LOG(LogD1Ability, Log, TEXT("RestoreAbilityStates: %s → Status=%s, Level=%d, Slot=%s"),
+			*Saved.AbilityTag.ToString(), *Saved.StatusTag.ToString(), Spec->Level, *RestoredSlot.ToString());
+	}
 }
 
 void UD1AbilitySystemComponent::OnRep_ActivateAbilities()

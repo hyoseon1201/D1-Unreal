@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
+#include "AbilitySystem/Data/D1AbilityInfo.h"
 #include "D1AbilitySystemComponent.generated.h"
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FEffectAssetTags, const FGameplayTagContainer&);
@@ -56,6 +57,12 @@ public:
 	void ClearSlot(const FGameplayTag& SlotTag);
 
 	void UpdateAbilityStatuses(int32 Level);
+
+	/** Travel 전 어빌리티 상태(레벨/잠금해제/퀵슬롯) 저장 */
+	TArray<FD1SavedAbilityInfo> SaveAbilityStates();
+
+	/** Travel 후 AddCharacterAbilities + UpdateAbilityStatuses 완료 시점에 호출 */
+	void RestoreAbilityStates(const TArray<FD1SavedAbilityInfo>& SavedAbilities);
 
 protected:
 

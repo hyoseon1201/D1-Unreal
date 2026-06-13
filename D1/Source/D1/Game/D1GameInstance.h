@@ -4,11 +4,34 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "Inventory/D1InventoryTypes.h"
+#include "AbilitySystem/Data/D1AbilityInfo.h"
 #include "D1GameInstance.generated.h"
 
+/** 플레이어 한 명의 Travel 보존 데이터 */
+USTRUCT()
+struct FD1SavedPlayerData
+{
+	GENERATED_BODY()
+
+	UPROPERTY() int32 AttributePoints = 0;
+	UPROPERTY() int32 SkillPoints     = 0;
+	UPROPERTY() int32 Level           = 1;
+	UPROPERTY() int32 XP              = 0;
+
+	UPROPERTY() float Strength        = 0.f;
+	UPROPERTY() float Intelligence    = 0.f;
+	UPROPERTY() float Dexterity       = 0.f;
+	UPROPERTY() float Luck            = 0.f;
+
+	UPROPERTY() TArray<FD1InventoryItem>    InventorySlots;
+	UPROPERTY() TArray<FD1EquippedItem>     EquippedItems;
+	UPROPERTY() TArray<FD1SavedAbilityInfo> AbilityStates;
+};
+
 /**
- * 맵 이동(ClientTravel) 시 PlayerState 데이터를 임시 저장/복원하는 GameInstance.
- * PIE 및 SeamlessTravel 미지원 환경에서도 데이터 유지를 보장.
+ * 맵 이동(ServerTravel) 시 PlayerState 데이터를 임시 저장/복원하는 GameInstance.
+ * 플레이어별 슬롯(TMap)으로 관리하므로 멀티플레이어에서도 서로 덮어쓰지 않는다.
  */
 UCLASS()
 class D1_API UD1GameInstance : public UGameInstance
@@ -16,50 +39,24 @@ class D1_API UD1GameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
-	/** 맵 이동 전 현재 PlayerState의 영속 데이터를 저장 (Ability 초기화 여부 제외) */
-	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
-	void SavePlayerStateData(
-		int32 InAttributePoints, int32 InLevel, int32 InXP,
-		float InStrength, float InIntelligence,
-		float InDexterity, float InLuck);
+	/** Travel 직전 서버 측에서 호출 — PlayerId 별로 저장 */
+	void SavePlayerData(const FString& PlayerId, const FD1SavedPlayerData& Data);
 
-	/** 맵 이동 후 새 PlayerState에 데이터를 복원 (없으면 기본값 사용) */
-	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
-	void RestorePlayerStateData(
-		int32& OutAttributePoints, int32& OutLevel, int32& OutXP,
-		float& OutStrength, float& OutIntelligence,
-		float& OutDexterity, float& OutLuck) const;
+	/** PossessedBy 에서 호출 — 저장된 데이터가 있으면 OutData에 복사하고 true 반환 */
+	bool TryGetPlayerData(const FString& PlayerId, FD1SavedPlayerData& OutData) const;
 
-	/** 저장된 데이터를 초기화 (선택: 로그아웃 시) */
-	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
-	void ClearSavedData();
+	/** 복원 완료 후 슬롯 해제 */
+	void ClearPlayerData(const FString& PlayerId);
 
-	/** 저장된 데이터가 있는지 여부 */
-	UFUNCTION(BlueprintPure, Category = "D1|Travel")
-	bool HasSavedData() const { return bHasSavedData; }
+	/** 전체 초기화 (레벨 언로드 등 예외 상황용) */
+	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
+	void ClearAllSavedData();
+
+	/** 특정 플레이어의 저장 데이터 유무 */
+	bool HasSavedData(const FString& PlayerId) const { return SavedPlayers.Contains(PlayerId); }
 
 private:
+	/** Key = PartyPlayerId (UniqueNetId 문자열 or PlayerName) */
 	UPROPERTY()
-	int32 SavedAttributePoints = -1;
-
-	UPROPERTY()
-	int32 SavedLevel = -1;
-
-	UPROPERTY()
-	int32 SavedXP = -1;
-
-	UPROPERTY()
-	float SavedStrength = -1.f;
-
-	UPROPERTY()
-	float SavedIntelligence = -1.f;
-
-	UPROPERTY()
-	float SavedDexterity = -1.f;
-
-	UPROPERTY()
-	float SavedLuck = -1.f;
-
-	UPROPERTY()
-	bool bHasSavedData = false;
+	TMap<FString, FD1SavedPlayerData> SavedPlayers;
 };

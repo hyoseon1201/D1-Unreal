@@ -10,6 +10,7 @@
 #include "AbilitySystemBlueprintLibrary.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "AbilitySystem/D1AttributeSet.h"
+#include "AbilitySystem/Data/D1AbilityInfo.h"
 #include "D1GameplayTags.h"
 #include "Interaction/HighlightInterface.h"
 #include "NavigationSystem.h"
@@ -25,6 +26,7 @@
 #include "Game/D1GameStateTown.h"
 #include "Player/D1PlayerState.h"
 #include "Interaction/CombatInterface.h"
+#include "Inventory/D1InventoryComponent.h"
 
 AD1PlayerController::AD1PlayerController()
 {
@@ -269,40 +271,74 @@ void AD1PlayerController::UnHighlightActor(AActor* InActor)
 	}
 }
 
+void AD1PlayerController::SaveTravelDataToGameInstance()
+{
+	UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance());
+	if (!GI)
+	{
+		UE_LOG(LogD1Travel, Error, TEXT("SaveTravelData: GameInstance is NOT UD1GameInstance! Class=%s"),
+			*GetNameSafe(GetGameInstance()));
+		return;
+	}
+
+	AD1PlayerState* PS = GetPlayerState<AD1PlayerState>();
+	if (!PS)
+	{
+		UE_LOG(LogD1Travel, Error, TEXT("SaveTravelData: PlayerState is NULL!"));
+		return;
+	}
+
+	const UD1AttributeSet* AS = Cast<UD1AttributeSet>(PS->GetAttributeSet());
+	if (!AS)
+	{
+		UE_LOG(LogD1Travel, Error, TEXT("SaveTravelData: AttributeSet is NULL!"));
+		return;
+	}
+
+	TArray<FD1InventoryItem> InventorySlots;
+	TArray<FD1EquippedItem> EquippedItems;
+	if (UD1InventoryComponent* IC = PS->GetInventoryComponent())
+	{
+		InventorySlots = IC->GetInventorySlots();
+		EquippedItems = IC->GetEquippedItems();
+	}
+
+	TArray<FD1SavedAbilityInfo> AbilityStates;
+	if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+	{
+		AbilityStates = D1ASC->SaveAbilityStates();
+	}
+
+	FD1SavedPlayerData Data;
+	Data.AttributePoints = PS->GetAttributePoints();
+	Data.SkillPoints     = PS->GetSkillPoints();
+	Data.Level           = PS->GetPlayerLevel();
+	Data.XP              = PS->GetXP();
+	Data.Strength        = AS->GetStrength();
+	Data.Intelligence    = AS->GetIntelligence();
+	Data.Dexterity       = AS->GetDexterity();
+	Data.Luck            = AS->GetLuck();
+	Data.InventorySlots  = InventorySlots;
+	Data.EquippedItems   = EquippedItems;
+	Data.AbilityStates   = AbilityStates;
+
+	const FString PlayerId = PS->GetPartyPlayerId();
+	GI->SavePlayerData(PlayerId, Data);
+
+	UE_LOG(LogD1Travel, Warning, TEXT("SaveTravelData [%s]: AttrPts=%d, SkillPts=%d, Level=%d, Str=%.1f, Abilities=%d"),
+		*PlayerId, Data.AttributePoints, Data.SkillPoints, Data.Level, Data.Strength, AbilityStates.Num());
+}
+
 void AD1PlayerController::PreClientTravel(const FString& PendingURL, ETravelType TravelType, bool bIsSeamlessTravel)
 {
 	Super::PreClientTravel(PendingURL, TravelType, bIsSeamlessTravel);
 
-	UE_LOG(LogD1Travel, Verbose, TEXT("PreClientTravel. URL=%s, Type=%d, Seamless=%s"),
-		*PendingURL, (int32)TravelType, bIsSeamlessTravel ? TEXT("TRUE") : TEXT("FALSE"));
+	UE_LOG(LogD1Travel, Warning, TEXT("PreClientTravel: URL=%s, Type=%d — saving travel data as backup"),
+		*PendingURL, (int32)TravelType);
 
-	// ClientTravel 직전 PlayerState + Primary Attribute 데이터를 GameInstance에 저장
-	if (UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance()))
-	{
-		if (AD1PlayerState* PS = GetPlayerState<AD1PlayerState>())
-		{
-			if (const UD1AttributeSet* AS = Cast<UD1AttributeSet>(PS->GetAttributeSet()))
-			{
-				GI->SavePlayerStateData(
-					PS->GetAttributePoints(), PS->GetPlayerLevel(), PS->GetXP(),
-					AS->GetStrength(), AS->GetIntelligence(),
-					AS->GetDexterity(), AS->GetLuck());
-			}
-			else
-			{
-				UE_LOG(LogD1Travel, Error, TEXT("PreClientTravel: AttributeSet is NULL!"));
-			}
-		}
-		else
-		{
-			UE_LOG(LogD1Travel, Error, TEXT("PreClientTravel: PlayerState is NULL!"));
-		}
-	}
-	else
-	{
-		UE_LOG(LogD1Travel, Error, TEXT("PreClientTravel: GameInstance is NOT UD1GameInstance! GetGameInstance()=%s"),
-			*GetNameSafe(GetGameInstance()));
-	}
+	// 서버 측에서 이미 SaveTravelDataToGameInstance()를 호출했지만, 혹시 누락된 경우를 위한 보험
+	// (이미 저장된 상태라면 덮어쓰기는 무해함)
+	SaveTravelDataToGameInstance();
 }
 
 void AD1PlayerController::TravelToMap(const FString& MapName)
@@ -527,15 +563,19 @@ void AD1PlayerController::Server_StartDungeon_Implementation()
 
 void AD1PlayerController::Server_ReturnToTown_Implementation()
 {
-	// MVP: 단일 서버이므로 ServerTravel로 접속자 전원을 마을로 함께 이동시킨다.
-	// (주의) ClientTravel(맵 이름)을 쓰면 서버 연결이 끊기고 각자 로컬 오프라인 월드가 열려 플레이어가 분리됨.
-	// 마을 복귀 시 GameStateTown이 새로 생성되므로 파티는 자동 해산됨 (Parties 빈 배열로 시작).
-	//
-	// Phase 3 (웹서버 연동 시) 교체 예정:
-	//   1. 던전 서버가 각 플레이어의 캐릭터 데이터를 웹서버/DB에 저장
-	//   2. 플레이어에게 마을 서버 주소를 내려주고 ClientTravel("IP:Port")로 마을 데디서버에 직접 접속시킴
-	//   3. 전원 퇴장 후 던전 서버 프로세스는 파괴 (Stateless 인스턴스)
-	GetWorld()->ServerTravel(TEXT("/Game/Maps/Town"));
+	// ServerTravel 전에 서버 측에서 데이터를 저장 (PlayerState가 아직 유효한 시점)
+	// 전원이 ServerTravel로 함께 이동하므로 모든 PlayerController의 데이터를 저장
+	if (UWorld* World = GetWorld())
+	{
+		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+		{
+			if (AD1PlayerController* PC = Cast<AD1PlayerController>(It->Get()))
+			{
+				PC->SaveTravelDataToGameInstance();
+			}
+		}
+		World->ServerTravel(TEXT("/Game/Maps/Town"));
+	}
 }
 
 void AD1PlayerController::ClientShowLoadingScreen_Implementation(const FText& LoadingText)

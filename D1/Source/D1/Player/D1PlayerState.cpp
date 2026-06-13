@@ -111,87 +111,79 @@ void AD1PlayerState::OnRep_SkillPoints(int32 OldSkillPoints)
 
 bool AD1PlayerState::RestoreTravelDataIfNeeded()
 {
-	if (UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance()))
-	{
-		if (!GI->HasSavedData())
-		{
-			return false;
-		}
-
-		int32 SavedAttrPts = -1, SavedLvl = -1, SavedXPVal = -1;
-		float SavedStr = -1.f, SavedInt = -1.f, SavedDex = -1.f, SavedLuc = -1.f;
-
-		GI->RestorePlayerStateData(
-			SavedAttrPts, SavedLvl, SavedXPVal,
-			SavedStr, SavedInt, SavedDex, SavedLuc);
-
-		if (SavedAttrPts < 0)
-		{
-			UE_LOG(LogD1Travel, Warning, TEXT("RestoreTravelDataIfNeeded: Invalid saved data"));
-			return false;
-		}
-
-		// ★ bAbilitySystemInitialized는 복원하지 않음
-		// 맵 이동 시 Ability 재등록을 위해 false로 유지
-
-		// 복원 전 현재 값 저장 (변경 여부 비교용)
-		const int32 OldAttributePointsBeforeRestore = AttributePoints;
-		const int32 OldLevelBeforeRestore = Level;
-		const int32 OldXPBeforeRestore = XP;
-
-		// 1. 스칼라 값 복원
-		AttributePoints = SavedAttrPts;
-		Level = SavedLvl;
-		XP = SavedXPVal;
-
-		// 2. Primary Attribute 복원
-		if (UD1AttributeSet* AS = Cast<UD1AttributeSet>(AttributeSet))
-		{
-			AS->SetStrength(SavedStr);
-			AS->SetIntelligence(SavedInt);
-			AS->SetDexterity(SavedDex);
-			AS->SetLuck(SavedLuc);
-		}
-
-		// 3. 값이 실제로 변경되었을 때만 OnRep 호출 (맵 이동 시 레벨업 이펙트 중복 방지)
-		if (AttributePoints != OldAttributePointsBeforeRestore)
-		{
-			OnRep_AttributePoints(AttributePoints);
-		}
-		if (Level != OldLevelBeforeRestore)
-		{
-			OnRep_Level(Level);
-		}
-		if (XP != OldXPBeforeRestore)
-		{
-			OnRep_XP(XP);
-		}
-
-		UE_LOG(LogD1Travel, Verbose, TEXT("RestoreTravelDataIfNeeded: restored. AttrPts=%d, Level=%d, XP=%d"),
-			AttributePoints, Level, XP);
-
-		// 한 번 복원 후 저장 데이터 초기화
-		GI->ClearSavedData();
-		return true;
-	}
-	else
+	UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance());
+	if (!GI)
 	{
 		UE_LOG(LogD1Travel, Error, TEXT("RestoreTravelDataIfNeeded: GameInstance is NOT UD1GameInstance! Class=%s"),
 			*GetNameSafe(GetGameInstance()));
 		return false;
 	}
+
+	const FString PartyId = GetPartyPlayerId();
+	if (!GI->HasSavedData(PartyId))
+	{
+		UE_LOG(LogD1Travel, Warning, TEXT("RestoreTravelDataIfNeeded [%s]: No saved data — skipping restore"), *PartyId);
+		return false;
+	}
+
+	FD1SavedPlayerData Data;
+	if (!GI->TryGetPlayerData(PartyId, Data))
+	{
+		UE_LOG(LogD1Travel, Warning, TEXT("RestoreTravelDataIfNeeded [%s]: TryGetPlayerData failed"), *PartyId);
+		return false;
+	}
+
+	// 1. 스칼라 값 복원
+	const int32 OldAttrPts = AttributePoints, OldLvl = Level, OldXP = XP;
+	const int32 OldSkillPts = SkillPoints;
+	AttributePoints = Data.AttributePoints;
+	SkillPoints     = Data.SkillPoints;
+	Level           = Data.Level;
+	XP              = Data.XP;
+
+	// 2. Primary Attribute 복원
+	if (UD1AttributeSet* AS = Cast<UD1AttributeSet>(AttributeSet))
+	{
+		AS->SetStrength(Data.Strength);
+		AS->SetIntelligence(Data.Intelligence);
+		AS->SetDexterity(Data.Dexterity);
+		AS->SetLuck(Data.Luck);
+	}
+
+	// 3. 인벤토리 복원
+	if (InventoryComponent)
+	{
+		InventoryComponent->RestoreFromSave(Data.InventorySlots, Data.EquippedItems);
+	}
+
+	// 4. 어빌리티 상태는 PossessedBy의 UpdateAbilityStatuses 완료 후에 적용 (임시 보관)
+	PendingAbilityRestoreData = Data.AbilityStates;
+
+	// 5. 변경된 값만 OnRep 호출
+	if (AttributePoints != OldAttrPts) OnRep_AttributePoints(AttributePoints);
+	if (SkillPoints     != OldSkillPts) OnRep_SkillPoints(SkillPoints);
+	if (Level           != OldLvl)     OnRep_Level(Level);
+	if (XP              != OldXP)      OnRep_XP(XP);
+
+	UE_LOG(LogD1Travel, Warning, TEXT("RestoreTravelDataIfNeeded [%s]: RESTORED AttrPts=%d, Level=%d, Str=%.1f, Inventory=%d, Equipped=%d, Abilities=%d"),
+		*PartyId, AttributePoints, Level, Data.Strength, Data.InventorySlots.Num(), Data.EquippedItems.Num(), Data.AbilityStates.Num());
+
+	GI->ClearPlayerData(PartyId);
+	return true;
 }
 
 void AD1PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// 맵 이동(ClientTravel) 후 데이터 복원 (PossessedBy보다 늦을 수 있으므로 안전망)
-	RestoreTravelDataIfNeeded();
+	// 맵 이동(Travel) 데이터 복원은 PossessedBy에서 처리
+	// (BeginPlay는 PossessedBy보다 먼저 호출되므로 여기서 복원하면 GameInstance 데이터가 소진됨)
 
-	// 서버에서만 테스트 아이템 지급 (인벤토리 UI 테스트용)
-	// 맵 이동(ClientTravel) 후 중복 지급 방지: bAbilitySystemInitialized로 체크
-	if (HasAuthority() && InventoryComponent && !bAbilitySystemInitialized)
+	// 서버에서만 최초 입장 시 테스트 아이템 지급
+	// 조건: 어빌리티 시스템 미초기화 상태 + Travel 복원 데이터 없음
+	UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance());
+	const bool bHasTravelData = GI && GI->HasSavedData(GetPartyPlayerId());
+	if (HasAuthority() && InventoryComponent && !bAbilitySystemInitialized && !bHasTravelData)
 	{
 		InventoryComponent->AddItem(FName("Potion_Health_Small"), 5);
 		InventoryComponent->AddItem(FName("Sword_Iron"), 1);

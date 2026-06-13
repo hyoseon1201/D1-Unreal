@@ -56,8 +56,27 @@ struct FD1AbilityTagInfo
 	int32 Level = 0;
 };
 
+/** Travel 시 어빌리티 상태 저장/복원에 사용되는 경량 구조체 */
+USTRUCT()
+struct FD1SavedAbilityInfo
+{
+	GENERATED_BODY()
+
+	UPROPERTY()
+	FGameplayTag AbilityTag;
+
+	UPROPERTY()
+	FGameplayTag StatusTag;  // Eligible/Unlocked/Equipped
+
+	UPROPERTY()
+	FGameplayTag SlotTag;    // 퀵슬롯 InputTag (Equipped 상태일 때만 유효)
+
+	UPROPERTY()
+	int32 Level = 1;
+};
+
 /**
- * 
+ *
  */
 UCLASS()
 class D1_API UD1AbilityInfo : public UDataAsset

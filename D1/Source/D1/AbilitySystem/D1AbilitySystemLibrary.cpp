@@ -18,6 +18,7 @@
 #include "UI/WidgetController/D1DungeonPartyWidgetController.h"
 #include "Inventory/D1ItemRegistry.h"
 #include "AbilitySystem/D1AttributeSet.h"
+#include "Characters/D1CharacterBase.h"
 
 bool UD1AbilitySystemLibrary::MakeWidgetControllerParams(const UObject* WorldContextObject, FWidgetControllerParams& OutWCParams, AD1HUD*& OutD1HUD)
 {
@@ -113,13 +114,6 @@ void UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(const UObject* Worl
 		return;
 	}
 
-	UD1CharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
-	if (!CharacterClassInfo)
-	{
-		UE_LOG(LogD1Ability, Error, TEXT("RecalculateSecondaryAttributes: CharacterClassInfo is null!"));
-		return;
-	}
-
 	AActor* AvatarActor = ASC->GetAvatarActor();
 	int32 CurrentLevel = 1;
 	if (AvatarActor && AvatarActor->Implements<UCombatInterface>())
@@ -127,19 +121,43 @@ void UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(const UObject* Worl
 		CurrentLevel = ICombatInterface::Execute_GetPlayerLevel(AvatarActor);
 	}
 
-	// 기존 SecondaryAttributes GE를 모두 제거 (중복 적용 방지 + Base Value 강제 갱신)
+	// 캐릭터 자신의 DefaultSecondaryAttributes를 우선 사용 (플레이어: Instant GE)
+	// 없을 경우 CharacterClassInfo->SecondaryAttributes를 폴백으로 사용 (몬스터용)
+	TSubclassOf<UGameplayEffect> SecondaryGEClass = nullptr;
+	if (const AD1CharacterBase* CharBase = Cast<AD1CharacterBase>(AvatarActor))
+	{
+		SecondaryGEClass = CharBase->GetDefaultSecondaryAttributesGE();
+	}
+
+	if (!SecondaryGEClass)
+	{
+		UD1CharacterClassInfo* CharacterClassInfo = GetCharacterClassInfo(WorldContextObject);
+		if (!CharacterClassInfo || !CharacterClassInfo->SecondaryAttributes)
+		{
+			UE_LOG(LogD1Ability, Error, TEXT("RecalculateSecondaryAttributes: SecondaryAttributes GE not found on character or CharacterClassInfo!"));
+			return;
+		}
+		SecondaryGEClass = CharacterClassInfo->SecondaryAttributes;
+	}
+
+	// 기존 SecondaryAttributes GE를 모두 제거 (중복 적용 방지)
 	FGameplayEffectQuery Query;
-	Query.EffectDefinition = CharacterClassInfo->SecondaryAttributes;
+	Query.EffectDefinition = SecondaryGEClass;
 	const int32 RemovedCount = ASC->RemoveActiveEffects(Query);
 
 	FGameplayEffectContextHandle SecondaryAttributesContextHandle = ASC->MakeEffectContext();
 	SecondaryAttributesContextHandle.AddSourceObject(AvatarActor);
-	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(CharacterClassInfo->SecondaryAttributes, (float)CurrentLevel, SecondaryAttributesContextHandle);
+	const FGameplayEffectSpecHandle SecondaryAttributesSpecHandle = ASC->MakeOutgoingSpec(SecondaryGEClass, (float)CurrentLevel, SecondaryAttributesContextHandle);
 
 	if (SecondaryAttributesSpecHandle.IsValid())
 	{
 		ASC->ApplyGameplayEffectSpecToSelf(*SecondaryAttributesSpecHandle.Data.Get());
-		UE_LOG(LogD1Ability, Verbose, TEXT("RecalculateSecondaryAttributes: re-applied at Level %d (removed %d old effects)"), CurrentLevel, RemovedCount);
+
+		const float DBG_AP_Current = ASC->GetNumericAttribute(UD1AttributeSet::GetAttackPowerAttribute());
+		const float DBG_AP_Base   = ASC->GetNumericAttributeBase(UD1AttributeSet::GetAttackPowerAttribute());
+		UE_LOG(LogD1Ability, Warning,
+			TEXT("RecalculateSecondaryAttributes: Level=%d, removed=%d, AP_CurrentValue=%.0f, AP_BaseValue=%.0f"),
+			CurrentLevel, RemovedCount, DBG_AP_Current, DBG_AP_Base);
 	}
 	else
 	{
@@ -202,6 +220,11 @@ UD1AbilityInfo* UD1AbilitySystemLibrary::GetAbilityInfo(const UObject* WorldCont
 
 UD1ItemData* UD1AbilitySystemLibrary::GetItemData(const UObject* WorldContextObject, const FName& ItemID)
 {
+	if (ItemID.IsNone())
+	{
+		return nullptr;
+	}
+
 	const UWorld* World = GEngine->GetWorldFromContextObject(WorldContextObject, EGetWorldErrorMode::LogAndReturnNull);
 	if (!World)
 	{

@@ -14,6 +14,8 @@
 #include "AbilitySystem/Data/D1LevelupInfo.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "AbilitySystem/D1AbilitySystemLibrary.h"
+#include "Game/D1GameInstance.h"
 
 AD1Hero::AD1Hero()
 {
@@ -50,27 +52,36 @@ void AD1Hero::PossessedBy(AController* NewController)
 
 	if (AD1PlayerState* D1PS = GetPlayerState<AD1PlayerState>())
 	{
-		// 1. Attribute 초기화 (처음 한 번만)
-		// Primary Attribute 기본값 설정
-		if (!D1PS->bAbilitySystemInitialized)
-		{
-			InitializeDefaultAttributes();
-			D1PS->bAbilitySystemInitialized = true;
+		// 1. Attribute 초기화
+		// Travel 여부는 GameInstance 저장 데이터 유무로 판단한다.
+		// (bAbilitySystemInitialized는 PlayerState가 매번 재생성되므로 항상 false — 사용 불가)
+		const UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance());
+		const bool bIsTraveling = GI && GI->HasSavedData(D1PS->GetPartyPlayerId());
 
+		if (!bIsTraveling)
+		{
+			// 최초 스폰: Primary + Secondary + Vital 전부 초기화
+			InitializeDefaultAttributes();
 			UE_LOG(LogD1Travel, Verbose, TEXT("PossessedBy: InitializeDefaultAttributes executed. Level [%d]"), D1PS->GetPlayerLevel());
 		}
 		else
 		{
-			// Travel: Secondary + Vital만 재적용 (Primary는 아래 Restore에서 Override)
+			// Travel: Secondary + Vital만 재적용 (Primary는 RestoreTravelDataIfNeeded에서 직접 Set)
 			ApplyEffectToSelf(DefaultSecondaryAttributes, (float)D1PS->GetPlayerLevel());
 			ApplyEffectToSelf(DefaultVitalAttributes, (float)D1PS->GetPlayerLevel());
-
-			UE_LOG(LogD1Travel, Verbose, TEXT("PossessedBy: Secondary+Vital re-applied. Level [%d]"), D1PS->GetPlayerLevel());
+			UE_LOG(LogD1Travel, Verbose, TEXT("PossessedBy: Travel — Secondary+Vital re-applied. Level [%d]"), D1PS->GetPlayerLevel());
 		}
+
+		D1PS->bAbilitySystemInitialized = true;
 
 		// 2. GameInstance에서 저장된 데이터 복원 (Primary Attribute Override)
 		// InitializeDefaultAttributes 이후에 실행하여 기본값을 덮어씀
 		D1PS->RestoreTravelDataIfNeeded();
+
+		// 3. Primary 복원 후 Secondary 재계산
+		// RestoreTravelDataIfNeeded가 Strength 등을 덮어쓰므로, Instant Secondary GE를
+		// 다시 적용해 BaseValue를 복원된 Primary 기준으로 갱신한다.
+		UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(this, D1PS->GetAbilitySystemComponent());
 
 		// 3. Ability는 항상 재등록 (맵 이동 시 새 Pawn의 새 ASC에 필요)
 		// AddCharacterAbilities 내부에서 중복 체크됨
@@ -80,6 +91,13 @@ void AD1Hero::PossessedBy(AController* NewController)
 		if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(GetAbilitySystemComponent()))
 		{
 			D1ASC->UpdateAbilityStatuses(D1PS->GetPlayerLevel());
+
+			// 5. Travel 복원: UpdateAbilityStatuses 완료 후 저장된 스킬 상태(Unlocked/Equipped/퀵슬롯) 적용
+			if (!D1PS->PendingAbilityRestoreData.IsEmpty())
+			{
+				D1ASC->RestoreAbilityStates(D1PS->PendingAbilityRestoreData);
+				D1PS->PendingAbilityRestoreData.Empty();
+			}
 		}
 	}
 	else
@@ -171,6 +189,10 @@ void AD1Hero::AddToPlayerLevel_Implementation(int32 InPlayerLevel)
 	{
 		D1ASC->UpdateAbilityStatuses(D1PS->GetPlayerLevel());
 	}
+
+	// 레벨 변경 후 Secondary GE를 새 레벨 기준으로 재적용
+	// (Infinite GE는 생성 시점의 EffectLevel을 유지하므로 수동 갱신 필요)
+	UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(this, GetAbilitySystemComponent());
 }
 
 void AD1Hero::AddToSkillPoints_Implementation(int32 InSkillPoints)

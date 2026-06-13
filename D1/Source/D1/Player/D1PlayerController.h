@@ -35,6 +35,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
 	void TravelToMap(const FString& MapName);
 
+	/** PlayerState/Inventory 데이터를 GameInstance에 저장 (ServerTravel 직전에 서버 측에서 호출) */
+	void SaveTravelDataToGameInstance();
+
 	/** 현재 GameMode에서 Ability 사용이 허용되는가? (Town=false, Dungeon=true) */
 	UFUNCTION(BlueprintPure, Category = "D1|GameMode Rules")
 	bool CanUseAbilities() const;

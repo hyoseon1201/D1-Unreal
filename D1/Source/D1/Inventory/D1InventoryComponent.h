@@ -76,6 +76,9 @@ public:
 	/** 특정 부위의 장착 아이템을 검색 (없으면 nullptr) */
 	const FD1InventoryItem* FindEquippedItem(EEquipmentSlot Slot) const;
 
+	/** 맵 이동 후 저장된 인벤토리/장비 데이터를 복원하고 장비 GE를 재적용 (서버 전용) */
+	void RestoreFromSave(const TArray<FD1InventoryItem>& InInventorySlots, const TArray<FD1EquippedItem>& InEquippedItems);
+
 protected:
 	/** 최대 슬롯 수 */
 	UPROPERTY(EditDefaultsOnly, Category = "Inventory")

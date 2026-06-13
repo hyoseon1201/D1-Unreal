@@ -24,6 +24,7 @@ public:
 
 	virtual UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	UAttributeSet* GetAttributeSet() const { return AttributeSet; }
+	TSubclassOf<UGameplayEffect> GetDefaultSecondaryAttributesGE() const { return DefaultSecondaryAttributes; }
 
 	/** Combat Interface */
 	virtual UAnimMontage* GetHitReactMontage_Implementation() override;
