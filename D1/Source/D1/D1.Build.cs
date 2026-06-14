@@ -10,18 +10,21 @@ public class D1 : ModuleRules
 
         PublicIncludePaths.Add(System.IO.Path.Combine(ModuleDirectory, ""));
 
-        PublicDependencyModuleNames.AddRange(new string[] { 
-			"Core", 
-			"CoreUObject", 
-			"Engine", 
-			"InputCore", 
+        PublicDependencyModuleNames.AddRange(new string[] {
+			"Core",
+			"CoreUObject",
+			"Engine",
+			"InputCore",
 			"EnhancedInput",
             "GameplayAbilities",
             "GameplayTags",
             "GameplayTasks",
             "NavigationSystem",
 			"Niagara",
-            "AIModule"
+            "AIModule",
+            "HTTP",
+            "Json",
+            "JsonUtilities"
         });
 
 		PrivateDependencyModuleNames.AddRange(new string[] {  });
