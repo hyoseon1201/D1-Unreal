@@ -4,6 +4,8 @@
 #include "D1/D1.h"
 #include "Game/D1GameStateBase.h"
 #include "Player/D1PlayerState.h"
+#include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
 
 AD1GameModeBase::AD1GameModeBase()
 {
@@ -18,6 +20,22 @@ void AD1GameModeBase::PostInitializeComponents()
 	{
 		D1GS->ItemRegistry = ItemRegistry;
 	}
+}
+
+FString AD1GameModeBase::InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
+	const FString& Options, const FString& Portal)
+{
+	const FString ErrorMessage = Super::InitNewPlayer(NewPlayerController, UniqueId, Options, Portal);
+
+	// 접속 URL 옵션에서 세션 토큰 추출 → PlayerState에 보관 (verify-session에서 사용)
+	if (AD1PlayerState* PS = NewPlayerController ? Cast<AD1PlayerState>(NewPlayerController->PlayerState) : nullptr)
+	{
+		PS->PendingSessionToken = UGameplayStatics::ParseOption(Options, TEXT("sessionToken"));
+		UE_LOG(LogD1Travel, Log, TEXT("InitNewPlayer: sessionToken %s"),
+			PS->PendingSessionToken.IsEmpty() ? TEXT("없음") : TEXT("캡처됨"));
+	}
+
+	return ErrorMessage;
 }
 
 void AD1GameModeBase::PostLogin(APlayerController* NewPlayer)

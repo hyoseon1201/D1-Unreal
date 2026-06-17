@@ -9,6 +9,8 @@
 #include "Inventory/D1InventoryComponent.h"
 #include "Net/UnrealNetwork.h"
 #include "Game/D1GameInstance.h"
+#include "Game/D1HttpSubsystem.h"
+#include "D1GameplayTags.h"
 
 AD1PlayerState::AD1PlayerState()
 {
@@ -172,20 +174,153 @@ bool AD1PlayerState::RestoreTravelDataIfNeeded()
 	return true;
 }
 
+void AD1PlayerState::ApplyLoadedStats(const FD1LoadedStats& Stats)
+{
+	// 1. 스칼라 값 적용
+	const int32 OldAttrPts = AttributePoints, OldLvl = Level, OldXP = XP, OldSkillPts = SkillPoints;
+	AttributePoints = Stats.AttributePoints;
+	SkillPoints     = Stats.SkillPoints;
+	Level           = Stats.Level;
+	XP              = Stats.XP;
+
+	// 2. Primary Attribute 적용 (RestoreTravelDataIfNeeded와 동일 메커니즘 — Base 직접 Set)
+	if (UD1AttributeSet* AS = Cast<UD1AttributeSet>(AttributeSet))
+	{
+		AS->SetStrength(Stats.Strength);
+		AS->SetIntelligence(Stats.Intelligence);
+		AS->SetDexterity(Stats.Dexterity);
+		AS->SetLuck(Stats.Luck);
+	}
+
+	// 3. 변경된 값만 OnRep 호출 (클라 동기화)
+	if (AttributePoints != OldAttrPts) OnRep_AttributePoints(AttributePoints);
+	if (SkillPoints     != OldSkillPts) OnRep_SkillPoints(SkillPoints);
+	if (Level           != OldLvl)     OnRep_Level(Level);
+	if (XP              != OldXP)      OnRep_XP(XP);
+
+	UE_LOG(LogD1Travel, Log, TEXT("ApplyLoadedStats: Lv=%d XP=%d AttrPts=%d SkillPts=%d STR=%.0f"),
+		Level, XP, AttributePoints, SkillPoints, Stats.Strength);
+}
+
+void AD1PlayerState::ApplyLoadedInventory(const TArray<FD1LoadedInventoryItem>& InInventory,
+	const TArray<FD1LoadedEquippedItem>& InEquipped)
+{
+	if (!InventoryComponent)
+	{
+		UE_LOG(LogD1Inventory, Warning, TEXT("ApplyLoadedInventory: InventoryComponent 없음"));
+		return;
+	}
+
+	// DB 타입 → 게임 타입 변환
+	TArray<FD1InventoryItem> InventorySlots;
+	InventorySlots.Reserve(InInventory.Num());
+	for (const FD1LoadedInventoryItem& Src : InInventory)
+	{
+		FD1InventoryItem Item;
+		Item.ItemID    = FName(*Src.ItemAssetId);
+		Item.Count     = Src.Quantity;
+		Item.SlotIndex = Src.SlotIndex;
+		InventorySlots.Add(Item);
+	}
+
+	const UEnum* SlotEnum = StaticEnum<EEquipmentSlot>();
+	TArray<FD1EquippedItem> EquippedItems;
+	EquippedItems.Reserve(InEquipped.Num());
+	for (const FD1LoadedEquippedItem& Src : InEquipped)
+	{
+		// slot_type 문자열 → EEquipmentSlot (qualified/short 둘 다 시도)
+		int64 EnumVal = SlotEnum ? SlotEnum->GetValueByNameString(FString(TEXT("EEquipmentSlot::")) + Src.SlotType) : INDEX_NONE;
+		if (EnumVal == INDEX_NONE && SlotEnum) EnumVal = SlotEnum->GetValueByNameString(Src.SlotType);
+		if (EnumVal == INDEX_NONE || EnumVal == (int64)EEquipmentSlot::None)
+		{
+			UE_LOG(LogD1Inventory, Warning, TEXT("ApplyLoadedInventory: 알 수 없는 slot_type '%s' — 건너뜀"), *Src.SlotType);
+			continue;
+		}
+
+		FD1EquippedItem Equip;
+		Equip.EquipmentSlot = (EEquipmentSlot)EnumVal;
+		Equip.Item.ItemID   = FName(*Src.ItemAssetId);
+		Equip.Item.Count    = 1;
+		EquippedItems.Add(Equip);
+	}
+
+	// 기존 복원 경로 재사용 (장비 GE 재적용 포함)
+	InventoryComponent->RestoreFromSave(InventorySlots, EquippedItems);
+
+	UE_LOG(LogD1Inventory, Log, TEXT("ApplyLoadedInventory: 인벤토리 %d칸, 장비 %d개 적용"),
+		InventorySlots.Num(), EquippedItems.Num());
+}
+
+void AD1PlayerState::ApplyLoadedSkills(const TArray<FD1LoadedSkill>& InSkills,
+	const TArray<FD1LoadedSkillSlot>& InSkillSlots)
+{
+	UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(GetAbilitySystemComponent());
+	if (!D1ASC)
+	{
+		UE_LOG(LogD1Ability, Warning, TEXT("ApplyLoadedSkills: ASC 없음"));
+		return;
+	}
+
+	const FD1GameplayTags& GameTags = FD1GameplayTags::Get();
+
+	// 슬롯 키(Q/W/E/R) → InputTag
+	auto SlotKeyToInputTag = [&GameTags](const FString& Key) -> FGameplayTag
+	{
+		if (Key == TEXT("Q")) return GameTags.InputTag_Q;
+		if (Key == TEXT("W")) return GameTags.InputTag_W;
+		if (Key == TEXT("E")) return GameTags.InputTag_E;
+		if (Key == TEXT("R")) return GameTags.InputTag_R;
+		return FGameplayTag();
+	};
+
+	// 어느 스킬이 어느 슬롯에 장착됐는지 (skill_tag → InputTag)
+	TMap<FString, FGameplayTag> EquippedSlotByTag;
+	for (const FD1LoadedSkillSlot& Slot : InSkillSlots)
+	{
+		const FGameplayTag InputTag = SlotKeyToInputTag(Slot.SlotKey);
+		if (InputTag.IsValid())
+		{
+			EquippedSlotByTag.Add(Slot.SkillTag, InputTag);
+		}
+	}
+
+	// DB 스킬 → FD1SavedAbilityInfo 변환
+	TArray<FD1SavedAbilityInfo> Saved;
+	for (const FD1LoadedSkill& Skill : InSkills)
+	{
+		FD1SavedAbilityInfo Info;
+		Info.AbilityTag = FGameplayTag::RequestGameplayTag(FName(*Skill.SkillTag), /*ErrorIfNotFound*/ false);
+		if (!Info.AbilityTag.IsValid())
+		{
+			UE_LOG(LogD1Ability, Warning, TEXT("ApplyLoadedSkills: 알 수 없는 skill_tag '%s' — 건너뜀"), *Skill.SkillTag);
+			continue;
+		}
+		Info.Level = Skill.SkillLevel;
+
+		// 슬롯에 있으면 Equipped + SlotTag, 없으면 Unlocked
+		if (const FGameplayTag* SlotTag = EquippedSlotByTag.Find(Skill.SkillTag))
+		{
+			Info.StatusTag = GameTags.Abilities_Status_Equipped;
+			Info.SlotTag   = *SlotTag;
+		}
+		else
+		{
+			Info.StatusTag = GameTags.Abilities_Status_Unlocked;
+		}
+		Saved.Add(Info);
+	}
+
+	D1ASC->RestoreAbilityStates(Saved);
+	UE_LOG(LogD1Ability, Log, TEXT("ApplyLoadedSkills: 스킬 %d개 적용 (슬롯 %d개)"), Saved.Num(), InSkillSlots.Num());
+}
+
 void AD1PlayerState::BeginPlay()
 {
 	Super::BeginPlay();
 
 	// 맵 이동(Travel) 데이터 복원은 PossessedBy에서 처리
 	// (BeginPlay는 PossessedBy보다 먼저 호출되므로 여기서 복원하면 GameInstance 데이터가 소진됨)
-
-	// 서버에서만 최초 입장 시 테스트 아이템 지급
-	// 조건: 어빌리티 시스템 미초기화 상태 + Travel 복원 데이터 없음
-	UD1GameInstance* GI = Cast<UD1GameInstance>(GetGameInstance());
-	const bool bHasTravelData = GI && GI->HasSavedData(GetPartyPlayerId());
-	if (HasAuthority() && InventoryComponent && !bAbilitySystemInitialized && !bHasTravelData)
-	{
-		InventoryComponent->AddItem(FName("Potion_Health_Small"), 5);
-		InventoryComponent->AddItem(FName("Sword_Iron"), 1);
-	}
+	//
+	// ※ 기존 테스트 아이템 하드코딩 지급(Potion/Sword)은 제거됨 (Phase 3) —
+	//   인벤토리는 웹서버 DB에서 verify-session으로 로드해 ApplyLoadedInventory로 적용.
 }

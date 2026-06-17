@@ -12,6 +12,7 @@ class UAttributeSet;
 class UNiagaraComponent;
 class UCameraComponent;
 class USpringArmComponent;
+class AD1PlayerState;
 
 /**
  * 
@@ -58,6 +59,23 @@ private:
 	TObjectPtr<USpringArmComponent> CameraBoom;
 
 	virtual void InitAbilityActorInfo() override;
+
+	// ----- PossessedBy 접속 경로별 GAS 초기화 -----
+
+	/** 최초 스폰 (PIE 등): 직업 ScalableFloat 기본값으로 전체 초기화 */
+	void InitializeFreshSpawn(AD1PlayerState* D1PS);
+
+	/** 같은 프로세스 맵 이동: Secondary/Vital 재적용 + GameInstance 저장 데이터 복원 */
+	void InitializeFromTravel(AD1PlayerState* D1PS);
+
+	/** [서버 전용] 웹서버 로그인/크로스 프로세스 접속: verify-session으로 DB 데이터 비동기 로드 후 적용 */
+	void InitializeFromDbLogin(AD1PlayerState* D1PS);
+
+	/** Primary 확정 후 공통 마무리: Secondary 재계산 + 어빌리티 재등록/상태 갱신/복원 */
+	void FinalizeGAS(AD1PlayerState* D1PS);
+
+	/** 체력·마나를 최대치로 충전 (MaxHealth/MaxMana 확정 이후 호출) */
+	void RefillVitals();
 
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastLevelupParticles() const;

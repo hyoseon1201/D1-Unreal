@@ -13,6 +13,11 @@ class UAttributeSet;
 class UD1LevelupInfo;
 class UD1InventoryComponent;
 class UD1GameInstance;
+struct FD1LoadedStats;
+struct FD1LoadedInventoryItem;
+struct FD1LoadedEquippedItem;
+struct FD1LoadedSkill;
+struct FD1LoadedSkillSlot;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32 /*StatValue*/)
 
@@ -81,8 +86,35 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "D1|Travel")
 	bool RestoreTravelDataIfNeeded();
 
+	/**
+	 * [서버 전용] 웹서버에서 로드한 stats를 적용 (Level/XP/Points + Primary Attribute).
+	 * RestoreTravelDataIfNeeded의 DB 버전 — 호출 후 RecalculateSecondaryAttributes 필요.
+	 */
+	void ApplyLoadedStats(const FD1LoadedStats& Stats);
+
+	/**
+	 * [서버 전용] 웹서버에서 로드한 인벤토리/장비를 InventoryComponent에 적용.
+	 * DB 타입(문자열 id) → 게임 타입(FName/EEquipmentSlot) 변환 후 RestoreFromSave 호출 (장비 GE 재적용 포함).
+	 */
+	void ApplyLoadedInventory(const TArray<FD1LoadedInventoryItem>& InInventory,
+		const TArray<FD1LoadedEquippedItem>& InEquipped);
+
+	/**
+	 * [서버 전용] 웹서버에서 로드한 스킬/스킬슬롯을 ASC에 적용.
+	 * DB 데이터를 FD1SavedAbilityInfo로 변환해 RestoreAbilityStates 호출.
+	 * ※ 반드시 UpdateAbilityStatuses(레벨 기반 Eligible/Locked 세팅) 이후에 호출할 것.
+	 */
+	void ApplyLoadedSkills(const TArray<FD1LoadedSkill>& InSkills,
+		const TArray<FD1LoadedSkillSlot>& InSkillSlots);
+
 	/** PossessedBy에서 UpdateAbilityStatuses 완료 후 적용할 어빌리티 상태 (서버 전용 임시 필드) */
 	TArray<FD1SavedAbilityInfo> PendingAbilityRestoreData;
+
+	/** [서버 전용] 접속 URL 옵션에서 캡처한 세션 토큰. verify-session 호출에 사용. 복제 안 함. */
+	FString PendingSessionToken;
+
+	/** [서버 전용] verify-session으로 확정된 웹서버 캐릭터 ID. save 호출에 사용. */
+	int64 WebCharacterId = 0;
 
 protected:
 

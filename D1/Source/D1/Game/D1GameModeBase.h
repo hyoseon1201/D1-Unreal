@@ -27,6 +27,10 @@ public:
 	virtual void PostInitializeComponents() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
 
+	/** 접속 URL 옵션(?sessionToken=)을 파싱해 PlayerState에 보관 */
+	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
+		const FString& Options, const FString& Portal = TEXT("")) override;
+
 	/** 이 GameMode에서 Ability 사용(전투/버프/회복 등)을 허용하는가? */
 	UFUNCTION(BlueprintPure, Category = "D1|GameMode Rules")
 	virtual bool AreAbilitiesAllowed() const { return true; }
