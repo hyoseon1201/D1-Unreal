@@ -342,3 +342,30 @@ void UD1HttpSubsystem::VerifySession(const FString& SessionToken, FD1VerifySessi
 
 	Request->ProcessRequest();
 }
+
+void UD1HttpSubsystem::SaveCharacter(int64 CharacterId, const FString& JsonBody)
+{
+	TSharedRef<IHttpRequest> Request = FHttpModule::Get().CreateRequest();
+	Request->SetURL(BaseUrl + FString::Printf(TEXT("/api/server/characters/%lld/save"), CharacterId));
+	Request->SetVerb(TEXT("POST"));
+	Request->SetHeader(TEXT("Content-Type"), TEXT("application/json"));
+	Request->SetHeader(TEXT("X-Server-Api-Key"), ServerApiKey);
+	Request->SetContentAsString(JsonBody);   // 본문은 여기서 복사됨 → 이후 PS 소멸과 무관
+
+	// fire-and-forget: 결과 로깅만 (PS/액터 참조하지 않음)
+	Request->OnProcessRequestComplete().BindLambda(
+		[CharacterId](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnectedSuccessfully)
+		{
+			const int32 Code = Response.IsValid() ? Response->GetResponseCode() : 0;
+			if (bConnectedSuccessfully && Code == 204)
+			{
+				UE_LOG(LogD1Travel, Log, TEXT("SaveCharacter 성공: CharId=%lld"), CharacterId);
+			}
+			else
+			{
+				UE_LOG(LogD1Travel, Warning, TEXT("SaveCharacter 실패: CharId=%lld (HTTP %d)"), CharacterId, Code);
+			}
+		});
+
+	Request->ProcessRequest();
+}

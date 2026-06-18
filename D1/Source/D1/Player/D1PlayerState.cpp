@@ -11,6 +11,9 @@
 #include "Game/D1GameInstance.h"
 #include "Game/D1HttpSubsystem.h"
 #include "D1GameplayTags.h"
+#include "Dom/JsonObject.h"
+#include "Serialization/JsonWriter.h"
+#include "Serialization/JsonSerializer.h"
 
 AD1PlayerState::AD1PlayerState()
 {
@@ -65,6 +68,7 @@ void AD1PlayerState::AddToLevel(int32 InLevel)
 {
 	Level += InLevel;
 	OnLevelChangedDelegate.Broadcast(Level);
+	OnActualLevelUpDelegate.Broadcast(Level);  // XP 획득 경로에서만 호출됨 (복원·동기화 경로는 SetLevel/OnRep_Level 사용)
 }
 
 void AD1PlayerState::AddToAttributePoints(int32 InPoints)
@@ -312,6 +316,109 @@ void AD1PlayerState::ApplyLoadedSkills(const TArray<FD1LoadedSkill>& InSkills,
 
 	D1ASC->RestoreAbilityStates(Saved);
 	UE_LOG(LogD1Ability, Log, TEXT("ApplyLoadedSkills: 스킬 %d개 적용 (슬롯 %d개)"), Saved.Num(), InSkillSlots.Num());
+}
+
+FString AD1PlayerState::BuildSaveJson()
+{
+	const UD1AttributeSet* AS = Cast<UD1AttributeSet>(AttributeSet);
+	const FD1GameplayTags& GameTags = FD1GameplayTags::Get();
+
+	// InputTag → 슬롯 키(Q/W/E/R) 역변환
+	auto InputTagToSlotKey = [&GameTags](const FGameplayTag& Tag) -> FString
+	{
+		if (Tag == GameTags.InputTag_Q) return TEXT("Q");
+		if (Tag == GameTags.InputTag_W) return TEXT("W");
+		if (Tag == GameTags.InputTag_E) return TEXT("E");
+		if (Tag == GameTags.InputTag_R) return TEXT("R");
+		return FString();
+	};
+
+	TSharedPtr<FJsonObject> Root = MakeShared<FJsonObject>();
+
+	// stats
+	TSharedPtr<FJsonObject> Stats = MakeShared<FJsonObject>();
+	Stats->SetNumberField(TEXT("level"),           Level);
+	Stats->SetNumberField(TEXT("xp"),              XP);
+	Stats->SetNumberField(TEXT("attributePoints"), AttributePoints);
+	Stats->SetNumberField(TEXT("skillPoints"),     SkillPoints);
+	Stats->SetNumberField(TEXT("strength"),        AS ? AS->GetStrength()     : 0.f);
+	Stats->SetNumberField(TEXT("intelligence"),    AS ? AS->GetIntelligence() : 0.f);
+	Stats->SetNumberField(TEXT("dexterity"),       AS ? AS->GetDexterity()    : 0.f);
+	Stats->SetNumberField(TEXT("luck"),            AS ? AS->GetLuck()         : 0.f);
+	Root->SetObjectField(TEXT("stats"), Stats);
+
+	// skills + skillSlots (SaveAbilityStates 기반)
+	TArray<TSharedPtr<FJsonValue>> SkillsArr;
+	TArray<TSharedPtr<FJsonValue>> SkillSlotsArr;
+	if (UD1AbilitySystemComponent* D1ASC = Cast<UD1AbilitySystemComponent>(GetAbilitySystemComponent()))
+	{
+		for (const FD1SavedAbilityInfo& Info : D1ASC->SaveAbilityStates())
+		{
+			const FString SkillTag = Info.AbilityTag.ToString();
+
+			TSharedPtr<FJsonObject> SkillObj = MakeShared<FJsonObject>();
+			SkillObj->SetStringField(TEXT("skillTag"), SkillTag);
+			SkillObj->SetNumberField(TEXT("skillLevel"), Info.Level);
+			SkillsArr.Add(MakeShared<FJsonValueObject>(SkillObj));
+
+			// Equipped면 슬롯도 기록
+			if (Info.StatusTag.MatchesTagExact(GameTags.Abilities_Status_Equipped) && Info.SlotTag.IsValid())
+			{
+				const FString SlotKey = InputTagToSlotKey(Info.SlotTag);
+				if (!SlotKey.IsEmpty())
+				{
+					TSharedPtr<FJsonObject> SlotObj = MakeShared<FJsonObject>();
+					SlotObj->SetStringField(TEXT("slotKey"), SlotKey);
+					SlotObj->SetStringField(TEXT("skillTag"), SkillTag);
+					SkillSlotsArr.Add(MakeShared<FJsonValueObject>(SlotObj));
+				}
+			}
+		}
+	}
+	Root->SetArrayField(TEXT("skills"), SkillsArr);
+	Root->SetArrayField(TEXT("skillSlots"), SkillSlotsArr);
+
+	// inventory + equippedItems
+	TArray<TSharedPtr<FJsonValue>> InvArr;
+	TArray<TSharedPtr<FJsonValue>> EquipArr;
+	if (InventoryComponent)
+	{
+		for (const FD1InventoryItem& Item : InventoryComponent->GetInventorySlots())
+		{
+			if (Item.ItemID.IsNone() || Item.Count <= 0) continue;
+			TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+			Obj->SetNumberField(TEXT("slotIndex"),   Item.SlotIndex);
+			Obj->SetStringField(TEXT("itemAssetId"), Item.ItemID.ToString());
+			Obj->SetNumberField(TEXT("quantity"),    Item.Count);
+			InvArr.Add(MakeShared<FJsonValueObject>(Obj));
+		}
+
+		const UEnum* SlotEnum = StaticEnum<EEquipmentSlot>();
+		for (const FD1EquippedItem& Equip : InventoryComponent->GetEquippedItems())
+		{
+			if (Equip.EquipmentSlot == EEquipmentSlot::None || Equip.Item.ItemID.IsNone()) continue;
+
+			// EEquipmentSlot → 짧은 이름 ("EEquipmentSlot::Weapon" → "Weapon")
+			FString SlotName = SlotEnum ? SlotEnum->GetNameStringByValue((int64)Equip.EquipmentSlot) : FString();
+			int32 ColonIdx;
+			if (SlotName.FindLastChar(TEXT(':'), ColonIdx)) SlotName = SlotName.RightChop(ColonIdx + 1);
+
+			TSharedPtr<FJsonObject> Obj = MakeShared<FJsonObject>();
+			Obj->SetStringField(TEXT("slotType"),    SlotName);
+			Obj->SetStringField(TEXT("itemAssetId"), Equip.Item.ItemID.ToString());
+			EquipArr.Add(MakeShared<FJsonValueObject>(Obj));
+		}
+	}
+	Root->SetArrayField(TEXT("inventory"), InvArr);
+	Root->SetArrayField(TEXT("equippedItems"), EquipArr);
+
+	// quickSlots: 게임 미구현 → 빈 배열 (백엔드 @NotNull 충족)
+	Root->SetArrayField(TEXT("quickSlots"), TArray<TSharedPtr<FJsonValue>>());
+
+	FString Out;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&Out);
+	FJsonSerializer::Serialize(Root.ToSharedRef(), Writer);
+	return Out;
 }
 
 void AD1PlayerState::BeginPlay()

@@ -129,6 +129,12 @@ public:
 	 */
 	void VerifySession(const FString& SessionToken, FD1VerifySessionDelegate OnComplete);
 
+	/**
+	 * [데디서버 전용] POST /api/server/characters/{id}/save — 캐릭터 데이터 전체 일괄 저장.
+	 * fire-and-forget: 요청 본문(JsonBody)은 호출 시점에 복사되므로 PS가 곧 소멸해도 POST는 완료된다.
+	 */
+	void SaveCharacter(int64 CharacterId, const FString& JsonBody);
+
 	// 로그인 성공 후 채워지는 세션 데이터
 	UPROPERTY(BlueprintReadOnly, Category = "D1|Session")
 	FString AuthToken;

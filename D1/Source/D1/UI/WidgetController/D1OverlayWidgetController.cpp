@@ -26,6 +26,11 @@ void UD1OverlayWidgetController::BindCallbacksToDependencies()
 			OnPlayerLevelChangedDelegate.Broadcast(NewLevel);
 		}
 	);
+	// 진짜 레벨업(XP 획득)에서만 발동 — 접속/복원/Travel 때는 미발동
+	GetD1PS()->OnActualLevelUpDelegate.AddLambda([this](int32 NewLevel)
+	{
+		OnPlayerLeveledUpDelegate.Broadcast(NewLevel);
+	});
 
 	AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(GetD1AS()->GetHealthAttribute()).AddLambda(
 		[this](const FOnAttributeChangeData& Data)

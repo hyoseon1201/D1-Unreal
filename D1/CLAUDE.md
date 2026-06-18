@@ -75,29 +75,33 @@
 |---|---------|------|
 | 1~5 | 캐릭터/능력치/멀티플레이 동기화/메뉴 위젯/HUD 쿨타임 | ✅ 완료 |
 | 6 | 인벤토리 시스템 Phase 1 (언리얼 내부) | ✅ 완료 |
-| 7 | 웹서버 연동 (로그인/영속화) | ⏳ Phase 3 |
+| 7 | 웹서버 연동 (로그인/영속화) | 🔄 진행중 (단일 프로세스 풀 루프 완료, 크로스 프로세스 travel 미완) |
 | 8 | 마을/던전 분리 (ClientTravel + GameInstance 임시 저장) | ✅ 완료 |
 | 9 | 어빌리티 추가 (ChargeDash, Focus, Heal) | ✅ 완료 |
-| 10 | 던전 전투 루프 (몬스터/보스/클리어) | 🔄 진행중 |
+| 10 | 던전 전투 루프 (몬스터/보스/클리어) | ✅ 완료 (몬스터 AI BT+EQS, 보스 사망→결과창→복귀) |
 | 11 | 마을 파티 시스템 (생성/참가/던전 입장) | ✅ 완료 |
 | 12 | Windows 데디서버 패키징 빌드 | ✅ 완료 |
-| 13 | DB 스키마 + Spring Boot 백엔드 | 🔄 **현재 작업** |
+| 13 | DB 스키마 + Spring Boot 백엔드 | ✅ 완료 (단일 서버 풀 루프 검증) |
+| 14 | 크로스 프로세스 travel (DB 핸드오프) | 🔄 **현재 작업** |
 
-### Phase 3 확정 일정 (2026-06-14 기준, 목표 6/30)
+### Phase 3 확정 일정 (2026-06-18 수정, 목표 **7/10 로컬 배포**, 주 5~6일 기준)
 
 | 기간 | 마일스톤 |
 |------|---------|
 | ✅ ~6/12 | **언리얼 마무리**: 파티 풀 루프 2인 테스트 완료, Windows 데디서버 빌드 완료 |
-| ~6/16 | DB 스키마 (계정/캐릭터/스탯/인벤토리) + Spring Boot 셋업 + 로그인/JWT + **GCP 첫 배포** |
-| ~6/21 | 캐릭터/스탯/인벤토리 저장·로드 API + UE HTTP 연동 (로그인 UI, verify-session) — ⚠️ **최대 리스크 구간** |
-| ~6/26 | 크로스 서버 이동: GCP VM에 Town/Dungeon 프로세스 2개 고정 기동, GameInstance → DB 핸드오프 교체 |
-| ~6/30 | 통합 테스트 + 버그픽스 + 데모 영상 촬영 |
+| ✅ ~6/18 | DB 스키마 + Spring Boot + JWT + verify-session/save **단일 서버 풀 루프 완료**. GCP → Phase 4 이월, MVP는 **로컬 홈서버** |
+| ~6/25 | **크로스 프로세스 travel**: Town:7777 → Dungeon:7778 ClientTravel (DB 핸드오프) + 던전→마을 복귀. Spring Boot `POST /api/server/sessions/issue` 신설 |
+| ~7/1 | **보상 시스템**: 아이템 드롭→인벤토리→save 훅. ※ 몬스터 AI(BT+EQS)는 이미 완료 |
+| ~7/7 | **통합 테스트 + 버그픽스**: 로그인→Town→파티→Dungeon→클리어→복귀→재로그인 데이터 유지 전체 루프 |
+| ~7/10 | 데모 영상 촬영 |
 
-**Scope 컷 (20일 일정 성립 조건):**
+**Scope 컷 (7/10 일정 성립 조건):**
+- 🔪 **GCP/클라우드 배포 → Phase 4 이월.** MVP는 로컬 홈서버(i5-14400F + RAM 64GB, 포트포워딩)
 - 🔪 **ECS/Docker 동적 오케스트레이션 → Phase 4 이월.** MVP는 고정 프로세스 2개(Town:7777, Dungeon:7778)
 - 🔪 캐릭터 생성 화면 최소화 (커스터마이징 없이 계정당 1캐릭터 자동 생성)
 - 🔪 Redis 없이 MySQL 직접 write (MVP 동접 수십 명 수준에서 충분)
-- **플랜 B** (6/21 마일스톤 지연 시): 크로스 서버 포기, 단일 서버 + DB 영속화까지만
+- ~~몬스터 AI~~ **완료** (BT+EQS 근접/원거리 구현됨). 보스 복잡 패턴은 Phase 4
+- **플랜 B** (7/1 마일스톤 지연 시): 던전 콘텐츠 축소(보스 1종만), 통합 테스트 우선
 - **지켜야 할 척추**: 로그인(JWT) → DB 로드 → Town 접속 → 파티 → Dungeon 크로스 이동(DB 핸드오프) → 클리어 → 복귀 → 재로그인 시 데이터 유지
 
 ---
@@ -166,9 +170,16 @@
 2. 웹서버가 IP/Port/SessionToken(1회용) 응답 → 클라이언트 `ClientTravel` 직접 접속
 3. 데디서버 → 웹서버 `POST /verify-session` (별도 API Key 인증) → DB 로드 → GAS 초기화
 
-### MVP 서버 구성
-- GCP VM 1대에 Town(7777) + Dungeon(7778) 프로세스 고정 기동
-- 동적 오케스트레이션(ECS/Docker)은 Phase 4
+### MVP 서버 구성 (Phase 3 확정)
+- **로컬 홈서버**: Town(7777) + Dungeon(7778) 프로세스 2개 고정 기동, 포트포워딩으로 외부 접속
+- 동적 오케스트레이션(ECS/Docker), GCP 클라우드 배포 → Phase 4
+
+### 크로스 프로세스 travel 설계 (Phase 3 핵심 잔여 작업)
+- Spring Boot `POST /api/server/sessions/issue` (API Key, CharacterId → 60초 세션토큰) 신설
+- Town GM: 파티원 전원 `SaveCharacter` → `IssueSessionToken` 각각 → `ClientTravel("dungeon_ip:7778?sessionToken=...")`
+- Dungeon server: 기존 `verify-session` 재사용 (DB 로드 경로 그대로)
+- 던전 클리어 시: Dungeon GM → 파티원 전원 `SaveCharacter` → `IssueSessionToken` → `ClientTravel("town_ip:7777?sessionToken=...")`
+- Town server: 기존 `verify-session` 재사용 (DB 로드)
 
 ---
 
@@ -192,4 +203,8 @@
 | 06-18 | ③ 데디서버 DB 로드 구현. 서버용 HTTP: `UD1HttpSubsystem::VerifySession(token, 콜백)` (X-Server-Api-Key, 요청별 람다로 플레이어별 라우팅, `FD1LoadedStats` 파싱). 토큰 캡처: `AD1GameModeBase::InitNewPlayer`에서 `ParseOption(sessionToken)` → PlayerState(`PendingSessionToken`/`WebCharacterId`). GAS 적용: PossessedBy에 DB로그인 early-branch `AD1Hero::InitializeFromDbLogin` 분리 — 동기로 Secondary/Vital+어빌리티만, Primary/Level은 verify-session 콜백에서 `AD1PlayerState::ApplyLoadedStats`(기존 캐릭터) 또는 `InitializeDefaultAttributes`(신규)로 적용 후 RecalculateSecondary+UpdateAbilityStatuses. 기존 PIE/travel 경로는 그대로(이중 Primary 적용 방지 위해 DB로그인은 InitializeDefaultAttributes 미호출). STR=99 저장→접속→게임 내 반영 검증 완료. |
 | 06-18 | PossessedBy 리팩토링 — 3개 접속 경로를 동일 층위 함수로 분리: `InitializeFreshSpawn`(직업 기본값) / `InitializeFromTravel`(GameInstance 복원) / `InitializeFromDbLogin`(DB 비동기 로드). PossessedBy는 `bDbLogin / bTraveling / else` 디스패처로 단순화. fresh·travel 공유 꼬리는 `FinalizeGAS()`(RecalcSecondary+AddCharacterAbilities+UpdateAbilityStatuses+RestoreAbilityStates)로 추출. 접속 시 체력/마나 풀충전 `RefillVitals()` 추가(DB로그인 콜백 끝). 호출 순서 보존(위치만 이동). |
 | 06-18 | ③-b 인벤토리/장비 DB 로드. verify-session 응답에 inventory/equippedItems 파싱 추가 → `FD1LoadedCharacter`(Stats+Inventory+Equipped) 컨테이너로 델리게이트 전달. `AD1PlayerState::ApplyLoadedInventory` — DB 타입(item_asset_id 문자열/slot_type 문자열)을 게임 타입(FName/EEquipmentSlot, `StaticEnum` 변환)으로 바꿔 기존 `RestoreFromSave` 재사용(장비 GE 재적용 포함). DB로그인 콜백 순서: Stats → 인벤토리/장비 → RecalcSecondary → UpdateStatuses → RefillVitals. **`D1PlayerState::BeginPlay`의 테스트 아이템 하드코딩(Potion/Sword) 제거** — 인벤토리는 이제 DB가 단일 소스. |
-| 06-18 | ③-c 스킬/스킬슬롯 DB 로드. verify-session에 skills/skillSlots 파싱 추가(`FD1LoadedSkill`/`FD1LoadedSkillSlot`). `AD1PlayerState::ApplyLoadedSkills` — DB 스킬을 `FD1SavedAbilityInfo`로 변환(skill_tag→`RequestGameplayTag`, slot_key Q/W/E/R→`InputTag_*`, 슬롯에 있으면 Equipped+SlotTag 없으면 Unlocked) 후 기존 `RestoreAbilityStates` 재사용. 콜백에서 **UpdateAbilityStatuses 이후** 호출(Eligible→Unlocked/Equipped 덮어쓰기). ⚠️ **아이템 퀵슬롯(character_quick_slots, 1~4)은 게임에 시스템 미구현이라 로드 제외** — 추후 아이템 퀵슬롯 기능 추가 시 반영. |
+| 06-18 | ③-c 스킬/스킬슬롯 DB 로드. verify-session에 skills/skillSlots 파싱 추가(`FD1LoadedSkill`/`FD1LoadedSkillSlot`). `AD1PlayerState::ApplyLoadedSkills` — DB 스킬을 `FD1SavedAbilityInfo`로 변환(skill_tag→`RequestGameplayTag`, slot_key Q/W/E/R→`InputTag_*`, 슬롯에 있으면 Equipped+SlotTag 없으면 Unlocked) 후 기존 `RestoreAbilityStates` 재사용. 콜백에서 **UpdateAbilityStatuses 이후** 호출(Eligible→Unlocked/Equipped 덮어쓰기). ⚠️ **아이템 퀵슬롯(character_quick_slots, 1~4)은 게임에 시스템 미구현이라 로드 제외** — 추후 아이템 퀵슬롯 기능 추가 시 반영. ※ 로컬 변수명 `Tags`는 `AActor::Tags`와 충돌(C4458) → `GameTags`로. |
+| 06-18 | ③-d 저장(save) — 로그아웃 시점. `UD1HttpSubsystem::SaveCharacter(id, jsonBody)`(POST /save, API Key, fire-and-forget — 본문 동기 복사라 PS 소멸 무관). `AD1PlayerState::BuildSaveJson()` — ApplyLoaded*의 역방향 직렬화(PS/AS getter + `SaveAbilityStates()` + 인벤토리 getter → DB 계약 JSON; InputTag→슬롯키, EEquipmentSlot→짧은이름, quickSlots 빈배열). `AD1GameModeBase::Logout`에서 `WebCharacterId>0`이면 저장 — 정상 종료/강제 킬(연결 타임아웃) 둘 다 Logout으로 진입. 서버 크래시만 미커버(추후 주기 autosave). 풀 루프(로드→플레이→Logout 저장→재접속 유지) 검증 완료. travel/던전클리어 저장은 같은 함수 재사용 예정. |
+| 06-18 | `SaveAbilityStates` 버그픽스 — Locked만 제외하던 것을 **Locked+Eligible 둘 다 제외**로 변경. Eligible(레벨로 자동 결정되는 미습득 상태)이 DB/travel에 저장되면 "안 배웠는데 배운 걸로" 의미 오염 → Unlocked/Equipped(실제 습득)만 저장. travel·DB 저장 양쪽에 일관 적용. |
+| 06-18 | **레벨업 알림 오발동 버그픽스.** 접속/Travel 시 DB 복원(`ApplyLoadedStats`)이 같은 `OnLevelChangedDelegate`를 터뜨려 BP에서 "레벨업!" 알림이 표시되던 문제. `AD1PlayerState::AddToLevel()`에만 `FOnPlayerActualLevelUp OnActualLevelUpDelegate` 추가 (XP 획득 경로 전용). `UD1OverlayWidgetController`에 `FOnPlayerLeveledUpSignature OnPlayerLeveledUpDelegate` (BlueprintAssignable) 신설하여 바인딩. BP에서 레벨업 알림을 `OnPlayerLevelChangedDelegate` → `OnPlayerLeveledUpDelegate`로 교체하면 복원/동기화 시 오발동 없어짐. |
+| 06-18 | **일정 개정** — GCP 배포 Phase 4 이월, MVP를 로컬 홈서버(포트포워딩)로 확정. 주 5~6일 기준으로 목표를 6/30 → **7/10**으로 조정. 크로스 프로세스 travel(DB 핸드오프)이 다음 주요 작업. |

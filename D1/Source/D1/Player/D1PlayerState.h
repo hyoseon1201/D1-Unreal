@@ -20,6 +20,7 @@ struct FD1LoadedSkill;
 struct FD1LoadedSkillSlot;
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerStatChanged, int32 /*StatValue*/)
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnPlayerActualLevelUp, int32 /*NewLevel*/)  // 복원/동기화 제외, 진짜 레벨업 시만
 
 /**
  * 
@@ -49,7 +50,8 @@ public:
 	TObjectPtr<UD1LevelupInfo> LevelUpInfo;
 
 	FOnPlayerStatChanged OnXPChangedDelegate;
-	FOnPlayerStatChanged OnLevelChangedDelegate;
+	FOnPlayerStatChanged OnLevelChangedDelegate;      // 레벨 숫자 변경 시 (복원·동기화 포함)
+	FOnPlayerActualLevelUp OnActualLevelUpDelegate;   // XP 획득 → 진짜 레벨업 시만
 	FOnPlayerStatChanged OnAttributePointsChangedDelegate;
 	FOnPlayerStatChanged OnSkillPointsChangedDelegate;
 
@@ -106,6 +108,12 @@ public:
 	 */
 	void ApplyLoadedSkills(const TArray<FD1LoadedSkill>& InSkills,
 		const TArray<FD1LoadedSkillSlot>& InSkillSlots);
+
+	/**
+	 * [서버 전용] 현재 PS/ASC/인벤토리 상태를 save API 요청 본문(JSON 문자열)으로 직렬화.
+	 * ApplyLoaded* 의 역방향 (게임 타입 → DB 계약 문자열). quickSlots는 게임 미구현이라 빈 배열.
+	 */
+	FString BuildSaveJson();
 
 	/** PossessedBy에서 UpdateAbilityStatuses 완료 후 적용할 어빌리티 상태 (서버 전용 임시 필드) */
 	TArray<FD1SavedAbilityInfo> PendingAbilityRestoreData;

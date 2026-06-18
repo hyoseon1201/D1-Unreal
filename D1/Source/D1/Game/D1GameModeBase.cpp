@@ -6,6 +6,7 @@
 #include "Player/D1PlayerState.h"
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
+#include "Game/D1HttpSubsystem.h"
 
 AD1GameModeBase::AD1GameModeBase()
 {
@@ -36,6 +37,25 @@ FString AD1GameModeBase::InitNewPlayer(APlayerController* NewPlayerController, c
 	}
 
 	return ErrorMessage;
+}
+
+void AD1GameModeBase::Logout(AController* Exiting)
+{
+	// 접속 종료 시 캐릭터 데이터 저장 (정상 종료 + 강제 킬 타임아웃 둘 다 여기로 들어옴).
+	// HTTP는 비동기지만 본문을 동기 직렬화해 fire-and-forget하므로 PS 소멸과 무관하게 완료된다.
+	if (AD1PlayerState* PS = Exiting ? Cast<AD1PlayerState>(Exiting->PlayerState) : nullptr)
+	{
+		if (PS->WebCharacterId > 0)
+		{
+			if (UD1HttpSubsystem* Http = GetGameInstance()->GetSubsystem<UD1HttpSubsystem>())
+			{
+				Http->SaveCharacter(PS->WebCharacterId, PS->BuildSaveJson());
+				UE_LOG(LogD1Travel, Log, TEXT("Logout: CharId=%lld 저장 요청"), PS->WebCharacterId);
+			}
+		}
+	}
+
+	Super::Logout(Exiting);
 }
 
 void AD1GameModeBase::PostLogin(APlayerController* NewPlayer)

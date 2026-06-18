@@ -416,13 +416,19 @@ TArray<FD1SavedAbilityInfo> UD1AbilitySystemComponent::SaveAbilityStates()
 {
 	TArray<FD1SavedAbilityInfo> Result;
 
+	const FD1GameplayTags& GameTags = FD1GameplayTags::Get();
+
 	ABILITYLIST_SCOPE_LOCK();
 	for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
 	{
 		const FGameplayTag StatusTag = GetStatusFromSpec(Spec);
 
-		// Locked 상태는 저장 불필요 — AddCharacterAbilities + UpdateAbilityStatuses가 재생성
-		if (!StatusTag.IsValid() || StatusTag.MatchesTagExact(FD1GameplayTags::Get().Abilities_Status_Locked))
+		// Unlocked/Equipped(실제 습득한 것)만 저장.
+		// Locked/Eligible은 레벨에 따라 UpdateAbilityStatuses가 자동 재생성하므로 저장 불필요
+		// (Eligible까지 저장하면 "안 배웠는데 배운 걸로" DB에 남는 의미 오염 발생).
+		if (!StatusTag.IsValid()
+			|| StatusTag.MatchesTagExact(GameTags.Abilities_Status_Locked)
+			|| StatusTag.MatchesTagExact(GameTags.Abilities_Status_Eligible))
 		{
 			continue;
 		}

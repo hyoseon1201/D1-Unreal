@@ -31,6 +31,9 @@ public:
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
 		const FString& Options, const FString& Portal = TEXT("")) override;
 
+	/** 접속 종료(정상/타임아웃) 시 캐릭터 데이터를 웹서버에 저장 */
+	virtual void Logout(AController* Exiting) override;
+
 	/** 이 GameMode에서 Ability 사용(전투/버프/회복 등)을 허용하는가? */
 	UFUNCTION(BlueprintPure, Category = "D1|GameMode Rules")
 	virtual bool AreAbilitiesAllowed() const { return true; }

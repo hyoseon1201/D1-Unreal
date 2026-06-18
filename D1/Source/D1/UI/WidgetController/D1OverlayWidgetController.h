@@ -10,6 +10,7 @@ class UD1AbilitySystemComponent;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_FourParams(FOnCooldownSignature, const FGameplayTag&, AbilityTag, const FGameplayTag&, CooldownTag, float, CooldownPercent, float, Duration);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnPlayerLeveledUpSignature, int32, NewLevel);  // 진짜 레벨업 전용 (복원/동기화 시 미발동)
 
 UCLASS(BlueprintType, Blueprintable)
 class D1_API UD1OverlayWidgetController : public UD1WidgetController
@@ -37,6 +38,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Level")
 	FOnPlayerStatChangedSignature OnPlayerLevelChangedDelegate;
+
+	/** XP 획득으로 레벨이 실제로 오를 때만 발동. 복원/맵이동 동기화 시엔 발동 안 함. */
+	UPROPERTY(BlueprintAssignable, Category = "GAS|Level")
+	FOnPlayerLeveledUpSignature OnPlayerLeveledUpDelegate;
 
 	UPROPERTY(BlueprintAssignable, Category = "GAS|Cooldown")
 	FOnCooldownSignature OnCooldownTagChangedDelegate;
