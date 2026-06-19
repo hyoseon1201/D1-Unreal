@@ -18,4 +18,7 @@ public:
 	/** 보스가 사망하면 모든 플레이어에게 결과 위젯을 띄움 */
 	UFUNCTION(BlueprintCallable, Category = "D1|Dungeon")
 	void OnBossDefeated();
+
+	/** 마지막 플레이어 퇴장 시 다음 파티를 위해 맵 리셋 */
+	virtual void Logout(AController* Exiting) override;
 };

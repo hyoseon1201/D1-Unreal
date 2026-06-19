@@ -15,6 +15,9 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "D1GameplayTags.h"
 #include "Game/D1GameModeDungeon.h"
+#include "Inventory/D1InventoryComponent.h"
+#include "Inventory/D1ItemData.h"
+#include "GameFramework/PlayerState.h"
 
 AD1Enemy::AD1Enemy()
 {
@@ -76,6 +79,51 @@ void AD1Enemy::Die()
 			if (AD1GameModeDungeon* GM = Cast<AD1GameModeDungeon>(GetWorld()->GetAuthGameMode()))
 			{
 				GM->OnBossDefeated();
+			}
+		}
+
+		// 드롭 테이블 처리 — 모든 파티원에게 동일 지급 (co-op 공유 드롭)
+		UE_LOG(LogD1Inventory, Warning, TEXT("Drop: Die() 서버 진입 — DropTable=%s"),
+			DropTable ? *DropTable->GetName() : TEXT("NULL"));
+
+		if (DropTable)
+		{
+			UE_LOG(LogD1Inventory, Warning, TEXT("Drop: Entries 수=%d"), DropTable->Entries.Num());
+
+			for (const FD1DropEntry& Entry : DropTable->Entries)
+			{
+				if (!IsValid(Entry.ItemData.Get()))
+				{
+					UE_LOG(LogD1Inventory, Warning, TEXT("Drop: ItemData NULL — 스킵"));
+					continue;
+				}
+				if (FMath::FRandRange(0.f, 100.f) > Entry.DropChance)
+				{
+					UE_LOG(LogD1Inventory, Warning, TEXT("Drop: %s 확률 미달 — 스킵"), *Entry.ItemData->ItemID.ToString());
+					continue;
+				}
+
+				const int32 Quantity = FMath::RandRange(Entry.MinQuantity, Entry.MaxQuantity);
+
+				for (FConstPlayerControllerIterator It = GetWorld()->GetPlayerControllerIterator(); It; ++It)
+				{
+					if (APlayerController* PC = It->Get())
+					{
+						if (APlayerState* PS = PC->GetPlayerState<APlayerState>())
+						{
+							if (UD1InventoryComponent* Inv = PS->FindComponentByClass<UD1InventoryComponent>())
+							{
+								const bool bOk = Inv->AddItem(Entry.ItemData->ItemID, Quantity);
+								UE_LOG(LogD1Inventory, Warning, TEXT("Drop: %s x%d → %s (성공=%d)"),
+									*Entry.ItemData->ItemID.ToString(), Quantity, *PS->GetPlayerName(), bOk);
+							}
+							else
+							{
+								UE_LOG(LogD1Inventory, Warning, TEXT("Drop: %s — InventoryComponent 없음"), *PS->GetPlayerName());
+							}
+						}
+					}
+				}
 			}
 		}
 	}

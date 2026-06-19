@@ -10,6 +10,7 @@ class UD1HttpSubsystem;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FD1OnLoginSuccessDelegate);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FD1OnLoginFailedDelegate, const FString&, ErrorMessage);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FD1OnRegisterSuccessDelegate);
 
 /**
  * 로그인 화면 WidgetController.
@@ -26,11 +27,20 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "D1|Login")
 	void RequestLogin(const FString& Email, const FString& Password);
 
+	UFUNCTION(BlueprintCallable, Category = "D1|Login")
+	void RequestRegister(const FString& Email, const FString& Password);
+
 	UPROPERTY(BlueprintAssignable, Category = "D1|Login")
 	FD1OnLoginSuccessDelegate OnLoginSuccess;
 
 	UPROPERTY(BlueprintAssignable, Category = "D1|Login")
 	FD1OnLoginFailedDelegate OnLoginFailed;
+
+	UPROPERTY(BlueprintAssignable, Category = "D1|Login")
+	FD1OnRegisterSuccessDelegate OnRegisterSuccess;
+
+	UPROPERTY(BlueprintAssignable, Category = "D1|Login")
+	FD1OnLoginFailedDelegate OnRegisterFailed;
 
 private:
 	UPROPERTY()
@@ -41,4 +51,7 @@ private:
 
 	UFUNCTION()
 	void HandleGetCharactersResponse(bool bSuccess, const FString& ErrorMessage);
+
+	UFUNCTION()
+	void HandleRegisterResponse(bool bSuccess, const FString& ErrorMessage);
 };

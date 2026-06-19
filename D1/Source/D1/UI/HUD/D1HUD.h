@@ -15,6 +15,7 @@ class UD1SkillMenuWidgetController;
 class UD1InventoryWidgetController;
 class UD1DungeonResultWidgetController;
 class UD1DungeonPartyWidgetController;
+class UD1GameMenuWidgetController;
 struct FWidgetControllerParams;
 
 /**
@@ -33,6 +34,7 @@ public:
 	UD1InventoryWidgetController* GetInventoryWidgetController(const FWidgetControllerParams& WCParams);
 	UD1DungeonResultWidgetController* GetDungeonResultWidgetController(const FWidgetControllerParams& WCParams);
 	UD1DungeonPartyWidgetController* GetDungeonPartyWidgetController(const FWidgetControllerParams& WCParams);
+	UD1GameMenuWidgetController* GetGameMenuWidgetController(const FWidgetControllerParams& WCParams);
 
 	void InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS);
 
@@ -78,4 +80,10 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	TSubclassOf<UD1DungeonPartyWidgetController> DungeonPartyWidgetControllerClass;
+
+	UPROPERTY()
+	TObjectPtr<UD1GameMenuWidgetController> GameMenuWidgetController;
+
+	UPROPERTY(EditAnywhere)
+	TSubclassOf<UD1GameMenuWidgetController> GameMenuWidgetControllerClass;
 };

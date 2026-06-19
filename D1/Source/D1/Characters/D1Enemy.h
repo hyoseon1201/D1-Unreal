@@ -8,6 +8,7 @@
 #include "Interaction/HighlightInterface.h"
 #include "UI/WidgetController/D1OverlayWidgetController.h"
 #include "AbilitySystem/Data/D1CharacterClassInfo.h"
+#include "Inventory/D1DropTableData.h"
 #include "D1Enemy.generated.h"
 
 class UWidgetComponent;
@@ -63,6 +64,10 @@ public:
 	/** true면 이 몬스터는 보스. 사망 시 던전 클리어 처리 */
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Combat")
 	bool bIsBoss = false;
+
+	/** 사망 시 드롭할 아이템 테이블 (없으면 드롭 없음) */
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Drop")
+	TObjectPtr<UD1DropTableData> DropTable;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "Combat")
 	TObjectPtr<AActor> CombatTarget;

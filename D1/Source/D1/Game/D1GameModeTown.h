@@ -32,6 +32,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Party")
 	void ShowLoadingForPartyMembers(const TArray<FString>& MemberNames);
 
+	/** 연결 종료 시 파티 자동 탈퇴 (던전 이동·강제 종료 등 모든 경로 처리) */
+	virtual void Logout(AController* Exiting) override;
+
 protected:
 	/** GameStateTown 캐스팅 헬퍼 */
 	AD1GameStateTown* GetGameStateTown() const;

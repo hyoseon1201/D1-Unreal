@@ -16,6 +16,7 @@ class UD1ItemData;
 class UD1InventoryWidgetController;
 class UD1DungeonResultWidgetController;
 class UD1DungeonPartyWidgetController;
+class UD1GameMenuWidgetController;
 class AD1GameStateBase;
 class AD1HUD;
 struct FWidgetControllerParams;
@@ -68,6 +69,9 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
 	static UD1DungeonPartyWidgetController* GetDungeonPartyWidgetController(const UObject* WorldContextObject);
+
+	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|WidgetController", meta = (DefaultToSelf = "WorldContextObject"))
+	static UD1GameMenuWidgetController* GetGameMenuWidgetController(const UObject* WorldContextObject);
 
 	UFUNCTION(BlueprintPure, Category = "D1AbilitySystemLibrary|GameplayEffects")
 	static bool IsCriticalHit(const FGameplayEffectContextHandle& EffectContextHandle);

@@ -97,6 +97,9 @@ struct FD1LoadedCharacter
 // 서버 내부 전용(비-dynamic): verify-session 결과를 요청을 건 그 플레이어에게 라우팅
 DECLARE_DELEGATE_ThreeParams(FD1VerifySessionDelegate, bool /*bSuccess*/, int64 /*CharacterId*/, const FD1LoadedCharacter& /*Data*/);
 
+// 서버간 이동용 세션 토큰 발급 결과 (Town↔Dungeon ClientTravel 직전 사용)
+DECLARE_DELEGATE_ThreeParams(FD1IssueSessionDelegate, bool /*bSuccess*/, const FString& /*SessionToken*/, const FString& /*ServerAddress*/);
+
 /**
  * 웹서버 HTTP 통신 전담 서브시스템.
  * JWT 토큰, AccountId, 선택된 CharacterId를 씬 전환에도 유지한다.
@@ -107,6 +110,10 @@ class D1_API UD1HttpSubsystem : public UGameInstanceSubsystem
 	GENERATED_BODY()
 
 public:
+	/** POST /api/auth/register */
+	UFUNCTION(BlueprintCallable, Category = "D1|HTTP")
+	void Register(const FString& Email, const FString& Password);
+
 	/** POST /api/auth/login */
 	UFUNCTION(BlueprintCallable, Category = "D1|HTTP")
 	void Login(const FString& Email, const FString& Password);
@@ -135,6 +142,12 @@ public:
 	 */
 	void SaveCharacter(int64 CharacterId, const FString& JsonBody);
 
+	/**
+	 * [데디서버 전용] POST /api/server/sessions/issue — 서버간 이동용 세션 토큰 발급.
+	 * Destination: "town" 또는 "dungeon". 응답으로 SessionToken + ServerAddress 수신 후 ClientTravel에 사용.
+	 */
+	void IssueSessionToken(int64 CharacterId, const FString& Destination, FD1IssueSessionDelegate OnComplete);
+
 	// 로그인 성공 후 채워지는 세션 데이터
 	UPROPERTY(BlueprintReadOnly, Category = "D1|Session")
 	FString AuthToken;
@@ -158,6 +171,9 @@ public:
 	UPROPERTY(BlueprintAssignable, Category = "D1|HTTP")
 	FD1CreateCharacterResponseDelegate OnCreateCharacterResponse;
 
+	UPROPERTY(BlueprintAssignable, Category = "D1|HTTP")
+	FD1HttpResponseDelegate OnRegisterResponse;
+
 	// 성공 시엔 즉시 ClientTravel하므로 실패(에러 표시)용으로만 사용
 	UPROPERTY(BlueprintAssignable, Category = "D1|HTTP")
 	FD1EnterTownResponseDelegate OnEnterTownResponse;
@@ -172,6 +188,7 @@ public:
 
 private:
 	void OnLoginCompleted(TSharedPtr<class IHttpRequest> Request, TSharedPtr<class IHttpResponse> Response, bool bConnectedSuccessfully);
+	void OnRegisterCompleted(TSharedPtr<class IHttpRequest> Request, TSharedPtr<class IHttpResponse> Response, bool bConnectedSuccessfully);
 	void OnGetCharactersCompleted(TSharedPtr<class IHttpRequest> Request, TSharedPtr<class IHttpResponse> Response, bool bConnectedSuccessfully);
 	void OnCreateCharacterCompleted(TSharedPtr<class IHttpRequest> Request, TSharedPtr<class IHttpResponse> Response, bool bConnectedSuccessfully);
 	void OnEnterTownCompleted(TSharedPtr<class IHttpRequest> Request, TSharedPtr<class IHttpResponse> Response, bool bConnectedSuccessfully);

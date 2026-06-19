@@ -24,6 +24,51 @@ TSharedRef<IHttpRequest> UD1HttpSubsystem::MakeRequest(const FString& Verb, cons
 	return Request;
 }
 
+void UD1HttpSubsystem::Register(const FString& Email, const FString& Password)
+{
+	TSharedRef<IHttpRequest> Request = MakeRequest(TEXT("POST"), TEXT("/api/auth/register"));
+
+	TSharedPtr<FJsonObject> Body = MakeShared<FJsonObject>();
+	Body->SetStringField(TEXT("email"), Email);
+	Body->SetStringField(TEXT("password"), Password);
+
+	FString BodyString;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BodyString);
+	FJsonSerializer::Serialize(Body.ToSharedRef(), Writer);
+	Request->SetContentAsString(BodyString);
+
+	Request->OnProcessRequestComplete().BindUObject(this, &UD1HttpSubsystem::OnRegisterCompleted);
+	Request->ProcessRequest();
+}
+
+void UD1HttpSubsystem::OnRegisterCompleted(TSharedPtr<IHttpRequest> Request, TSharedPtr<IHttpResponse> Response, bool bConnectedSuccessfully)
+{
+	if (!bConnectedSuccessfully || !Response.IsValid())
+	{
+		OnRegisterResponse.Broadcast(false, TEXT("서버에 연결할 수 없습니다."));
+		return;
+	}
+
+	if (Response->GetResponseCode() == 201)
+	{
+		OnRegisterResponse.Broadcast(true, TEXT(""));
+		return;
+	}
+
+	TSharedPtr<FJsonObject> JsonObject;
+	TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+	FString ErrorMsg = FString::Printf(TEXT("오류 코드: %d"), Response->GetResponseCode());
+	if (FJsonSerializer::Deserialize(Reader, JsonObject))
+	{
+		FString Msg;
+		if (JsonObject->TryGetStringField(TEXT("message"), Msg))
+		{
+			ErrorMsg = Msg;
+		}
+	}
+	OnRegisterResponse.Broadcast(false, ErrorMsg);
+}
+
 void UD1HttpSubsystem::Login(const FString& Email, const FString& Password)
 {
 	TSharedRef<IHttpRequest> Request = MakeRequest(TEXT("POST"), TEXT("/api/auth/login"));
@@ -365,6 +410,49 @@ void UD1HttpSubsystem::SaveCharacter(int64 CharacterId, const FString& JsonBody)
 			{
 				UE_LOG(LogD1Travel, Warning, TEXT("SaveCharacter 실패: CharId=%lld (HTTP %d)"), CharacterId, Code);
 			}
+		});
+
+	Request->ProcessRequest();
+}
+
+void UD1HttpSubsystem::IssueSessionToken(int64 CharacterId, const FString& Destination, FD1IssueSessionDelegate OnComplete)
+{
+	TSharedRef<IHttpRequest> Request = MakeRequest(TEXT("POST"), TEXT("/api/server/sessions/issue"));
+	Request->SetHeader(TEXT("X-Server-Api-Key"), ServerApiKey);
+
+	TSharedPtr<FJsonObject> Body = MakeShared<FJsonObject>();
+	Body->SetNumberField(TEXT("characterId"), static_cast<double>(CharacterId));
+	Body->SetStringField(TEXT("destination"), Destination);
+
+	FString BodyStr;
+	TSharedRef<TJsonWriter<>> Writer = TJsonWriterFactory<>::Create(&BodyStr);
+	FJsonSerializer::Serialize(Body.ToSharedRef(), Writer);
+	Request->SetContentAsString(BodyStr);
+
+	Request->OnProcessRequestComplete().BindLambda(
+		[CharacterId, OnComplete](FHttpRequestPtr Req, FHttpResponsePtr Response, bool bConnectedSuccessfully)
+		{
+			const int32 Code = Response.IsValid() ? Response->GetResponseCode() : 0;
+			if (!bConnectedSuccessfully || Code != 200)
+			{
+				UE_LOG(LogD1Travel, Warning, TEXT("IssueSessionToken 실패: CharId=%lld (HTTP %d)"), CharacterId, Code);
+				OnComplete.ExecuteIfBound(false, FString(), FString());
+				return;
+			}
+
+			TSharedPtr<FJsonObject> Json;
+			TSharedRef<TJsonReader<>> Reader = TJsonReaderFactory<>::Create(Response->GetContentAsString());
+			if (!FJsonSerializer::Deserialize(Reader, Json) || !Json.IsValid())
+			{
+				UE_LOG(LogD1Travel, Warning, TEXT("IssueSessionToken: JSON 파싱 실패 CharId=%lld"), CharacterId);
+				OnComplete.ExecuteIfBound(false, FString(), FString());
+				return;
+			}
+
+			const FString Token   = Json->GetStringField(TEXT("sessionToken"));
+			const FString Address = Json->GetStringField(TEXT("serverAddress"));
+			UE_LOG(LogD1Travel, Log, TEXT("IssueSessionToken 성공: CharId=%lld → %s"), CharacterId, *Address);
+			OnComplete.ExecuteIfBound(true, Token, Address);
 		});
 
 	Request->ProcessRequest();

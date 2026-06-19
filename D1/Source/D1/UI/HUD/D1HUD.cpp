@@ -10,6 +10,7 @@
 #include "UI/WidgetController/D1InventoryWidgetController.h"
 #include "UI/WidgetController/D1DungeonResultWidgetController.h"
 #include "UI/WidgetController/D1DungeonPartyWidgetController.h"
+#include "UI/WidgetController/D1GameMenuWidgetController.h"
 #include "Blueprint/UserWidget.h"
 
 UD1OverlayWidgetController* AD1HUD::GetOverlayWidgetController(const FWidgetControllerParams& WCParams)
@@ -76,6 +77,17 @@ UD1DungeonPartyWidgetController* AD1HUD::GetDungeonPartyWidgetController(const F
 		DungeonPartyWidgetController->BindCallbacksToDependencies();
 	}
 	return DungeonPartyWidgetController;
+}
+
+UD1GameMenuWidgetController* AD1HUD::GetGameMenuWidgetController(const FWidgetControllerParams& WCParams)
+{
+	if (GameMenuWidgetController == nullptr)
+	{
+		GameMenuWidgetController = NewObject<UD1GameMenuWidgetController>(this, GameMenuWidgetControllerClass);
+		GameMenuWidgetController->SetWidgetControllerParams(WCParams);
+		GameMenuWidgetController->BindCallbacksToDependencies();
+	}
+	return GameMenuWidgetController;
 }
 
 void AD1HUD::InitOverlay(APlayerController* PC, APlayerState* PS, UAbilitySystemComponent* ASC, UAttributeSet* AS)

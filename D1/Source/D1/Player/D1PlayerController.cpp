@@ -24,6 +24,7 @@
 #include "Game/D1GameModeBase.h"
 #include "Game/D1GameModeTown.h"
 #include "Game/D1GameStateTown.h"
+#include "Game/D1HttpSubsystem.h"
 #include "Player/D1PlayerState.h"
 #include "Interaction/CombatInterface.h"
 #include "Inventory/D1InventoryComponent.h"
@@ -563,10 +564,50 @@ void AD1PlayerController::Server_StartDungeon_Implementation()
 
 void AD1PlayerController::Server_ReturnToTown_Implementation()
 {
-	// ServerTravel 전에 서버 측에서 데이터를 저장 (PlayerState가 아직 유효한 시점)
-	// 전원이 ServerTravel로 함께 이동하므로 모든 PlayerController의 데이터를 저장
-	if (UWorld* World = GetWorld())
+	UWorld* World = GetWorld();
+	if (!World) return;
+
+	UD1HttpSubsystem* Http = GetGameInstance() ? GetGameInstance()->GetSubsystem<UD1HttpSubsystem>() : nullptr;
+
+	// DB 로그인 여부로 크로스 프로세스 경로 결정 (요청자 기준)
+	AD1PlayerState* RequesterPS = GetPlayerState<AD1PlayerState>();
+	const bool bCrossProcess = Http != nullptr && RequesterPS && RequesterPS->WebCharacterId > 0;
+
+	if (bCrossProcess)
 	{
+		// 크로스 프로세스: 던전 내 모든 플레이어를 Town으로 각자 ClientTravel
+		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
+		{
+			AD1PlayerController* PC = Cast<AD1PlayerController>(It->Get());
+			if (!PC) continue;
+
+			AD1PlayerState* PS = PC->GetPlayerState<AD1PlayerState>();
+			if (!PS || PS->WebCharacterId <= 0) continue;
+
+			Http->SaveCharacter(PS->WebCharacterId, PS->BuildSaveJson());
+
+			const int64 CharId = PS->WebCharacterId;
+			TWeakObjectPtr<AD1PlayerController> WeakPC(PC);
+			FD1IssueSessionDelegate Delegate;
+			Delegate.BindLambda([WeakPC, CharId](bool bSuccess, const FString& Token, const FString& Address)
+			{
+				if (!bSuccess)
+				{
+					UE_LOG(LogD1Travel, Warning, TEXT("ReturnToTown: 세션 토큰 발급 실패 CharId=%lld"), CharId);
+					return;
+				}
+				if (!WeakPC.IsValid()) return;
+
+				const FString URL = FString::Printf(TEXT("%s?sessionToken=%s"), *Address, *Token);
+				UE_LOG(LogD1Travel, Log, TEXT("ReturnToTown: ClientTravel → %s (CharId=%lld)"), *Address, CharId);
+				WeakPC->ClientTravel(URL, ETravelType::TRAVEL_Absolute);
+			});
+			Http->IssueSessionToken(CharId, TEXT("town"), Delegate);
+		}
+	}
+	else
+	{
+		// PIE 폴백: GameInstance TMap 저장 후 ServerTravel
 		for (FConstPlayerControllerIterator It = World->GetPlayerControllerIterator(); It; ++It)
 		{
 			if (AD1PlayerController* PC = Cast<AD1PlayerController>(It->Get()))
