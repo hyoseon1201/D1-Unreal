@@ -63,6 +63,18 @@ void AD1PreGameHUD::BeginPlay()
 			CharacterSelectWidget->SetVisibility(ESlateVisibility::Collapsed);
 		}
 	}
+
+	// 회원가입 위젯도 숨긴 채로 생성. LoginWidgetController를 그대로 공유한다 (RequestRegister가 그 안에 있음)
+	if (RegisterWidgetClass)
+	{
+		RegisterWidget = CreateWidget<UD1UserWidget>(GetOwningPlayerController(), RegisterWidgetClass);
+		if (RegisterWidget)
+		{
+			RegisterWidget->SetWidgetController(LoginWidgetController);
+			RegisterWidget->AddToViewport();
+			RegisterWidget->SetVisibility(ESlateVisibility::Collapsed);
+		}
+	}
 }
 
 void AD1PreGameHUD::ShowCharacterSelect()
@@ -74,5 +86,29 @@ void AD1PreGameHUD::ShowCharacterSelect()
 	if (CharacterSelectWidget)
 	{
 		CharacterSelectWidget->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void AD1PreGameHUD::ShowRegister()
+{
+	if (LoginWidget)
+	{
+		LoginWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (RegisterWidget)
+	{
+		RegisterWidget->SetVisibility(ESlateVisibility::Visible);
+	}
+}
+
+void AD1PreGameHUD::ShowLogin()
+{
+	if (RegisterWidget)
+	{
+		RegisterWidget->SetVisibility(ESlateVisibility::Collapsed);
+	}
+	if (LoginWidget)
+	{
+		LoginWidget->SetVisibility(ESlateVisibility::Visible);
 	}
 }

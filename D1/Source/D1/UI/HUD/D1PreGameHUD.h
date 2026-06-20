@@ -28,6 +28,14 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "D1|PreGame")
 	void ShowCharacterSelect();
 
+	/** 로그인 화면에서 회원가입 화면으로 전환 */
+	UFUNCTION(BlueprintCallable, Category = "D1|PreGame")
+	void ShowRegister();
+
+	/** 회원가입 완료/취소 후 로그인 화면으로 복귀 */
+	UFUNCTION(BlueprintCallable, Category = "D1|PreGame")
+	void ShowLogin();
+
 private:
 	UPROPERTY(EditAnywhere, Category = "D1|PreGame")
 	TSubclassOf<UD1UserWidget> LoginWidgetClass;
@@ -41,6 +49,10 @@ private:
 	UPROPERTY(EditAnywhere, Category = "D1|PreGame")
 	TSubclassOf<UD1CharacterSelectWidgetController> CharacterSelectWidgetControllerClass;
 
+	/** 회원가입 위젯도 로그인과 동일한 LoginWidgetController를 공유 (RequestRegister가 그 안에 있음) */
+	UPROPERTY(EditAnywhere, Category = "D1|PreGame")
+	TSubclassOf<UD1UserWidget> RegisterWidgetClass;
+
 	UPROPERTY()
 	TObjectPtr<UD1UserWidget> LoginWidget;
 
@@ -52,4 +64,7 @@ private:
 
 	UPROPERTY()
 	TObjectPtr<UD1CharacterSelectWidgetController> CharacterSelectWidgetController;
+
+	UPROPERTY()
+	TObjectPtr<UD1UserWidget> RegisterWidget;
 };

@@ -16,6 +16,7 @@
 #include "UI/WidgetController/D1WidgetController.h"
 #include "UI/WidgetController/D1DungeonResultWidgetController.h"
 #include "UI/WidgetController/D1DungeonPartyWidgetController.h"
+#include "UI/WidgetController/D1GameMenuWidgetController.h"
 #include "Inventory/D1ItemRegistry.h"
 #include "AbilitySystem/D1AttributeSet.h"
 #include "Characters/D1CharacterBase.h"
@@ -283,6 +284,20 @@ UD1DungeonPartyWidgetController* UD1AbilitySystemLibrary::GetDungeonPartyWidgetC
 	if (bSuccessfulParams)
 	{
 		return D1HUD->GetDungeonPartyWidgetController(WCParams);
+	}
+
+	return nullptr;
+}
+
+UD1GameMenuWidgetController* UD1AbilitySystemLibrary::GetGameMenuWidgetController(const UObject* WorldContextObject)
+{
+	FWidgetControllerParams WCParams;
+	AD1HUD* D1HUD = nullptr;
+	const bool bSuccessfulParams = MakeWidgetControllerParams(WorldContextObject, WCParams, D1HUD);
+
+	if (bSuccessfulParams)
+	{
+		return D1HUD->GetGameMenuWidgetController(WCParams);
 	}
 
 	return nullptr;
