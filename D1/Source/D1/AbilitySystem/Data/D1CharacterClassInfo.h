@@ -15,6 +15,10 @@ enum class ECharacterClass : uint8
 {
 	Goblin_Melee,
 	Goblin_Ranger,
+	Warrior,
+	Mage,
+	Archer,
+	Priest,
 };
 
 USTRUCT(BlueprintType)

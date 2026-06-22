@@ -2,8 +2,7 @@
 
 #include "UI/HUD/D1PreGameHUD.h"
 #include "UI/Widget/D1UserWidget.h"
-#include "UI/WidgetController/D1LoginWidgetController.h"
-#include "UI/WidgetController/D1CharacterSelectWidgetController.h"
+#include "UI/WidgetController/D1PreGameWidgetController.h"
 #include "Game/D1HttpSubsystem.h"
 #include "Blueprint/UserWidget.h"
 #include "D1.h"
@@ -27,88 +26,21 @@ void AD1PreGameHUD::BeginPlay()
 		return;
 	}
 
-	// 로그인 WidgetController 생성 및 초기화
-	if (LoginWidgetControllerClass)
+	// 프리게임 WidgetController 생성 및 초기화 (로그인~Town 입장까지 단일 컨트롤러 공유)
+	if (PreGameWidgetControllerClass)
 	{
-		LoginWidgetController = NewObject<UD1LoginWidgetController>(this, LoginWidgetControllerClass);
-		LoginWidgetController->Init(HttpSubsystem);
+		PreGameWidgetController = NewObject<UD1PreGameWidgetController>(this, PreGameWidgetControllerClass);
+		PreGameWidgetController->Init(HttpSubsystem);
 	}
 
-	// 캐릭터 선택 WidgetController 생성 및 초기화
-	if (CharacterSelectWidgetControllerClass)
+	// 프리게임 오버레이 위젯 생성. Login/Register/CharacterSelect/NewCharacter 패널 전환은 BP 내부에서 처리
+	if (PreGameOverlayWidgetClass)
 	{
-		CharacterSelectWidgetController = NewObject<UD1CharacterSelectWidgetController>(this, CharacterSelectWidgetControllerClass);
-		CharacterSelectWidgetController->Init(HttpSubsystem);
-	}
-
-	// 로그인 위젯 생성 및 표시
-	if (LoginWidgetClass)
-	{
-		LoginWidget = CreateWidget<UD1UserWidget>(GetOwningPlayerController(), LoginWidgetClass);
-		if (LoginWidget)
+		PreGameOverlayWidget = CreateWidget<UD1UserWidget>(GetOwningPlayerController(), PreGameOverlayWidgetClass);
+		if (PreGameOverlayWidget)
 		{
-			LoginWidget->SetWidgetController(LoginWidgetController);
-			LoginWidget->AddToViewport();
+			PreGameOverlayWidget->SetWidgetController(PreGameWidgetController);
+			PreGameOverlayWidget->AddToViewport();
 		}
-	}
-
-	// 캐릭터 선택 위젯은 숨긴 채로 생성
-	if (CharacterSelectWidgetClass)
-	{
-		CharacterSelectWidget = CreateWidget<UD1UserWidget>(GetOwningPlayerController(), CharacterSelectWidgetClass);
-		if (CharacterSelectWidget)
-		{
-			CharacterSelectWidget->SetWidgetController(CharacterSelectWidgetController);
-			CharacterSelectWidget->AddToViewport();
-			CharacterSelectWidget->SetVisibility(ESlateVisibility::Collapsed);
-		}
-	}
-
-	// 회원가입 위젯도 숨긴 채로 생성. LoginWidgetController를 그대로 공유한다 (RequestRegister가 그 안에 있음)
-	if (RegisterWidgetClass)
-	{
-		RegisterWidget = CreateWidget<UD1UserWidget>(GetOwningPlayerController(), RegisterWidgetClass);
-		if (RegisterWidget)
-		{
-			RegisterWidget->SetWidgetController(LoginWidgetController);
-			RegisterWidget->AddToViewport();
-			RegisterWidget->SetVisibility(ESlateVisibility::Collapsed);
-		}
-	}
-}
-
-void AD1PreGameHUD::ShowCharacterSelect()
-{
-	if (LoginWidget)
-	{
-		LoginWidget->SetVisibility(ESlateVisibility::Collapsed);
-	}
-	if (CharacterSelectWidget)
-	{
-		CharacterSelectWidget->SetVisibility(ESlateVisibility::Visible);
-	}
-}
-
-void AD1PreGameHUD::ShowRegister()
-{
-	if (LoginWidget)
-	{
-		LoginWidget->SetVisibility(ESlateVisibility::Collapsed);
-	}
-	if (RegisterWidget)
-	{
-		RegisterWidget->SetVisibility(ESlateVisibility::Visible);
-	}
-}
-
-void AD1PreGameHUD::ShowLogin()
-{
-	if (RegisterWidget)
-	{
-		RegisterWidget->SetVisibility(ESlateVisibility::Collapsed);
-	}
-	if (LoginWidget)
-	{
-		LoginWidget->SetVisibility(ESlateVisibility::Visible);
 	}
 }

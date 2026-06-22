@@ -66,23 +66,50 @@ bool UD1InventoryComponent::AddItem(const FName& ItemID, int32 Count)
 		return false;
 	}
 
-	// 빈 슬롯 탐색
-	for (int32 i = 0; i < MaxSlots; ++i)
-	{
-		if (InventorySlots[i].ItemID.IsNone() || InventorySlots[i].Count <= 0)
-		{
-			InventorySlots[i].ItemID = ItemID;
-			InventorySlots[i].Count = Count;
-			InventorySlots[i].SlotIndex = i;
+	const UD1ItemData* ItemData = UD1AbilitySystemLibrary::GetItemData(this, ItemID);
+	const int32 MaxStack = ItemData ? FMath::Max(1, ItemData->MaxStack) : 1;
 
-			UE_LOG(LogD1Inventory, Verbose, TEXT("AddItem: Slot %d <- %s x%d"), i, *ItemID.ToString(), Count);
-			OnInventoryChanged.Broadcast();
-			return true;
+	int32 Remaining = Count;
+
+	// 1순위: 같은 아이템이 들어있는 슬롯에 MaxStack까지 채워넣기
+	for (int32 i = 0; i < MaxSlots && Remaining > 0; ++i)
+	{
+		FD1InventoryItem& Slot = InventorySlots[i];
+		if (Slot.ItemID == ItemID && Slot.Count < MaxStack)
+		{
+			const int32 AddAmount = FMath::Min(Remaining, MaxStack - Slot.Count);
+			Slot.Count += AddAmount;
+			Remaining -= AddAmount;
+			UE_LOG(LogD1Inventory, Verbose, TEXT("AddItem: Slot %d 스택 += %d (%s)"), i, AddAmount, *ItemID.ToString());
 		}
 	}
 
-	UE_LOG(LogD1Inventory, Warning, TEXT("AddItem FAILED: No empty slot for %s"), *ItemID.ToString());
-	return false;
+	// 2순위: 남은 수량은 빈 슬롯에 MaxStack 단위로 새로 채움
+	for (int32 i = 0; i < MaxSlots && Remaining > 0; ++i)
+	{
+		FD1InventoryItem& Slot = InventorySlots[i];
+		if (Slot.ItemID.IsNone() || Slot.Count <= 0)
+		{
+			const int32 AddAmount = FMath::Min(Remaining, MaxStack);
+			Slot.ItemID = ItemID;
+			Slot.Count = AddAmount;
+			Slot.SlotIndex = i;
+			Remaining -= AddAmount;
+			UE_LOG(LogD1Inventory, Verbose, TEXT("AddItem: Slot %d <- %s x%d"), i, *ItemID.ToString(), AddAmount);
+		}
+	}
+
+	if (Remaining > 0)
+	{
+		UE_LOG(LogD1Inventory, Warning, TEXT("AddItem: %s x%d 중 %d개는 슬롯 부족으로 추가 실패"), *ItemID.ToString(), Count, Remaining);
+	}
+
+	if (Remaining < Count)
+	{
+		OnInventoryChanged.Broadcast();
+	}
+
+	return Remaining == 0;
 }
 
 bool UD1InventoryComponent::RemoveItem(int32 SlotIndex, int32 Count)

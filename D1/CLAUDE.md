@@ -22,7 +22,7 @@
 - **엔진 버전은 반드시 UE 5.7.4 소스 빌드.** 경로: `D:\UnrealEngineSource\UnrealEngine`. Launcher 버전은 Server Target 미지원.
 - **UHT 캐시 문제:** `UFUNCTION` 시그니처 변경 후 `.gen.cpp`가 구 시그니처를 참조해 빌드 에러 → VS에서 `Rebuild`, 안 되면 `Intermediate/` 삭제 후 프로젝트 파일 재생성.
 - **패키징 배치파일** (`D:\D1\`): `BuildServer.bat`, `BuildClient.bat`, `BuildAll.bat` — UAT 사용, `-map=/Game/Maps/Town+/Game/Maps/GoblinCave` 명시 필수 (생략 시 맵 누락).
-- **실행 배치파일** (`D:\D1\`): `RunServer.bat` (port 7777), `RunClients.bat` (클라 2개), `RunClient1.bat`.
+- **실행 배치파일** (`D:\D1\`): `RunTownServer.bat` (port 7777), `RunDungeonServer.bat` (port 7778), `RunClients.bat` (클라 2개), `RunClient1.bat`.
 - **빌드 출력:** 서버 → `D:\D1\Build\Server\WindowsServer\D1Server.exe`, 클라 → `D:\D1\Build\Client\Windows\D1.exe`.
 - **새 던전 맵 추가 시 필수 3곳:** ① `BuildServer.bat`/`BuildAll.bat`의 `-map=` 파라미터에 추가, ② `AD1GameStateTown::AllowedDungeonMaps`에 등록, ③ `DefaultGame.ini`의 `MapsToCook`에 추가 (UAT가 직접 읽진 않지만 에디터 쿡에서 참조).
 
