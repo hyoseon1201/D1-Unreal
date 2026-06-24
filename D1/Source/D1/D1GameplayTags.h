@@ -62,6 +62,9 @@ public:
 	FGameplayTag Player_Block_InputReleased;
 	FGameplayTag Player_Block_InputHeld;
 
+	/* Debug Tags */
+	FGameplayTag Debug_TestBot_Invulnerable;
+
 	/* Active Ability Tags */
 	FGameplayTag Abilities_Attack;
 	FGameplayTag Abilities_Physical_ChargeDash;

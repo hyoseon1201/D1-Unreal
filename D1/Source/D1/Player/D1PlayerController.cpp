@@ -73,6 +73,53 @@ void AD1PlayerController::BeginPlay()
 	InputModeData.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
 	InputModeData.SetHideCursorDuringCapture(false);
 	SetInputMode(InputModeData);
+
+	// 부하 테스트용 자동전투 모드 — 헤드리스 테스트 클라이언트 실행 시 -testbot 옵션으로 접속 즉시 활성화.
+	// 직접 로그인해서 원하는 위치로 이동한 뒤 켜고 싶다면 콘솔에서 ToggleTestBot 사용.
+	if (FParse::Param(FCommandLine::Get(), TEXT("testbot")) && !HasAuthority())
+	{
+		ToggleTestBot();
+	}
+}
+
+void AD1PlayerController::ToggleTestBot()
+{
+	if (HasAuthority())
+	{
+		// 서버 측 PlayerController 인스턴스에서는 동작하지 않음 (클라이언트 사이드 입력 시뮬레이션이므로)
+		return;
+	}
+
+	bIsTestBot = !bIsTestBot;
+
+	if (bIsTestBot)
+	{
+		GetWorldTimerManager().SetTimer(TestBotTimerHandle, this, &AD1PlayerController::TickTestBot, TestBotTickInterval, true);
+		UE_LOG(LogD1, Log, TEXT("TestBot: 활성화"));
+	}
+	else
+	{
+		GetWorldTimerManager().ClearTimer(TestBotTimerHandle);
+		UE_LOG(LogD1, Log, TEXT("TestBot: 비활성화"));
+	}
+
+	Server_SetTestBotInvulnerable(bIsTestBot);
+}
+
+void AD1PlayerController::Server_SetTestBotInvulnerable_Implementation(bool bEnable)
+{
+	if (UD1AbilitySystemComponent* ASC = GetASC())
+	{
+		const FGameplayTag& InvulnerableTag = FD1GameplayTags::Get().Debug_TestBot_Invulnerable;
+		if (bEnable)
+		{
+			ASC->AddLooseGameplayTag(InvulnerableTag);
+		}
+		else
+		{
+			ASC->RemoveLooseGameplayTag(InvulnerableTag);
+		}
+	}
 }
 
 void AD1PlayerController::SetupInputComponent()
@@ -623,4 +670,63 @@ void AD1PlayerController::ClientShowLoadingScreen_Implementation(const FText& Lo
 {
 	// TODO: 로딩 위젯 표시 (Phase 2에서 WBP_Loading 구현)
 	UE_LOG(LogD1UI, Log, TEXT("ShowLoadingScreen: %s"), *LoadingText.ToString());
+}
+
+void AD1PlayerController::TickTestBot()
+{
+	if (!CanUseAbilities())
+	{
+		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: CanUseAbilities() == false, 중단"));
+		return;
+	}
+
+	APawn* ControlledPawn = GetPawn();
+	if (!ControlledPawn)
+	{
+		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: ControlledPawn 없음, 중단"));
+		return;
+	}
+
+	TArray<AActor*> NearbyActors;
+	UD1AbilitySystemLibrary::GetLivePlayersWithinRadius(this, NearbyActors, { ControlledPawn },
+		TestBotDetectionRadius, ControlledPawn->GetActorLocation());
+
+	AActor* NearestEnemy = nullptr;
+	float NearestDistSq = TNumericLimits<float>::Max();
+	for (AActor* Actor : NearbyActors)
+	{
+		if (!Actor->ActorHasTag(FName("Enemy")))
+		{
+			continue;
+		}
+
+		const float DistSq = FVector::DistSquared(ControlledPawn->GetActorLocation(), Actor->GetActorLocation());
+		if (DistSq < NearestDistSq)
+		{
+			NearestDistSq = DistSq;
+			NearestEnemy = Actor;
+		}
+	}
+
+	if (!NearestEnemy)
+	{
+		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: 탐지 범위(%.0f) 안에 Enemy 태그 액터 없음 (위치=%s, 주변 액터 수=%d)"),
+			TestBotDetectionRadius, *ControlledPawn->GetActorLocation().ToString(), NearbyActors.Num());
+		return;
+	}
+
+	const float DistToEnemy = FMath::Sqrt(NearestDistSq);
+	if (DistToEnemy > TestBotAttackRange)
+	{
+		const FVector Direction = (NearestEnemy->GetActorLocation() - ControlledPawn->GetActorLocation()).GetSafeNormal();
+		ControlledPawn->AddMovementInput(Direction);
+		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: %s 추격 이동 중 (거리=%.0f)"), *NearestEnemy->GetName(), DistToEnemy);
+	}
+	else if (GetASC())
+	{
+		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: %s 공격 입력 시도 (거리=%.0f)"), *NearestEnemy->GetName(), DistToEnemy);
+		// 기본 공격(LMB)을 한 펄스 입력한 것처럼 시뮬레이션
+		GetASC()->AbilityInputTagPressed(FD1GameplayTags::Get().InputTag_LMB);
+		GetASC()->AbilityInputTagReleased(FD1GameplayTags::Get().InputTag_LMB);
+	}
 }

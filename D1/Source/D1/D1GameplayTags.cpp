@@ -61,6 +61,9 @@ void FD1GameplayTags::InitializeNativeGameplayTags()
 	GameplayTags.Player_Block_InputHeld = Manager.AddNativeGameplayTag(FName("Player.Block.Held"), FString("Block Input Held callback for input"));
 	GameplayTags.Player_Block_InputReleased = Manager.AddNativeGameplayTag(FName("Player.Block.Released"), FString("Block Input Released callback for input"));
 
+	/* Debug Tags */
+	GameplayTags.Debug_TestBot_Invulnerable = Manager.AddNativeGameplayTag(FName("Debug.TestBot.Invulnerable"), FString("부하 테스트용 봇 캐릭터 — 데미지 무시"));
+
 	/* Active Ability Tags */
 	GameplayTags.Abilities_Attack = Manager.AddNativeGameplayTag(FName("Abilities.Attack"), FString("Attack Ability"));
 	GameplayTags.Abilities_Physical_ChargeDash = Manager.AddNativeGameplayTag(FName("Abilities.Physical.ChargeDash"), FString("Warrior | ChargeDash Rush and Slam Attack"));

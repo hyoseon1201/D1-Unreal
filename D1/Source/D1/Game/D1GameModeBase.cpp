@@ -34,6 +34,8 @@ FString AD1GameModeBase::InitNewPlayer(APlayerController* NewPlayerController, c
 		PS->PendingSessionToken = UGameplayStatics::ParseOption(Options, TEXT("sessionToken"));
 		UE_LOG(LogD1Travel, Log, TEXT("InitNewPlayer: sessionToken %s"),
 			PS->PendingSessionToken.IsEmpty() ? TEXT("없음") : TEXT("캡처됨"));
+
+		PS->bIsTestBotConnection = UGameplayStatics::HasOption(Options, TEXT("testbot"));
 	}
 
 	return ErrorMessage;

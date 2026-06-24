@@ -124,6 +124,9 @@ public:
 	/** [서버 전용] verify-session으로 확정된 웹서버 캐릭터 ID. save 호출에 사용. */
 	int64 WebCharacterId = 0;
 
+	/** [서버 전용] 접속 URL에 testbot 옵션이 있었는지. true면 ChoosePlayerStart에서 랜덤 위치에 스폰. */
+	bool bIsTestBotConnection = false;
+
 protected:
 
 	UPROPERTY(VisibleAnywhere)

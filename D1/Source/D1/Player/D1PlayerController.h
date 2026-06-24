@@ -149,4 +149,31 @@ private:
 	/** 클라이언트에게 로딩 화면 표시 지시 */
 	UFUNCTION(Client, Reliable, Category = "D1|UI")
 	void ClientShowLoadingScreen(const FText& LoadingText);
+
+	// ─── 부하 테스트용 자동전투 봇 ───────────
+	// 커맨드라인 -testbot으로 접속 즉시 자동 시작하거나, 콘솔에서 ToggleTestBot으로 원하는 시점에 수동 토글 가능.
+
+	/** 콘솔 명령어로 자동전투 봇 On/Off (예: 로그인 후 원하는 위치로 직접 이동시킨 다음 켜기) */
+	UFUNCTION(Exec, Category = "Test Bot")
+	void ToggleTestBot();
+
+	/** 데미지 계산은 서버 권한이라, 서버 쪽 ASC에 무적 태그를 직접 추가/제거해야 함 */
+	UFUNCTION(Server, Reliable, Category = "Test Bot")
+	void Server_SetTestBotInvulnerable(bool bEnable);
+
+	/** 주기적으로 가장 가까운 적을 찾아 추격/공격한다 */
+	void TickTestBot();
+
+	bool bIsTestBot = false;
+
+	FTimerHandle TestBotTimerHandle;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Test Bot")
+	float TestBotTickInterval = 0.3f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Test Bot")
+	float TestBotDetectionRadius = 1500.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Test Bot")
+	float TestBotAttackRange = 150.f;
 };

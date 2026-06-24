@@ -6,6 +6,8 @@
 #include "Player/D1PlayerState.h"
 #include "Game/D1HttpSubsystem.h"
 #include "Engine/World.h"
+#include "NavigationSystem.h"
+#include "GameFramework/PlayerStart.h"
 
 void AD1GameModeDungeon::Logout(AController* Exiting)
 {
@@ -58,4 +60,34 @@ void AD1GameModeDungeon::OnBossDefeated()
 
 		PC->ClientShowDungeonResult(LootItems);
 	}
+}
+
+AActor* AD1GameModeDungeon::ChoosePlayerStart_Implementation(AController* Player)
+{
+	const AD1PlayerState* PS = Player ? Player->GetPlayerState<AD1PlayerState>() : nullptr;
+	if (PS && PS->bIsTestBotConnection)
+	{
+		if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent(GetWorld()))
+		{
+			// GetRandomPoint가 가끔 실패하는 걸 대비해 몇 번 재시도
+			constexpr int32 MaxAttempts = 5;
+			for (int32 Attempt = 0; Attempt < MaxAttempts; ++Attempt)
+			{
+				FNavLocation RandomLoc;
+				if (NavSys->GetRandomPoint(RandomLoc))
+				{
+					APlayerStart* TempStart = GetWorld()->SpawnActor<APlayerStart>(APlayerStart::StaticClass(), RandomLoc.Location, FRotator::ZeroRotator);
+					if (TempStart)
+					{
+						TempStart->SetLifeSpan(1.f);
+						UE_LOG(LogD1Travel, Log, TEXT("ChoosePlayerStart: 테스트 봇 랜덤 스폰 → %s (시도 %d/%d)"), *RandomLoc.Location.ToString(), Attempt + 1, MaxAttempts);
+						return TempStart;
+					}
+				}
+			}
+			UE_LOG(LogD1Travel, Warning, TEXT("ChoosePlayerStart: 테스트 봇 랜덤 위치 탐색 %d회 모두 실패, 기본 로직으로 폴백"), MaxAttempts);
+		}
+	}
+
+	return Super::ChoosePlayerStart_Implementation(Player);
 }

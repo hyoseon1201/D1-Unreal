@@ -22,7 +22,7 @@
 - **엔진 버전은 반드시 UE 5.7.4 소스 빌드.** 경로: `D:\UnrealEngineSource\UnrealEngine`. Launcher 버전은 Server Target 미지원.
 - **UHT 캐시 문제:** `UFUNCTION` 시그니처 변경 후 `.gen.cpp`가 구 시그니처를 참조해 빌드 에러 → VS에서 `Rebuild`, 안 되면 `Intermediate/` 삭제 후 프로젝트 파일 재생성.
 - **패키징 배치파일** (`D:\D1\`): `BuildServer.bat`, `BuildClient.bat`, `BuildAll.bat` — UAT 사용, `-map=/Game/Maps/Town+/Game/Maps/GoblinCave` 명시 필수 (생략 시 맵 누락).
-- **실행 배치파일** (`D:\D1\`): `RunTownServer.bat` (port 7777), `RunDungeonServer.bat` (port 7778), `RunClients.bat` (클라 2개), `RunClient1.bat`.
+- **실행 배치파일** (`D:\D1\`): `RunTownServer.bat` (port 7777), `RunDungeonServer.bat` (port 7778), `RunHuntingGroundServer.bat` (port 7779), `RunClients.bat` (클라 2개), `RunClient1.bat`, `RunTestBots.bat`(부하테스트용 헤드리스 봇 클라이언트, 아래 9번 참고), `RunHuntingGroundServerDebug.bat`(클라 exe를 `-server`로 띄우는 화면 있는 디버그용 서버 — 콘솔에서 `show Collision`으로 서버 권한 콜리전 시각 확인 가능).
 - **빌드 출력:** 서버 → `D:\D1\Build\Server\WindowsServer\D1Server.exe`, 클라 → `D:\D1\Build\Client\Windows\D1.exe`.
 - **새 던전 맵 추가 시 필수 3곳:** ① `BuildServer.bat`/`BuildAll.bat`의 `-map=` 파라미터에 추가, ② `AD1GameStateTown::AllowedDungeonMaps`에 등록, ③ `DefaultGame.ini`의 `MapsToCook`에 추가 (UAT가 직접 읽진 않지만 에디터 쿡에서 참조).
 
@@ -212,3 +212,19 @@
 | 06-19 | **버그픽스 2종.** ① 파티 자동 탈퇴 미동작: `AD1GameModeTown::Logout` 오버라이드 추가 — Super 전에 PlayerState에서 PartyPlayerId 조회 후 `ServerLeaveParty` 호출(던전 이동·강제 종료 등 모든 Logout 경로 커버). ② 던전 재입장 시 몬스터 미스폰: `AD1GameModeDungeon::Logout` 오버라이드 추가 — Super 후 플레이어 수 확인, 마지막 플레이어 퇴장 시 `GetWorld()->ServerTravel(GetWorld()->URL.Map)`으로 맵 전체 리셋 → 다음 파티 입장 전 몬스터 스포너 재실행 보장. |
 | 06-19 | **보상 시스템 — 드롭 테이블 + 클리어 저장.** `UD1DropTableData`(PrimaryDataAsset, `Inventory/`) + `FD1DropEntry`(ItemData + DropChance + Min/MaxQuantity) 신설. `AD1Enemy`에 `TObjectPtr<UD1DropTableData> DropTable` 추가. `Die()` HasAuthority 블록에서 확률 판정 후 던전 내 모든 플레이어 인벤토리에 `AddItem` (co-op 공유 드롭). `AD1GameModeDungeon::OnBossDefeated`에 체크포인트 `SaveCharacter` 추가 — 드롭 반영 직후 저장(ReturnToTown 전 크래시 대비). 기존 하드코딩 LootItems 텍스트 제거. 에디터에서 `DA_DropTable_Goblin` 등 DataAsset 인스턴스 생성 후 Enemy BP에 할당하면 동작. |
 | 06-19 | **회원가입 API + 인게임 게임메뉴 WC.** `UD1HttpSubsystem::Register()`(POST /api/auth/register, 201→성공) + `OnRegisterResponse` 델리게이트. `UD1LoginWidgetController::RequestRegister()` + `OnRegisterSuccess/OnRegisterFailed` 브로드캐스트. `UD1GameMenuWidgetController`(UD1WidgetController 상속) 신설 — `RequestReturnToTitle()`(OpenLevel "PreGame", Logout 경유 자동저장), `RequestQuitGame()`(KismetSystemLibrary::QuitGame). 3-place 규칙 적용: D1HUD getter(`GetGameMenuWidgetController`) + D1AbilitySystemLibrary static getter 추가. |
+| 06-22~23 | **PreGame UI 통합 + HuntingGround 신규 콘텐츠 + 부하테스트 인프라.** Login/CharacterSelect WC를 `UD1PreGameWidgetController` 하나로 통합(`WBP_PreGameOverlay`가 단일 WC 보유, Login/Register/CharacterSelect/NewCharacter는 서브패널로 내부 처리). 플레이어용 `ECharacterClass`(Warrior/Mage/Archer/Priest) 추가(실제 GAS 차별화는 Warrior만 구현, 나머지는 enum만 존재). `AddItem` 스택 버그 수정(같은 아이템 슬롯에 먼저 채우고 남으면 새 슬롯). `AD1Portal`(Actor) 신설 — Destination/DestinationMapName/DestinationPlayerStartTag로 범용 크로스 프로세스 포탈, `HasAuthority()`에서만 SaveCharacter→IssueSessionToken→ClientTravel(또는 PIE는 ServerTravel 폴백). `AD1Barrack`(Actor) 신설 — 주기적 몬스터 자동 스폰 + 상한 캡, 에디터에서 `UDrawSphereComponent`로 SpawnRadius 시각화. HuntingGround 맵 추가(빌드 배치파일 3종 + `MapsToCook`에 등록, `AllowedDungeonMaps`는 에디터에서 BP_D1GameStateTown에 직접 추가 필요). 데디서버 dev(루즈) 바이너리가 `WorldGridMaterial` CDO 단계에서 죽는 버그 발견(원인 미해결, 패키징 빌드는 정상) — 멀티 프로세스 테스트는 패키징 빌드로 진행. **부하테스트 인프라**: `AD1PlayerController`에 `-testbot`/`ToggleTestBot`(Exec) 자동전투 봇 모드(주변 Enemy 태그 탐색→이동/공격, LMB 입력 시뮬레이션) + `Debug.TestBot.Invulnerable` 태그(서버 RPC로 ASC에 부여, `ExecCalc_Damage`에서 데미지 0 처리)로 봇이 죽지 않게 함. `RunTestBots.bat/.ps1`(헤드리스 클라 N개를 `TestBots.json` 기준으로 로그인→매치메이킹→실행). |
+
+---
+
+## 9. 성능 테스트 워크플로우 (HuntingGround 부하 테스트)
+
+다음 순서로 진행:
+
+1. **Docker로 MySQL 기동**: `D1-WebServer`에서 `docker-compose up -d`
+2. **웹서버 기동**: IntelliJ에서 `bootRun` (localhost:8080)
+3. **데디서버 기동**: `RunTownServer.bat`(7777) + `RunHuntingGroundServer.bat`(7779)
+4. **헤드리스 테스트 봇 기동**: `RunTestBots.bat` — `D:\D1\TestBots.json`(사전 등록된 테스트 계정 5개)을 읽어서 로그인 → `POST /api/matchmaking/huntingground` → `D1.exe -game -nullrhi -testbot -log`로 자동 실행. 봇은 `Debug.TestBot.Invulnerable` 태그로 무적, 주변 `Enemy` 태그 탐색해서 자동 추격/공격
+5. **관전 확인**: 에디터에서 Standalone으로 직접 로그인 → HuntingGround로 이동 → 봇들이 몬스터와 정상적으로 전투 중인지 육안 확인 (서버 로그의 `LogD1Ability Verbose`로도 데미지 계산 확인 가능)
+6. **문제 없으면 Unreal Insights로 성능 측정**: `-trace=cpu,frame,counters,stat,bookmark`로 서버 실행 → `UnrealInsights.exe`로 분석. `D1Barrack`의 `MaxMonsterCount`/`RespawnInterval`을 단계적으로 올리며 Game Thread 비용 변화 관찰 (1단계: 몬스터만 증가, 2단계: 봇 연결 수 증가, 3단계: 둘 다)
+
+**알려진 한계**: 헤드리스 봇 접속 시 `&testbot=1` URL 옵션을 붙여서 보내고 있지만, 서버 쪽에서 이 옵션을 파싱해 랜덤 위치에 분산 스폰시키는 로직은 아직 구현 안 됨 — 현재는 HuntingGround의 기본 PlayerStart 한 곳에 모든 봇이 몰려서 스폰됨.
