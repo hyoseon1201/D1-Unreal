@@ -25,6 +25,12 @@ AD1Enemy::AD1Enemy()
 	// 부하테스트에서 GameNetDriver 리플리케이션 비용의 71%(D1Enemy 호출 73만+회)를 차지한 1순위 비용 → 20Hz로 낮춤.
 	SetNetUpdateFrequency(20.f);
 
+	// 거리 컬링: 탑다운 카메라(ArmLength 900, Pitch -55, FOV 90) 기준 화면에 보이는 지면 범위는
+	// 캐릭터로부터 약 900~1100유닛 → 2000유닛이면 화면에 보이는 몬스터는 안전하게 포함하면서
+	// 그보다 먼 다른 플레이어 그룹의 몬스터는 리플리케이션 대상에서 제외된다.
+	// 기본값(15,000유닛)보다 훨씬 좁혀서, 분산 스폰된 플레이어 그룹 간 불필요한 복제를 차단.
+	SetNetCullDistanceSquared(2000.f * 2000.f);
+
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 	AbilitySystemComponent = CreateDefaultSubobject<UD1AbilitySystemComponent>("AbilitySystemComponent");
