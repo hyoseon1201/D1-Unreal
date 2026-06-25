@@ -8,6 +8,7 @@
 #include "AbilitySystem/D1AttributeSet.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 #include "D1GameplayTags.h"
 
 AD1CharacterBase::AD1CharacterBase()
@@ -20,6 +21,11 @@ AD1CharacterBase::AD1CharacterBase()
 	GetMesh()->SetCollisionResponseToChannel(ECC_Camera, ECR_Ignore);
 	GetMesh()->SetCollisionResponseToChannel(ECC_Projectile, ECR_Overlap);
 	GetMesh()->SetGenerateOverlapEvents(true);
+
+	// 렌더링되지 않을 때(=데디서버는 항상)는 비싼 전체 애니메이션 포즈 계산을 스킵하고
+	// 몽타주만 틱한다. 근접공격 데미지가 몽타주 AnimNotify로 발동되므로 전투는 그대로 동작하면서
+	// 서버의 스켈레탈 애니메이션 비용(부하테스트에서 1순위 비용)을 크게 줄인다.
+	GetMesh()->VisibilityBasedAnimTickOption = EVisibilityBasedAnimTickOption::OnlyTickMontagesWhenNotRendered;
 
 	Weapon = CreateDefaultSubobject<UStaticMeshComponent>("Weapon");
 	Weapon->SetupAttachment(GetMesh(), FName("WeaponHandSocket"));

@@ -164,7 +164,20 @@ private:
 	/** 주기적으로 가장 가까운 적을 찾아 추격/공격한다 */
 	void TickTestBot();
 
+public:
+	/**
+	 * 테스트 봇이 현재 타게팅 중인 적을 가리키는 HitResult를 만든다.
+	 * 헤드리스(-nullrhi) 봇은 마우스 커서가 없어 GetHitResultUnderCursor가 쓰레기값을 반환하므로,
+	 * TargetDataUnderMouse가 커서 대신 이 값을 쓰도록 한다. 봇이 아니거나 타겟이 없으면 false.
+	 * (외부 어빌리티 태스크에서 호출하므로 public)
+	 */
+	bool GetTestBotTargetHit(FHitResult& OutHit) const;
+
+private:
 	bool bIsTestBot = false;
+
+	/** TickTestBot이 매 틱 갱신하는 현재 추격/공격 대상 (TargetDataUnderMouse에서 참조) */
+	TWeakObjectPtr<AActor> TestBotTarget;
 
 	FTimerHandle TestBotTimerHandle;
 

@@ -7,6 +7,10 @@
 #include "GameFramework/PlayerController.h"
 #include "Kismet/GameplayStatics.h"
 #include "Game/D1HttpSubsystem.h"
+#include "Engine/World.h"
+#include "GameFramework/PlayerStart.h"
+#include "EngineUtils.h"
+#include "Characters/D1Enemy.h"
 
 AD1GameModeBase::AD1GameModeBase()
 {
@@ -58,6 +62,65 @@ void AD1GameModeBase::Logout(AController* Exiting)
 	}
 
 	Super::Logout(Exiting);
+}
+
+void AD1GameModeBase::BeginPlay()
+{
+	Super::BeginPlay();
+
+	// 서버에서만, 주기적으로 살아있는 Enemy 수를 로그로 남긴다 (부하 테스트 관찰용).
+	// Enemy가 없는 맵(Town 등)에서는 LogMonsterCount가 알아서 로그를 생략한다.
+	if (HasAuthority())
+	{
+		GetWorldTimerManager().SetTimer(MonsterCountTimerHandle, this, &AD1GameModeBase::LogMonsterCount, MonsterCountLogInterval, true);
+	}
+}
+
+void AD1GameModeBase::LogMonsterCount()
+{
+	int32 Count = 0;
+	for (TActorIterator<AD1Enemy> It(GetWorld()); It; ++It)
+	{
+		++Count;
+	}
+
+	// 몬스터가 없는 맵(Town 등)은 매번 0을 찍어 로그를 더럽히므로 건너뛴다.
+	if (Count == 0)
+	{
+		return;
+	}
+
+	MonsterCountSum += Count;
+	++MonsterCountSamples;
+	const double Average = MonsterCountSamples > 0 ? static_cast<double>(MonsterCountSum) / MonsterCountSamples : 0.0;
+
+	UE_LOG(LogD1, Log, TEXT("[몬스터수] 현재=%d, 평균=%.1f (샘플 %d개, %.0f초 주기)"),
+		Count, Average, MonsterCountSamples, MonsterCountLogInterval);
+}
+
+AActor* AD1GameModeBase::ChoosePlayerStart_Implementation(AController* Player)
+{
+	const AD1PlayerState* PS = Player ? Player->GetPlayerState<AD1PlayerState>() : nullptr;
+	if (PS && PS->bIsTestBotConnection)
+	{
+		// 부하 테스트 봇은 "Bot1"~"BotN" 태그가 달린 PlayerStart에 순서대로 스폰한다.
+		// (몬스터 밀집 구역에 미리 배치해두면 봇이 항상 전투 한가운데서 시작 — 표류/idle 방지)
+		const int32 BotIndex = ++TestBotSpawnIndex; // 1-based
+		const FName WantedTag(*FString::Printf(TEXT("Bot%d"), BotIndex));
+
+		for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+		{
+			if (It->ActorHasTag(WantedTag))
+			{
+				UE_LOG(LogD1Travel, Log, TEXT("ChoosePlayerStart: 테스트 봇 %s 태그 PlayerStart에 스폰"), *WantedTag.ToString());
+				return *It;
+			}
+		}
+
+		UE_LOG(LogD1Travel, Warning, TEXT("ChoosePlayerStart: '%s' 태그 PlayerStart를 못 찾음 (봇 수 > 태그 PlayerStart 수?), 기본 로직으로 폴백"), *WantedTag.ToString());
+	}
+
+	return Super::ChoosePlayerStart_Implementation(Player);
 }
 
 void AD1GameModeBase::PostLogin(APlayerController* NewPlayer)

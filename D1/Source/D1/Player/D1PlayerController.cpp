@@ -710,23 +710,51 @@ void AD1PlayerController::TickTestBot()
 
 	if (!NearestEnemy)
 	{
+		TestBotTarget = nullptr;
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: 탐지 범위(%.0f) 안에 Enemy 태그 액터 없음 (위치=%s, 주변 액터 수=%d)"),
 			TestBotDetectionRadius, *ControlledPawn->GetActorLocation().ToString(), NearbyActors.Num());
 		return;
 	}
 
+	// TargetDataUnderMouse가 커서 대신 참조할 현재 타겟 저장
+	TestBotTarget = NearestEnemy;
+
+	// 적을 향해 회전 (근접공격이 캐릭터 정면으로 판정되므로 바라봐야 맞음)
+	const FVector ToEnemy = NearestEnemy->GetActorLocation() - ControlledPawn->GetActorLocation();
+	const FRotator FaceRotation(0.f, ToEnemy.Rotation().Yaw, 0.f);
+	SetControlRotation(FaceRotation);
+
 	const float DistToEnemy = FMath::Sqrt(NearestDistSq);
 	if (DistToEnemy > TestBotAttackRange)
 	{
-		const FVector Direction = (NearestEnemy->GetActorLocation() - ControlledPawn->GetActorLocation()).GetSafeNormal();
-		ControlledPawn->AddMovementInput(Direction);
+		ControlledPawn->AddMovementInput(ToEnemy.GetSafeNormal());
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: %s 추격 이동 중 (거리=%.0f)"), *NearestEnemy->GetName(), DistToEnemy);
 	}
 	else if (GetASC())
 	{
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: %s 공격 입력 시도 (거리=%.0f)"), *NearestEnemy->GetName(), DistToEnemy);
-		// 기본 공격(LMB)을 한 펄스 입력한 것처럼 시뮬레이션
-		GetASC()->AbilityInputTagPressed(FD1GameplayTags::Get().InputTag_LMB);
-		GetASC()->AbilityInputTagReleased(FD1GameplayTags::Get().InputTag_LMB);
+		// 기본 공격(LMB)을 한 펄스 입력한 것처럼 시뮬레이션.
+		// 실제 발동(TryActivateAbility)은 Held 경로에 있으므로 Pressed→Held→Released 순으로 호출해야 한다.
+		// (Pressed/Released만 부르면 입력 눌림 표시만 되고 어빌리티가 발동되지 않음)
+		const FGameplayTag LMB = FD1GameplayTags::Get().InputTag_LMB;
+		GetASC()->AbilityInputTagPressed(LMB);
+		GetASC()->AbilityInputTagHeld(LMB);
+		GetASC()->AbilityInputTagReleased(LMB);
 	}
+}
+
+bool AD1PlayerController::GetTestBotTargetHit(FHitResult& OutHit) const
+{
+	if (!bIsTestBot || !TestBotTarget.IsValid())
+	{
+		return false;
+	}
+
+	const FVector TargetLocation = TestBotTarget->GetActorLocation();
+	OutHit = FHitResult();
+	OutHit.bBlockingHit = true;
+	OutHit.HitObjectHandle = FActorInstanceHandle(TestBotTarget.Get());
+	OutHit.Location = TargetLocation;
+	OutHit.ImpactPoint = TargetLocation;
+	return true;
 }

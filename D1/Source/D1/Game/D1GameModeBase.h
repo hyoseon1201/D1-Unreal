@@ -26,6 +26,10 @@ public:
 
 	virtual void PostInitializeComponents() override;
 	virtual void PostLogin(APlayerController* NewPlayer) override;
+	virtual void BeginPlay() override;
+
+	/** 부하 테스트용 봇 접속(bIsTestBotConnection)이면 네브메시 전체에서 랜덤 위치에 스폰, 아니면 기존 PlayerStartTag 로직 그대로 */
+	virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
 
 	/** 접속 URL 옵션(?sessionToken=)을 파싱해 PlayerState에 보관 */
 	virtual FString InitNewPlayer(APlayerController* NewPlayerController, const FUniqueNetIdRepl& UniqueId,
@@ -49,4 +53,21 @@ public:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Item Data")
 	TObjectPtr<UD1ItemRegistry> ItemRegistry;
+
+private:
+	/** 현재 월드의 살아있는 Enemy 수를 세서 로그로 찍고, 누적 평균을 갱신한다 (부하 테스트용). 몬스터가 없는 맵(Town 등)에서는 로그를 남기지 않는다. */
+	void LogMonsterCount();
+
+	FTimerHandle MonsterCountTimerHandle;
+
+	/** Enemy 수 로깅 주기 (초) */
+	UPROPERTY(EditDefaultsOnly, Category = "D1|Debug")
+	float MonsterCountLogInterval = 5.f;
+
+	// 누적 평균 계산용 (Enemy가 1마리 이상인 샘플만 집계)
+	int64 MonsterCountSum = 0;
+	int32 MonsterCountSamples = 0;
+
+	// 테스트 봇을 Bot1, Bot2... 태그 PlayerStart에 순서대로 배정하기 위한 카운터
+	int32 TestBotSpawnIndex = 0;
 };

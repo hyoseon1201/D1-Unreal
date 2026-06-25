@@ -21,6 +21,10 @@
 
 AD1Enemy::AD1Enemy()
 {
+	// 몬스터는 정교한 입력 반응성이 필요 없는 AI 기반 이동/전투라 기본값(100Hz)은 과함.
+	// 부하테스트에서 GameNetDriver 리플리케이션 비용의 71%(D1Enemy 호출 73만+회)를 차지한 1순위 비용 → 20Hz로 낮춤.
+	SetNetUpdateFrequency(20.f);
+
 	GetMesh()->SetCollisionResponseToChannel(ECC_Visibility, ECR_Block);
 
 	AbilitySystemComponent = CreateDefaultSubobject<UD1AbilitySystemComponent>("AbilitySystemComponent");

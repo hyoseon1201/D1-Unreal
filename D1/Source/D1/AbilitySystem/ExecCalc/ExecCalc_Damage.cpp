@@ -51,6 +51,12 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	// 부하 테스트용 봇은 죽으면 안 되므로 데미지를 무시
 	if (TargetASC && TargetASC->HasMatchingGameplayTag(FD1GameplayTags::Get().Debug_TestBot_Invulnerable))
 	{
+		UE_LOG(LogD1Ability, Log, TEXT("[전투] %s(%s) → %s(%s): 0.0 데미지 (무적 - 차단됨)"),
+			SourceAvatar ? *SourceAvatar->GetName() : TEXT("Unknown"),
+			SourceAvatar ? *SourceAvatar->GetActorLocation().ToString() : TEXT("?"),
+			TargetAvatar ? *TargetAvatar->GetName() : TEXT("Unknown"),
+			TargetAvatar ? *TargetAvatar->GetActorLocation().ToString() : TEXT("?"));
+
 		OutExecutionOutput.AddOutputModifier(FGameplayModifierEvaluatedData(UD1AttributeSet::GetIncomingDamageAttribute(), EGameplayModOp::Additive, 0.f));
 		return;
 	}

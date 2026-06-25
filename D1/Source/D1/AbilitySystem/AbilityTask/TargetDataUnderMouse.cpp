@@ -4,6 +4,7 @@
 #include "AbilitySystem/AbilityTask/TargetDataUnderMouse.h"
 
 #include "AbilitySystemComponent.h"
+#include "Player/D1PlayerController.h"
 
 UTargetDataUnderMouse* UTargetDataUnderMouse::CreateTargetDataUnderMouse(UGameplayAbility* OwningAbility)
 {
@@ -37,7 +38,13 @@ void UTargetDataUnderMouse::SendMouseCursorData()
 
 	APlayerController* PC = Ability->GetCurrentActorInfo()->PlayerController.Get();
 	FHitResult CursorHit;
-	PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+
+	// 헤드리스(-nullrhi) 테스트 봇은 마우스 커서가 없어 GetHitResultUnderCursor가 쓰레기값을 반환한다.
+	// 봇이 추격 중인 적을 커서 위치 대신 타겟으로 사용.
+	if (AD1PlayerController* D1PC = Cast<AD1PlayerController>(PC); !D1PC || !D1PC->GetTestBotTargetHit(CursorHit))
+	{
+		PC->GetHitResultUnderCursor(ECC_Visibility, false, CursorHit);
+	}
 
 	FGameplayAbilityTargetDataHandle DataHandle;
 	FGameplayAbilityTargetData_SingleTargetHit* Data = new FGameplayAbilityTargetData_SingleTargetHit();
