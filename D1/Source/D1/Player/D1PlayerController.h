@@ -181,12 +181,22 @@ private:
 
 	FTimerHandle TestBotTimerHandle;
 
+	// 0.3초 → 1초: 매 틱 연속 입력 재적용(TestBotMoveDirection)과 같이 적용 — 방향을 너무 자주 재계산할 필요가 없어짐
 	UPROPERTY(EditDefaultsOnly, Category = "Test Bot")
-	float TestBotTickInterval = 0.3f;
+	float TestBotTickInterval = 1.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Test Bot")
 	float TestBotDetectionRadius = 1500.f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Test Bot")
 	float TestBotAttackRange = 150.f;
+
+	/** 봇이 최초 위치(TestBotOriginLocation)에서 이 거리보다 먼 적은 추격하지 않음 — 장시간 누적되며 다른 구역으로 표류하는 것을 방지 */
+	UPROPERTY(EditDefaultsOnly, Category = "Test Bot")
+	float TestBotLeashRadius = 2000.f;
+
+	/** TickTestBot 최초 호출 시점의 위치로 1회 고정됨 (리쉬 기준점) */
+	FVector TestBotOriginLocation = FVector::ZeroVector;
+
+	bool bTestBotOriginSet = false;
 };

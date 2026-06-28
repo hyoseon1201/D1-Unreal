@@ -51,7 +51,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	// 부하 테스트용 봇은 죽으면 안 되므로 데미지를 무시
 	if (TargetASC && TargetASC->HasMatchingGameplayTag(FD1GameplayTags::Get().Debug_TestBot_Invulnerable))
 	{
-		UE_LOG(LogD1Ability, Log, TEXT("[전투] %s(%s) → %s(%s): 0.0 데미지 (무적 - 차단됨)"),
+		UE_LOG(LogD1Ability, Verbose, TEXT("[전투] %s(%s) → %s(%s): 0.0 데미지 (무적 - 차단됨)"),
 			SourceAvatar ? *SourceAvatar->GetName() : TEXT("Unknown"),
 			SourceAvatar ? *SourceAvatar->GetActorLocation().ToString() : TEXT("?"),
 			TargetAvatar ? *TargetAvatar->GetName() : TEXT("Unknown"),
@@ -155,8 +155,8 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	UE_LOG(LogD1Ability, Verbose, TEXT("ExecCalc_Damage: Raw=%.1f, Armor=%.1f, Pen=%.1f, Mult=%.3f, Crit=%s, Final=%.1f"),
 		Damage, Armor, ArmorPenetration, DamageMultiplier, bIsCritical ? TEXT("Y") : TEXT("N"), FinalDamage);
 
-	// 전투 로그: 누가 누구에게 얼마나 데미지를 입혔는지 (부하테스트/봇 동작 확인용, 항상 보이는 레벨)
-	UE_LOG(LogD1Ability, Log, TEXT("[전투] %s(%s) → %s(%s): %.1f 데미지%s"),
+	// 전투 로그: 누가 누구에게 얼마나 데미지를 입혔는지 (부하테스트/봇 동작 확인용 — 진단 완료, Verbose로 하향)
+	UE_LOG(LogD1Ability, Verbose, TEXT("[전투] %s(%s) → %s(%s): %.1f 데미지%s"),
 		SourceAvatar ? *SourceAvatar->GetName() : TEXT("Unknown"),
 		SourceAvatar ? *SourceAvatar->GetActorLocation().ToString() : TEXT("?"),
 		TargetAvatar ? *TargetAvatar->GetName() : TEXT("Unknown"),

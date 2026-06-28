@@ -9,6 +9,7 @@
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "Components/MeshComponent.h"
 #include "D1GameplayTags.h"
 
 AD1CharacterBase::AD1CharacterBase()
@@ -40,27 +41,36 @@ UAbilitySystemComponent* AD1CharacterBase::GetAbilitySystemComponent() const
 FVector AD1CharacterBase::GetCombatSocketLocation_Implementation(const FGameplayTag& SocketTag)
 {
 	const FD1GameplayTags& GameplayTags = FD1GameplayTags::Get();
+
+	UMeshComponent* SocketComponent = nullptr;
+	FName SocketName = NAME_None;
+
 	// 1. 무기 끝 소켓 (칼 등)
 	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_Weapon) && IsValid(Weapon))
 	{
-		return Weapon->GetSocketLocation(WeaponTipSocketName);
+		SocketComponent = Weapon;
+		SocketName = WeaponTipSocketName;
 	}
-
 	// 2. 오른손 소켓
-	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_RightHand))
+	else if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_RightHand))
 	{
-		return GetMesh()->GetSocketLocation(RightHandSocketName);
+		SocketComponent = GetMesh();
+		SocketName = RightHandSocketName;
 	}
-
 	// 3. 왼손 소켓 (필요시 추가)
-	if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_LeftHand))
+	else if (SocketTag.MatchesTagExact(GameplayTags.CombatSocket_LeftHand))
 	{
-		return GetMesh()->GetSocketLocation(LeftHandSocketName);
+		SocketComponent = GetMesh();
+		SocketName = LeftHandSocketName;
+	}
+	else
+	{
+		// 기본값으로 메쉬의 위치를 반환하거나 로그를 찍어 문제를 파악합니다.
+		UE_LOG(LogD1, Error, TEXT("Unknown Socket Tag: %s"), *SocketTag.ToString());
+		return GetMesh()->GetComponentLocation();
 	}
 
-	// 기본값으로 메쉬의 위치를 반환하거나 로그를 찍어 문제를 파악합니다.
-	UE_LOG(LogD1, Error, TEXT("Unknown Socket Tag: %s"), *SocketTag.ToString());
-	return GetMesh()->GetComponentLocation();
+	return SocketComponent->GetSocketLocation(SocketName);
 }
 
 void AD1CharacterBase::Die()

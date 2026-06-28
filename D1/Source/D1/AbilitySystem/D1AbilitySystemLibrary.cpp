@@ -156,7 +156,7 @@ void UD1AbilitySystemLibrary::RecalculateSecondaryAttributes(const UObject* Worl
 
 		const float DBG_AP_Current = ASC->GetNumericAttribute(UD1AttributeSet::GetAttackPowerAttribute());
 		const float DBG_AP_Base   = ASC->GetNumericAttributeBase(UD1AttributeSet::GetAttackPowerAttribute());
-		UE_LOG(LogD1Ability, Warning,
+		UE_LOG(LogD1Ability, Verbose,
 			TEXT("RecalculateSecondaryAttributes: Level=%d, removed=%d, AP_CurrentValue=%.0f, AP_BaseValue=%.0f"),
 			CurrentLevel, RemovedCount, DBG_AP_Current, DBG_AP_Base);
 	}

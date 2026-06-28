@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Player/D1PlayerState.h"
 #include "AbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
 #include "AbilitySystem/D1AbilitySystemComponent.h"
 #include "AbilitySystem/D1AttributeSet.h"
 #include "UI/HUD/D1HUD.h"
@@ -332,6 +333,13 @@ void AD1Hero::InitAbilityActorInfo()
 	AbilitySystemComponent = D1PS->GetAbilitySystemComponent();
 	AttributeSet = D1PS->GetAttributeSet();
 
+	// 플레이어 어빌리티 발동 성공/실패를 서버 권한에서만 로깅 (몬스터 ASC에는 바인딩 안 하므로 자동으로 플레이어 전용)
+	if (HasAuthority())
+	{
+		AbilitySystemComponent->AbilityActivatedCallbacks.AddUObject(this, &AD1Hero::OnAbilityActivated);
+		AbilitySystemComponent->AbilityFailedCallbacks.AddUObject(this, &AD1Hero::OnAbilityActivationFailed);
+	}
+
 	if (AD1PlayerController* D1PlayerController = Cast<AD1PlayerController>(GetController()))
 	{
 		if (AD1HUD* D1HUD = Cast<AD1HUD>(D1PlayerController->GetHUD()))
@@ -339,6 +347,18 @@ void AD1Hero::InitAbilityActorInfo()
 			D1HUD->InitOverlay(D1PlayerController, D1PS, AbilitySystemComponent, AttributeSet);
 		}
 	}
+}
+
+void AD1Hero::OnAbilityActivated(UGameplayAbility* Ability)
+{
+	UE_LOG(LogD1Ability, Verbose, TEXT("[발동 성공] %s — %s"),
+		Ability ? *Ability->GetName() : TEXT("Unknown"), *GetName());
+}
+
+void AD1Hero::OnAbilityActivationFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason)
+{
+	UE_LOG(LogD1Ability, Warning, TEXT("[발동 실패] %s — %s — 이유: %s"),
+		Ability ? *Ability->GetName() : TEXT("Unknown"), *GetName(), *FailureReason.ToStringSimple());
 }
 
 void AD1Hero::MulticastLevelupParticles_Implementation() const

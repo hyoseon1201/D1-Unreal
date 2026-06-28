@@ -25,7 +25,8 @@ AD1PlayerState::AD1PlayerState()
 
 	InventoryComponent = CreateDefaultSubobject<UD1InventoryComponent>("InventoryComponent");
 
-	SetNetUpdateFrequency(100.f);
+	// 서버 NetServerMaxTickRate(30Hz, DefaultEngine.ini)보다 높게 잡아도 그 이상으로는 캡되어 의미 없음 → 30으로 일치
+	SetNetUpdateFrequency(30.f);
 }
 
 void AD1PlayerState::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const

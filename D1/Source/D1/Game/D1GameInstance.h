@@ -39,6 +39,8 @@ class D1_API UD1GameInstance : public UGameInstance
 	GENERATED_BODY()
 
 public:
+	virtual void Init() override;
+
 	/** Travel 직전 서버 측에서 호출 — PlayerId 별로 저장 */
 	void SavePlayerData(const FString& PlayerId, const FD1SavedPlayerData& Data);
 

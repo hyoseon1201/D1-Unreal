@@ -100,6 +100,7 @@ void AD1PlayerController::ToggleTestBot()
 	else
 	{
 		GetWorldTimerManager().ClearTimer(TestBotTimerHandle);
+		bTestBotOriginSet = false; // 다음 활성화 시 그 시점의 위치를 새 리쉬 기준점으로 잡도록 리셋
 		UE_LOG(LogD1, Log, TEXT("TestBot: 비활성화"));
 	}
 
@@ -677,6 +678,7 @@ void AD1PlayerController::TickTestBot()
 	if (!CanUseAbilities())
 	{
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: CanUseAbilities() == false, 중단"));
+		bAutoRunning = false;
 		return;
 	}
 
@@ -684,18 +686,35 @@ void AD1PlayerController::TickTestBot()
 	if (!ControlledPawn)
 	{
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: ControlledPawn 없음, 중단"));
+		bAutoRunning = false;
 		return;
+	}
+
+	// 최초 틱 시점의 위치를 리쉬 기준점으로 1회 고정 (이후 추격하며 위치가 바뀌어도 기준점은 유지)
+	if (!bTestBotOriginSet)
+	{
+		TestBotOriginLocation = ControlledPawn->GetActorLocation();
+		bTestBotOriginSet = true;
+		UE_LOG(LogD1, Log, TEXT("TickTestBot: 리쉬 기준점 설정 (%s), 반경=%.0f"), *TestBotOriginLocation.ToString(), TestBotLeashRadius);
 	}
 
 	TArray<AActor*> NearbyActors;
 	UD1AbilitySystemLibrary::GetLivePlayersWithinRadius(this, NearbyActors, { ControlledPawn },
 		TestBotDetectionRadius, ControlledPawn->GetActorLocation());
 
+	const float LeashRadiusSq = FMath::Square(TestBotLeashRadius);
+
 	AActor* NearestEnemy = nullptr;
 	float NearestDistSq = TNumericLimits<float>::Max();
 	for (AActor* Actor : NearbyActors)
 	{
 		if (!Actor->ActorHasTag(FName("Enemy")))
+		{
+			continue;
+		}
+
+		// 리쉬: 최초 위치에서 너무 먼 적은 후보에서 제외 (장시간 누적 표류 방지)
+		if (FVector::DistSquared(TestBotOriginLocation, Actor->GetActorLocation()) > LeashRadiusSq)
 		{
 			continue;
 		}
@@ -711,6 +730,7 @@ void AD1PlayerController::TickTestBot()
 	if (!NearestEnemy)
 	{
 		TestBotTarget = nullptr;
+		bAutoRunning = false;
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: 탐지 범위(%.0f) 안에 Enemy 태그 액터 없음 (위치=%s, 주변 액터 수=%d)"),
 			TestBotDetectionRadius, *ControlledPawn->GetActorLocation().ToString(), NearbyActors.Num());
 		return;
@@ -727,11 +747,27 @@ void AD1PlayerController::TickTestBot()
 	const float DistToEnemy = FMath::Sqrt(NearestDistSq);
 	if (DistToEnemy > TestBotAttackRange)
 	{
-		ControlledPawn->AddMovementInput(ToEnemy.GetSafeNormal());
+		// 실제 플레이어의 RMB 클릭 이동(ShortPressThreshold 분기)과 동일한 경로: 내비메시로 경로 산출 →
+		// 스플라인 구성 → AutoRun()이 매 틱 그 스플라인을 따라 연속으로 AddMovementInput을 호출한다.
+		// (TickTestBot은 1초 주기로 목적지만 갱신하고, 실제 매 틱 이동 적용은 기존 AutoRun()이 담당)
+		if (UNavigationPath* NavPath = UNavigationSystemV1::FindPathToLocationSynchronously(this, ControlledPawn->GetActorLocation(), NearestEnemy->GetActorLocation()))
+		{
+			Spline->ClearSplinePoints();
+			for (const FVector& PointLoc : NavPath->PathPoints)
+			{
+				Spline->AddSplinePoint(PointLoc, ESplineCoordinateSpace::World);
+			}
+			if (NavPath->PathPoints.Num() > 0)
+			{
+				CachedDestination = NavPath->PathPoints[NavPath->PathPoints.Num() - 1];
+				bAutoRunning = true;
+			}
+		}
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: %s 추격 이동 중 (거리=%.0f)"), *NearestEnemy->GetName(), DistToEnemy);
 	}
 	else if (GetASC())
 	{
+		bAutoRunning = false;
 		UE_LOG(LogD1, Verbose, TEXT("TickTestBot: %s 공격 입력 시도 (거리=%.0f)"), *NearestEnemy->GetName(), DistToEnemy);
 		// 기본 공격(LMB)을 한 펄스 입력한 것처럼 시뮬레이션.
 		// 실제 발동(TryActivateAbility)은 Held 경로에 있으므로 Pressed→Held→Released 순으로 호출해야 한다.

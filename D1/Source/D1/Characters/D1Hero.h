@@ -60,6 +60,12 @@ private:
 
 	virtual void InitAbilityActorInfo() override;
 
+	/** 플레이어 어빌리티 발동 성공 시 로그 (몬스터 제외, 서버 권한에서만 바인딩) */
+	void OnAbilityActivated(UGameplayAbility* Ability);
+
+	/** 플레이어 어빌리티 발동 실패 시 실패 이유 태그까지 로그 (몬스터 제외) */
+	void OnAbilityActivationFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& FailureReason);
+
 	// ----- PossessedBy 접속 경로별 GAS 초기화 -----
 
 	/** 최초 스폰 (PIE 등): 직업 ScalableFloat 기본값으로 전체 초기화 */

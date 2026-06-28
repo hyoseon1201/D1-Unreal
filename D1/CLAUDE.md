@@ -84,25 +84,42 @@
 | 13 | DB 스키마 + Spring Boot 백엔드 | ✅ 완료 (단일 서버 풀 루프 검증) |
 | 14 | 크로스 프로세스 travel (DB 핸드오프) | 🔄 **현재 작업** |
 
-### Phase 3 확정 일정 (2026-06-18 수정, 목표 **7/10 로컬 배포**, 주 5~6일 기준)
+### Phase 3 확정 일정 (2026-06-26 수정, 목표 **8/10 데모**, 주 5~6일 기준)
+
+> 2026-06-26 일정 개정: 척추(로그인→Town→파티→Dungeon 크로스 이동→클리어→복귀→데이터 유지)와 1차 서버 성능 최적화는 예정대로 완료. 이후 "실제 게임처럼 플레이할 만한 콘텐츠 분량"을 목표로 스코프를 확장하기로 결정 → 데모를 7/10에서 **8/10**으로 재조정.
 
 | 기간 | 마일스톤 |
 |------|---------|
 | ✅ ~6/12 | **언리얼 마무리**: 파티 풀 루프 2인 테스트 완료, Windows 데디서버 빌드 완료 |
 | ✅ ~6/18 | DB 스키마 + Spring Boot + JWT + verify-session/save **단일 서버 풀 루프 완료**. GCP → Phase 4 이월, MVP는 **로컬 홈서버** |
-| ~6/25 | **크로스 프로세스 travel**: Town:7777 → Dungeon:7778 ClientTravel (DB 핸드오프) + 던전→마을 복귀. Spring Boot `POST /api/server/sessions/issue` 신설 |
-| ~7/1 | **보상 시스템**: 아이템 드롭→인벤토리→save 훅. ※ 몬스터 AI(BT+EQS)는 이미 완료 |
-| ~7/7 | **통합 테스트 + 버그픽스**: 로그인→Town→파티→Dungeon→클리어→복귀→재로그인 데이터 유지 전체 루프 |
-| ~7/10 | 데모 영상 촬영 |
+| ✅ ~6/19 | **크로스 프로세스 travel + 보상 시스템** (당초 예정보다 조기 완료) |
+| ✅ ~6/26 | **서버 1차 네트워크/성능 최적화** (Insights 측정 기반 — 애니 틱/NetUpdateFrequency/거리 컬링, 자세한 내용은 작업 이력 06-26 및 `Docs/NetworkPerfOptimization_2026-06-26.md`) |
+| 6/26~6/28 | **수신측 리플리케이션 최적화** (이동 입력 처리 — `UNetConnection_ReceivedPacket`/`ServerMovePacked` 등, 1차 최적화에서 발견된 다음 1순위 비용) |
+| 6/29~7/5 | **신규 직업 1개 풀구현** (어빌리티 4~5종 포함, Warrior GAS 패턴 재사용) |
+| 7/6~7/10 | **어빌리티 추가 5종 + 아이템 15종** (병행 진행) |
+| 7/11~7/16 | **신규 몬스터 2종** |
+| 7/17~7/23 | **신규 던전 1개** (블록아웃+배치+보스) |
+| 7/24~8/2 | **사냥터(HuntingGround) 레벨디자인** (부하테스트용 블록아웃 → 실제 플레이 가능한 맵) |
+| 8/3~8/5 | **설정 메뉴** (그래픽/오디오/키바인딩) |
+| 8/6~8/9 | **통합 테스트 + 버그픽스** |
+| 8/10 | 데모 영상 촬영 |
 
-**Scope 컷 (7/10 일정 성립 조건):**
+**Scope 컷 (8/10 일정 성립 조건):**
 - 🔪 **GCP/클라우드 배포 → Phase 4 이월.** MVP는 로컬 홈서버(i5-14400F + RAM 64GB, 포트포워딩)
 - 🔪 **ECS/Docker 동적 오케스트레이션 → Phase 4 이월.** MVP는 고정 프로세스 2개(Town:7777, Dungeon:7778)
+- 🔪 **Replication Graph / NetDormancy / 추가 네트워크 최적화 → Phase 4 이월.** 1차 최적화(애니 틱/NetUpdateFrequency/거리 컬링)+수신측 1차 작업까지만 8/10 전에 처리
 - 🔪 캐릭터 생성 화면 최소화 (커스터마이징 없이 계정당 1캐릭터 자동 생성)
 - 🔪 Redis 없이 MySQL 직접 write (MVP 동접 수십 명 수준에서 충분)
-- ~~몬스터 AI~~ **완료** (BT+EQS 근접/원거리 구현됨). 보스 복잡 패턴은 Phase 4
-- **플랜 B** (7/1 마일스톤 지연 시): 던전 콘텐츠 축소(보스 1종만), 통합 테스트 우선
-- **지켜야 할 척추**: 로그인(JWT) → DB 로드 → Town 접속 → 파티 → Dungeon 크로스 이동(DB 핸드오프) → 클리어 → 복귀 → 재로그인 시 데이터 유지
+- 🔪 신규 직업/몬스터/던전은 각 1개(또는 소수)로 제한, 추가 분량은 Phase 4
+- **지켜야 할 척추**: 로그인(JWT) → DB 로드 → Town 접속 → 파티 → Dungeon 크로스 이동(DB 핸드오프) → 클리어 → 복귀 → 재로그인 시 데이터 유지 (이미 완료, 콘텐츠 확장 중에도 깨지지 않는지 통합 테스트 단계에서 재검증)
+
+### Phase 4 예고 (8/10 데모 이후 — 고난이도 최적화 복귀)
+8/10 이후에는 콘텐츠 확장으로 늘어난 액터/플레이어 규모를 기반으로 다시 성능 최적화로 복귀할 예정:
+- **Replication Graph** 커스텀 구현 (콘텐츠 확장으로 액터 수가 늘면 거리 컬링만으론 부족해질 가능성)
+- **수신측 이동 리플리케이션 심화** (6/26~28 1차 작업 이후 추가 개선)
+- **NetDormancy** (idle 몬스터 복제 정지)
+- **GCP 클라우드 배포 + ECS/Docker 동적 오케스트레이션**
+- 봇 수를 10/20명 등으로 늘려 `Docs/NetworkPerfOptimization_2026-06-26.md` 8장에서 예측한 리플리케이션 O(N²) 스케일링을 실측으로 검증
 
 ---
 
@@ -213,6 +230,9 @@
 | 06-19 | **보상 시스템 — 드롭 테이블 + 클리어 저장.** `UD1DropTableData`(PrimaryDataAsset, `Inventory/`) + `FD1DropEntry`(ItemData + DropChance + Min/MaxQuantity) 신설. `AD1Enemy`에 `TObjectPtr<UD1DropTableData> DropTable` 추가. `Die()` HasAuthority 블록에서 확률 판정 후 던전 내 모든 플레이어 인벤토리에 `AddItem` (co-op 공유 드롭). `AD1GameModeDungeon::OnBossDefeated`에 체크포인트 `SaveCharacter` 추가 — 드롭 반영 직후 저장(ReturnToTown 전 크래시 대비). 기존 하드코딩 LootItems 텍스트 제거. 에디터에서 `DA_DropTable_Goblin` 등 DataAsset 인스턴스 생성 후 Enemy BP에 할당하면 동작. |
 | 06-19 | **회원가입 API + 인게임 게임메뉴 WC.** `UD1HttpSubsystem::Register()`(POST /api/auth/register, 201→성공) + `OnRegisterResponse` 델리게이트. `UD1LoginWidgetController::RequestRegister()` + `OnRegisterSuccess/OnRegisterFailed` 브로드캐스트. `UD1GameMenuWidgetController`(UD1WidgetController 상속) 신설 — `RequestReturnToTitle()`(OpenLevel "PreGame", Logout 경유 자동저장), `RequestQuitGame()`(KismetSystemLibrary::QuitGame). 3-place 규칙 적용: D1HUD getter(`GetGameMenuWidgetController`) + D1AbilitySystemLibrary static getter 추가. |
 | 06-25 | **부하테스트 안정화 + GameMode 리팩토링 + 봇 전투 버그픽스.** ① **봇이 공격을 못 하던 근본원인 수정** — `TickTestBot`이 `AbilityInputTagPressed/Released`만 호출했는데 기본공격 발동(`TryActivateAbility`)은 **Held 입력 경로**(`AbilityInputTagHeld`)에 있어서 영영 발동 안 됨 → `Pressed→Held→Released` 순으로 호출하게 수정. ② **헤드리스(-nullrhi) 봇 조준 수정** — 근접공격이 `TargetDataUnderMouse`로 커서 위치를 읽는데 봇은 커서가 없어 쓰레기값 → `AD1PlayerController::GetTestBotTargetHit()` 추가, 봇이면 커서 대신 현재 타겟(`TestBotTarget`) HitResult 사용(`TargetDataUnderMouse.cpp`에서 분기). ③ **GameMode 상속 분리** — `AD1GameModeHuntingGround` 신설(상시 운영형 전투맵). 공통 기능(봇 랜덤/태그 스폰 `ChoosePlayerStart`, 몬스터 수 주기 로깅 `LogMonsterCount`)을 `AD1GameModeBase`로 끌어올림(`Count==0`이면 로그 생략→Town 무영향). 던전 전용(보스 결과창/맵 리셋)만 `AD1GameModeDungeon`에 잔류. ④ **봇 고정 스폰** — 랜덤 네브메시 스폰(GetRandomPoint, startup 타이밍·표류 문제)을 폐기하고 `Bot1`~`BotN` **Actor Tag** PlayerStart에 접속순서대로 스폰(`TestBotSpawnIndex`). `RuntimeGeneration`은 Static 시도 후 에디터 마찰로 **Dynamic 복귀**. 결과: 봇 5명이 맵 5개 코너에 분산 스폰→표류/idle 없이 전투 지속 검증. ⑤ 서버 전투 로그 `[전투] 공격자→타겟: 데미지`(`ExecCalc_Damage`, LogD1Ability Log·무적 차단도 로깅), 몬스터수 로그(`[몬스터수] 현재/평균`)로 에디터 없이 로그만으로 봇 동작 확인. ⑥ Insights용 `RunHuntingGroundServerInsights.bat`, 화면 있는 디버그 서버 `RunHuntingGroundServerDebug.bat`(클라 exe `?Listen`) 추가. UnrealInsights는 소스에서 빌드 필요(`Build.bat UnrealInsights Win64 Development`). ⚠️ **미해결**: 패키징(Development) 서버가 전투 2~3분 후 스택 없이 하드 크래시(DebugGame 빌드에선 재현 안 됨 → 최적화 빌드 전용 메모리 손상 의심). 동시 다중 사망/드롭 경로 의심, 크래시 덤프 또는 디버거로 스택 확보 필요. ⚠️ **배치파일 한글 echo 금지** — cmd 코드페이지 949에서 UTF-8 한글이 깨져 파싱 실패(서버 즉시 종료) → 배치파일 echo는 영어로. |
+| 06-26 | **서버 1차 네트워크/성능 최적화 (Insights 측정 기반).** HuntingGround 부하(봇 5 + 몬스터 99)에서 데디서버 GameThread를 Unreal Insights로 프로파일링 → 비용 분해 → 단계별 1개씩 수정 후 재측정하는 루프 적용. **① 애니메이션 틱 최적화**: `AD1CharacterBase` 생성자에 `GetMesh()->VisibilityBasedAnimTickOption = OnlyTickMontagesWhenNotRendered` — 렌더링 안 되는(데디서버=항상) 캐릭터의 풀 포즈/스키닝 평가를 스킵하고 몽타주 진행만 유지(근접 데미지는 몽타주 AnimNotify로 발동되므로 전투 무손상). `CharacterMesh0` 14.9s→3.3s급 감소. **② 몬스터 복제 빈도**: `AD1Enemy` 생성자 `SetNetUpdateFrequency(20.f)` (엔진 기본 100Hz는 30Hz 서버 캡 대비 과함). **③ 거리 컬링**: `AD1Enemy` 생성자 `SetNetCullDistanceSquared(2000.f*2000.f)` — 탑다운 카메라(ArmLength 900, Pitch -55, FOV 90) 가시거리(~1000유닛) + 마진 기준, 기본값 15,000유닛에서 축소. 분산 스폰된 플레이어 그룹 간 불필요한 몬스터 복제 차단. **종합 결과(Baseline→3개 적용)**: `UWorld_Tick` 38.7s→18.4s(-52%), `GameNetDriver`(송신) 8.2s→1.3s(-84%), `D1Enemy` 복제 비용 6.0s→0.44s(-93%). **측정 방법론 발견**: 라이브 세션의 빈 구간은 표시지연(워커 트랙은 계속 동작)이고, 저장 파일에서도 보이는 4.5s짜리 가짜 hitch는 `FAsyncWriter_SerializeBufferToArchive`(트레이스 버퍼 디스크 flush)가 GameThread를 막은 관찰자 효과 → `-trace`에서 `net,stat` 제거 + `-tracetailmb=128`로 완화, 분석 시 hitch 구간 제외하고 드래그. `RunTestBots.ps1`에 `-notraceserver`(봇은 측정 대상 아님). **다음 1순위 비용**: 수신측 이동 리플리케이션(`UNetConnection_ReceivedPacket`+`ServerMovePacked`, 최종 트레이스의 ~33%) — Replication Graph(송신 전용)는 이미 송신 비중이 7%로 줄어 효과 작음 → 둘 다 Phase 4 이월. 상세 학습/발표 문서: `Docs/NetworkPerfOptimization_2026-06-26.md`. ⚠️ CLAUDE.md 본문의 `-trace=...stat,bookmark,net` 표기는 구버전(현재 `cpu,frame,counters,bookmark` + `-tracetailmb=128`). |
+| 06-27 | **플레이어 근접공격이 진짜 데디서버 멀티플레이에서만 데미지가 안 들어가던 버그 해결.** 싱글/PIE는 100% 정상, 분리된 데디서버+클라에서는 0%(발동은 매번 성공하지만 데미지 미적용). 8개 가설(프레임 스파이크, 히트반경, stale 본 트랜스폼, 태스크 병렬/순서, EventTag 불일치, Held 재발동, 피격 캔슬)을 로그로 하나씩 검증 후 소거. `AbilityActivatedCallbacks`/`AbilityFailedCallbacks`(`D1Hero.cpp`)로 발동 성공률 100% 확인 → 쿨다운/태그 차단 아님. 체인을 단계별 로그로 추적(AnimNotify 발동 ✅ → Wait Gameplay Event 수신 ❌)해서 끊기는 지점을 좁힘. **동일 패턴을 쓰는 `GA_GroundSword`(정상)와 1:1 비교**해서 어빌리티 설정(Net Execution Policy 등)은 전부 동일, **유일한 차이는 AnimNotify의 `Montage Tick Type`**(`GroundSword`=Branching Point, `MeleeAttack`=Queued)임을 발견. `Queued`는 클라이언트 RPC로 시작되는 `Local Predicted` 어빌리티의 몽타주에서 데디서버 디스패치가 누락될 수 있음(몬스터는 AI가 서버에서 직접 발동이라 `Queued`로도 정상 작동, 이 차이로 처음엔 헷갈렸음). `AM_Warrior_MeleeAttackNew`의 `AN_Montage_Event`를 `Branching Point`로 변경하여 해결. **앞으로 GAS 데미지 판정용 AnimNotify는 기본값(Queued) 대신 Branching Point를 우선 사용할 것.** 진단 중 추가했던 `GetMesh()->RefreshBoneTransforms()` 강제 호출이 `PostAnimEvaluation` 재귀 크래시를 유발한 것도 확인(AnimNotify 콜백 안에서 호출 금지). 상세 진단 과정: `Docs/MeleeAttackMultiplayerBug_2026-06-27.md`. |
+| 06-27 | **1차 네트워크 최적화 재측정 — "효과는 부하 패턴에 의존한다" 발견.** 부하테스트 재현성을 위해 `AD1Barrack`(랜덤 스폰)을 `AD1FixedMonsterSpawner`(고정 스폰, 30마리)로 교체한 뒤, 06-26 최적화 3개(애니 틱/NetUpdateFrequency/거리컬링)를 주석처리/복원만 해서 같은 시나리오로 직접 A/B 재측정(`baseline_30monster_5bot` ↔ `optimized_30monster_5bot`, ~2분, 스파이크 포함 전체 구간). **거리 컬링+NetUpdateFrequency 20Hz는 여전히 견고**(`D1Enemy` 호출 -91%/시간 -78%, `AbilitySystemComponent` 호출 -80%/시간 -64%, `GameNetDriver` -26%/-17%). **반면 애니 틱 스킵(`OnlyTickMontagesWhenNotRendered`)은 거의 효과 없음**(`CharacterMesh0` Incl 거의 그대로, Excl 소폭 증가) — 06-26 때 -78%였던 건 `AD1Barrack`의 랜덤 스폰이 만들던 "몬스터 밀집" 패턴 덕분이었고, 고정 스폰으로 밀집이 줄자 줄일 대상도 사라진 것으로 확인. `UWorld_Tick` 전체 -14%(06-26 발표치 -52%보다 작음 — 최적화가 약해진 게 아니라 비교 시나리오의 "문제 상황" 성격이 달라졌기 때문). 부수적으로 `D1PlayerState`의 `SetNetUpdateFrequency(100.f)`(서버 캡 30Hz 이상이라 의미 없던 값)도 `30.f`로 정리. 스파이크는 baseline 대비 optimized에서 크게 줄었으나 완전히 0은 아님(다음 작업 대상). **틱레이트(30Hz)는 캡일 뿐 측정값이 아님** — 여력이 있어도 그 이상 못 올라가며, 올린다고 공짜로 빨라지는 게 아니라 틱당 비용의 초당 총량이 그만큼 늘어나는 트레이드오프임을 정리. 상세: `Docs/NetworkPerfOptimization_2026-06-26.md` 갱신판. |
 | 06-22~23 | **PreGame UI 통합 + HuntingGround 신규 콘텐츠 + 부하테스트 인프라.** Login/CharacterSelect WC를 `UD1PreGameWidgetController` 하나로 통합(`WBP_PreGameOverlay`가 단일 WC 보유, Login/Register/CharacterSelect/NewCharacter는 서브패널로 내부 처리). 플레이어용 `ECharacterClass`(Warrior/Mage/Archer/Priest) 추가(실제 GAS 차별화는 Warrior만 구현, 나머지는 enum만 존재). `AddItem` 스택 버그 수정(같은 아이템 슬롯에 먼저 채우고 남으면 새 슬롯). `AD1Portal`(Actor) 신설 — Destination/DestinationMapName/DestinationPlayerStartTag로 범용 크로스 프로세스 포탈, `HasAuthority()`에서만 SaveCharacter→IssueSessionToken→ClientTravel(또는 PIE는 ServerTravel 폴백). `AD1Barrack`(Actor) 신설 — 주기적 몬스터 자동 스폰 + 상한 캡, 에디터에서 `UDrawSphereComponent`로 SpawnRadius 시각화. HuntingGround 맵 추가(빌드 배치파일 3종 + `MapsToCook`에 등록, `AllowedDungeonMaps`는 에디터에서 BP_D1GameStateTown에 직접 추가 필요). 데디서버 dev(루즈) 바이너리가 `WorldGridMaterial` CDO 단계에서 죽는 버그 발견(원인 미해결, 패키징 빌드는 정상) — 멀티 프로세스 테스트는 패키징 빌드로 진행. **부하테스트 인프라**: `AD1PlayerController`에 `-testbot`/`ToggleTestBot`(Exec) 자동전투 봇 모드(주변 Enemy 태그 탐색→이동/공격, LMB 입력 시뮬레이션) + `Debug.TestBot.Invulnerable` 태그(서버 RPC로 ASC에 부여, `ExecCalc_Damage`에서 데미지 0 처리)로 봇이 죽지 않게 함. `RunTestBots.bat/.ps1`(헤드리스 클라 N개를 `TestBots.json` 기준으로 로그인→매치메이킹→실행). |
 
 ---

@@ -93,12 +93,14 @@ void AD1Enemy::Die()
 		}
 
 		// 드롭 테이블 처리 — 모든 파티원에게 동일 지급 (co-op 공유 드롭)
-		UE_LOG(LogD1Inventory, Warning, TEXT("Drop: Die() 서버 진입 — DropTable=%s"),
+		// 정상 흐름 로그는 Verbose로 — 죽음마다(Entry수×플레이어수) Warning을 동기 출력하던 게
+		// 부하테스트에서 한 프레임에 수십 줄씩 몰려 CauseDamage 프레임을 수십ms 잡아먹는 원인이었음.
+		UE_LOG(LogD1Inventory, Verbose, TEXT("Drop: Die() 서버 진입 — DropTable=%s"),
 			DropTable ? *DropTable->GetName() : TEXT("NULL"));
 
 		if (DropTable)
 		{
-			UE_LOG(LogD1Inventory, Warning, TEXT("Drop: Entries 수=%d"), DropTable->Entries.Num());
+			UE_LOG(LogD1Inventory, Verbose, TEXT("Drop: Entries 수=%d"), DropTable->Entries.Num());
 
 			for (const FD1DropEntry& Entry : DropTable->Entries)
 			{
@@ -109,7 +111,7 @@ void AD1Enemy::Die()
 				}
 				if (FMath::FRandRange(0.f, 100.f) > Entry.DropChance)
 				{
-					UE_LOG(LogD1Inventory, Warning, TEXT("Drop: %s 확률 미달 — 스킵"), *Entry.ItemData->ItemID.ToString());
+					UE_LOG(LogD1Inventory, Verbose, TEXT("Drop: %s 확률 미달 — 스킵"), *Entry.ItemData->ItemID.ToString());
 					continue;
 				}
 
@@ -124,7 +126,7 @@ void AD1Enemy::Die()
 							if (UD1InventoryComponent* Inv = PS->FindComponentByClass<UD1InventoryComponent>())
 							{
 								const bool bOk = Inv->AddItem(Entry.ItemData->ItemID, Quantity);
-								UE_LOG(LogD1Inventory, Warning, TEXT("Drop: %s x%d → %s (성공=%d)"),
+								UE_LOG(LogD1Inventory, Verbose, TEXT("Drop: %s x%d → %s (성공=%d)"),
 									*Entry.ItemData->ItemID.ToString(), Quantity, *PS->GetPlayerName(), bOk);
 							}
 							else
